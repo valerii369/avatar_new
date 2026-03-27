@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR from "swr";
 import { useUserStore, useInsightsStore, type Insight } from "@/lib/store";
-import { dsbAPI } from "@/lib/api";
+import { masterHubAPI } from "@/lib/api";
 import { SPHERES, SPHERE_BY_ID, INFLUENCE_SORT } from "@/lib/constants";
 import SphereFilter from "@/components/SphereFilter";
 import InsightCard from "@/components/InsightCard";
@@ -17,39 +17,33 @@ export default function YourWorldPage() {
   const { insights, setInsights, activeSphere, setActiveSphere } = useInsightsStore();
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
 
-  // Fetch all insights
+  // Fetch all insights in one go via the unified Master Hub API
   const { isValidating: loading } = useSWR(
-    userId ? ["all-insights", userId] : null,
+    userId ? ["master-hub", userId] : null,
     async () => {
-      // Fetch all spheres in parallel
-      const results = await Promise.allSettled(
-        SPHERES.map(s => dsbAPI.getSphere(userId!, s.id).then(r => r.data))
-      );
+      const res = await masterHubAPI.get(userId!);
+      const data = res.data;
+      
+      if (data.status === "pending") return [];
 
       const allInsights: Insight[] = [];
-      results.forEach((result, idx) => {
-        if (result.status === "fulfilled" && result.value?.factors) {
-          const sphere = SPHERES[idx];
-          result.value.factors.forEach((f: any, rank: number) => {
+      const systems = data.insights || {};
+      
+      // We prioritize 'western_astrology'
+      Object.keys(systems).forEach(sys => {
+        const spheres = systems[sys];
+        Object.keys(spheres).forEach(sphereId => {
+          const items = spheres[sphereId];
+          items.forEach((item: any, rank: number) => {
             allInsights.push({
-              id: f.id,
-              system: f.source_system || "western_astrology",
-              primary_sphere: sphere.id,
-              rank,
-              influence_level: f.influence_level || "medium",
-              weight: f.weight || 0.5,
-              position: f.position || "",
-              core_theme: f.core_theme || "",
-              energy_description: f.energy_description || f.description || "",
-              light_aspect: f.light_aspect || "",
-              shadow_aspect: f.shadow_aspect || "",
-              developmental_task: f.developmental_task || "",
-              integration_key: f.integration_key || "",
-              triggers: f.triggers || [],
-              source: f.source || null,
+              ...item,
+              id: item.id || `${sys}-${sphereId}-${rank}`,
+              system: sys,
+              primary_sphere: parseInt(sphereId),
+              rank: item.rank ?? rank,
             });
           });
-        }
+        });
       });
 
       setInsights(allInsights);
@@ -64,7 +58,7 @@ export default function YourWorldPage() {
     if (activeSphere !== null) {
       result = result.filter(i => i.primary_sphere === activeSphere);
     }
-    return result.sort((a, b) => {
+    return [...result].sort((a, b) => {
       if (a.primary_sphere !== b.primary_sphere) return a.primary_sphere - b.primary_sphere;
       return (INFLUENCE_SORT[b.influence_level] || 0) - (INFLUENCE_SORT[a.influence_level] || 0);
     });
@@ -75,7 +69,11 @@ export default function YourWorldPage() {
     if (activeSphere !== null) return [{ sphereId: activeSphere, items: filteredInsights }];
     const groups: { sphereId: number; items: Insight[] }[] = [];
     let current: { sphereId: number; items: Insight[] } | null = null;
-    for (const ins of filteredInsights) {
+    
+    // Ensure sorting for grouping
+    const sorted = [...filteredInsights].sort((a, b) => a.primary_sphere - b.primary_sphere);
+    
+    for (const ins of sorted) {
       if (!current || current.sphereId !== ins.primary_sphere) {
         current = { sphereId: ins.primary_sphere, items: [] };
         groups.push(current);
@@ -150,7 +148,6 @@ export default function YourWorldPage() {
                 const sphere = SPHERE_BY_ID[group.sphereId];
                 return (
                   <div key={group.sphereId}>
-                    {/* Sphere header (only when showing all) */}
                     {activeSphere === null && (
                       <div style={{
                         display: "flex", alignItems: "center", gap: 8,
