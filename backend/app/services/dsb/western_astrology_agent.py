@@ -210,12 +210,11 @@ async def generate_insights(chart: dict, attempt: int = 0) -> UISResponse:
     queries = build_queries(chart)
     context_chunks = await retrieve_context(queries)
 
-    temp = 0.4 if attempt == 0 else 0.2
     slim_chart = _slim_chart_for_prompt(chart)
 
     try:
         response = await openai_client.chat.completions.create(
-            model="gpt-4o",
+            model="o4-mini",
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
@@ -227,8 +226,7 @@ async def generate_insights(chart: dict, attempt: int = 0) -> UISResponse:
                     ]
                 }, ensure_ascii=False)}
             ],
-            temperature=temp,
-            max_tokens=16000,
+            max_completion_tokens=16000,
         )
         raw = response.choices[0].message.content
         return await parse_and_validate(raw)
