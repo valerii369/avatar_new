@@ -1,13 +1,13 @@
-name: Deploy Backend to Timeweb
+name: Deploy to Timeweb VPS
 
 on:
   push:
     branches: [develop]
-    paths:
-      - 'backend/**'
+  workflow_dispatch:
 
 jobs:
-  deploy:
+  deploy-backend:
+    name: Deploy Backend
     runs-on: ubuntu-latest
 
     steps:
@@ -18,9 +18,28 @@ jobs:
           username: root
           key: ${{ secrets.TIMEWEB_SSH_KEY }}
           script: |
-            cd /var/www/avatar
-            git pull origin develop
-            cd backend
+            set -e
+            DEPLOY_DIR=/root/avatar-new
+
+            # Clone or pull latest
+            if [ ! -d "$DEPLOY_DIR/.git" ]; then
+              git clone https://github.com/valerii369/avatar_new.git $DEPLOY_DIR
+              cd $DEPLOY_DIR && git checkout develop
+            else
+              cd $DEPLOY_DIR && git fetch origin && git reset --hard origin/develop
+            fi
+
+            cd $DEPLOY_DIR/backend
+
+            # Setup venv if needed
+            if [ ! -d "venv" ]; then
+              python3 -m venv venv
+            fi
+
+            # Install dependencies
             venv/bin/pip install -r requirements.txt -q
-            sudo systemctl restart avatar
-            echo "✅ Backend deployed"
+
+            # Restart backend service
+            systemctl restart avatar-new-backend
+
+            echo "✅ Backend deployed to /root/avatar-new"
