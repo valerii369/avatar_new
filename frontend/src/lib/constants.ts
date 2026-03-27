@@ -1,8 +1,17 @@
-import { 
-  Users, Briefcase, Heart, Home, GraduationCap, 
+import type React from "react";
+import {
+  Users, Briefcase, Heart, Home, GraduationCap,
   Smile, Shield, Globe, Star, Zap, 
   Compass, Eye, User
 } from "lucide-react";
+
+export type SphereMeta = {
+  id: number;
+  name: string;
+  subtitle: string;
+  color: string;
+  icon: React.ComponentType<any>;
+};
 
 export const SPHERES = [
   { id: 1, name: "Личность", subtitle: "Ядро и маска", color: "#8B5CF6", icon: User },
@@ -28,4 +37,18 @@ export const INFLUENCE_SORT: Record<string, number> = {
   high: 3,
   medium: 2,
   low: 1,
+};
+
+export const INFLUENCE_CONFIG: Record<string, { bg: string; color: string; label: string }> = {
+  high:   { bg: "rgba(139,92,246,0.15)", color: "#8B5CF6", label: "СИЛЬНОЕ" },
+  medium: { bg: "rgba(59,130,246,0.12)", color: "#3B82F6", label: "СРЕДНЕЕ" },
+  low:    { bg: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.35)", label: "ФОНОВОЕ" },
+};
+
+export const SYSTEM_SHORT: Record<string, string> = {
+  western_astrology: "АСТРО",
+  numerology:        "ЧИСЛА",
+  human_design:      "HD",
+  tarot:             "ТАРО",
+  dsb:               "DSB",
 };

@@ -15,7 +15,7 @@ const MicIcon = ({ className }: { className?: string }) => (
     </svg>
 );
 
-const useVoiceRecorder = (userId: number | null, setInput: React.Dispatch<React.SetStateAction<string>>) => {
+const useVoiceRecorder = (userId: string | null, setInput: React.Dispatch<React.SetStateAction<string>>) => {
     const [isRecording, setIsRecording] = useState(false);
     const [isTranscribing, setIsTranscribing] = useState(false);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);

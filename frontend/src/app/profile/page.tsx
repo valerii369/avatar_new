@@ -280,7 +280,7 @@ function MainProfileView({ game, loadingGame, profile, setShowShop, setShowSubsc
     );
 }
 
-function SettingsView({ userId }: { userId: number }) {
+function SettingsView({ userId }: { userId: string }) {
     const [lang, setLang] = useState("RU");
     const { musicEnabled, sfxEnabled, toggleMusic, toggleSfx, play } = useAudio();
 
@@ -408,7 +408,7 @@ function SettingsView({ userId }: { userId: number }) {
     );
 }
 
-function ReferralView({ userId, referralCode }: { userId: number; referralCode: string }) {
+function ReferralView({ userId, referralCode }: { userId: string; referralCode: string }) {
     const botUsername = "avatarmatrixtest_bot";
     const refLink = `https://t.me/${botUsername}?start=${referralCode}`;
 
@@ -528,7 +528,7 @@ function StatTile({ label, value, color }: { label: string; value: string; color
 
 // ─── ShopModal ──────────────────────────────────────────────────────────────
 
-function ShopModal({ onClose, userId }: { onClose: () => void; userId: number }) {
+function ShopModal({ onClose, userId }: { onClose: () => void; userId: string }) {
     const { play } = useAudio();
     const { data: offers, isLoading } = useSWR("payment_offers", () => paymentsAPI.getOffers().then(res => res.data));
     const [buyingId, setBuyingId] = useState<string | null>(null);
@@ -608,7 +608,7 @@ function ShopModal({ onClose, userId }: { onClose: () => void; userId: number })
 
 // ─── SubscriptionModal ───────────────────────────────────────────────────────
 
-function SubscriptionModal({ onClose, userId }: { onClose: () => void; userId: number }) {
+function SubscriptionModal({ onClose, userId }: { onClose: () => void; userId: string }) {
     const { play } = useAudio();
     const [isBuying, setIsBuying] = useState(false);
 
