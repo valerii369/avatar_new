@@ -1,0 +1,86 @@
+
+> frontend@0.1.0 lint
+> eslint
+
+
+/Users/valeriiguro/Desktop/AVATARv2.0/frontend/src/app/assistant/page.tsx
+   75:12  warning  'isFirstTouch' is assigned a value but never used                                                                                                @typescript-eslint/no-unused-vars
+  111:8   warning  React Hook useEffect has missing dependencies: 'messages.length' and 'setAssistantMessages'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  188:11  warning  'particles' is assigned a value but never used                                                                                                   @typescript-eslint/no-unused-vars
+  293:33  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                  react/no-unescaped-entities
+  293:48  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                  react/no-unescaped-entities
+
+/Users/valeriiguro/Desktop/AVATARv2.0/frontend/src/app/diary/page.tsx
+   35:48  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  124:42  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/valeriiguro/Desktop/AVATARv2.0/frontend/src/app/onboarding/page.tsx
+   77:66  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+   88:32  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  106:48  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  126:25  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  145:21  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  251:8   warning  React Hook useEffect has a missing dependency: 'sendChat'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  294:21  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  362:13  warning  'userId' is assigned a value but never used                                                                  @typescript-eslint/no-unused-vars
+
+/Users/valeriiguro/Desktop/AVATARv2.0/frontend/src/app/page.tsx
+    2:31  warning  'useMemo' is defined but never used                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+   34:31  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   69:19  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   79:17  warning  'profile' is assigned a value but never used                                                                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+  160:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/valeriiguro/Desktop/AVATARv2.0/frontend/src/app/profile/page.tsx
+   20:11  warning  'router' is assigned a value but never used                                                                                                                                                                                                                                              @typescript-eslint/no-unused-vars
+   21:13  warning  'play' is assigned a value but never used                                                                                                                                                                                                                                                @typescript-eslint/no-unused-vars
+   32:39  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   58:25  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   71:42  warning  'loadingProfile' is assigned a value but never used                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+  115:29  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  213:47  warning  'profile' is defined but never used                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+  213:92  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  380:55  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  474:46  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  478:41  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  541:28  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  542:28  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  574:44  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  574:89  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  620:28  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  621:28  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  632:21  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+
+/Users/valeriiguro/Desktop/AVATARv2.0/frontend/src/app/your-world/page.tsx
+  33:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/valeriiguro/Desktop/AVATARv2.0/frontend/src/components/InsightDetailModal.tsx
+  243:9  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/valeriiguro/Desktop/AVATARv2.0/frontend/src/components/SacredGeometryLogo.tsx
+  3:10  warning  'motion' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/valeriiguro/Desktop/AVATARv2.0/frontend/src/lib/api.ts
+  17:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/valeriiguro/Desktop/AVATARv2.0/frontend/src/lib/hooks/useAudio.ts
+  21:20  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/valeriiguro/Desktop/AVATARv2.0/frontend/src/lib/hooks/useAudio.ts:21:20
+  19 |     useEffect(() => {
+  20 |         const saved = localStorage.getItem('avatar_audio_settings');
+> 21 |         if (saved) setState(JSON.parse(saved));
+     |                    ^^^^^^^^ Avoid calling setState() directly within an effect
+  22 |
+  23 |         const sounds: Record<SoundId, string> = {
+  24 |             click: '/audio/click.mp3',  react-hooks/set-state-in-effect
+  37:37  warning  The ref value 'audioRefs.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'audioRefs.current' to a variable inside the effect, and use that variable in the cleanup function                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      react-hooks/exhaustive-deps
+
+✖ 44 problems (28 errors, 16 warnings)
+
