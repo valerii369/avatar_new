@@ -90,5 +90,19 @@ CREATE TABLE uis_errors (
     user_id         TEXT NOT NULL,
     raw_response    TEXT NOT NULL,
     error_message   TEXT NOT NULL,
-    created_at      TIMESTAMPTZ DEFAULT NOW()
+-- 6. User Portraits (Summarized Identity)
+-- This table stores the high-level character summary for the "About" tab
+CREATE TABLE user_portraits (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id             TEXT NOT NULL,
+    core_identity       TEXT NOT NULL,
+    core_archetype      TEXT NOT NULL,
+    narrative_role      TEXT NOT NULL,
+    energy_type         TEXT NOT NULL,
+    current_dynamic     TEXT NOT NULL,
+    deep_profile_data   JSONB, -- contains strengths, shadows, etc.
+    created_at          TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Index for faster retrieval
+CREATE INDEX idx_user_portraits_user_id ON user_portraits(user_id);

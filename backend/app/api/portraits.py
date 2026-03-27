@@ -10,24 +10,26 @@ router = APIRouter()
 @router.get("/{user_id}")
 async def get_portrait(user_id: str):
     """
-    Fetches the synthesized 12-sphere insights from Supabase 
-    and returns them correctly grouped for the Frontend MasterHubView.
+    Fetches both the synthesized 12-sphere insights and the portrait summary
+    from Supabase for the Frontend MasterHubView.
     """
     try:
         supabase = get_supabase()
         
-        # Order by system, primary_sphere, then rank (ascending)
-        resp = supabase.table("user_insights").select("*").eq("user_id", user_id).order("system").order("primary_sphere").order("rank").execute()
+        # 1. Fetch 12-Sphere Insights
+        insights_resp = supabase.table("user_insights").select("*").eq("user_id", user_id).order("system").order("primary_sphere").order("rank").execute()
         
-        if not resp.data:
+        # 2. Fetch Portrait Summary
+        portrait_resp = supabase.table("user_portraits").select("*").eq("user_id", user_id).execute()
+        
+        if not insights_resp.data and not portrait_resp.data:
             return {"status": "pending", "message": "Portrait is still calculating or not requested"}
 
-        # Re-group by system and sphere to match expected frontend output structure
-        result = defaultdict(lambda: defaultdict(list))
-        for row in resp.data:
+        # Group insights by system and sphere
+        spheres = defaultdict(lambda: defaultdict(list))
+        for row in insights_resp.data:
             sys = row["system"]
             sphere = row["primary_sphere"]
-            # To output clean UniversalInsight objects without DB metadata:
             insight = {
                 "primary_sphere": row["primary_sphere"],
                 "influence_level": row["influence_level"],
@@ -42,9 +44,26 @@ async def get_portrait(user_id: str):
                 "triggers": row["triggers"],
                 "source": row.get("source")
             }
-            result[sys][str(sphere)].append(insight)
+            spheres[sys][str(sphere)].append(insight)
 
-        return result
+        # Construct final hub object
+        portrait_data = portrait_resp.data[0] if portrait_resp.data else None
+        
+        # We assume 'western_astrology' as the primary system for now
+        # matching the frontend expectation of a unified hub object
+        hub = {
+            "insights": spheres.get("western_astrology", {}),
+            "portrait_summary": {
+                "core_identity": portrait_data.get("core_identity") if portrait_data else "Инициация...",
+                "core_archetype": portrait_data.get("core_archetype") if portrait_data else "Странник",
+                "narrative_role": portrait_data.get("narrative_role") if portrait_data else "Искатель",
+                "energy_type": portrait_data.get("energy_type") if portrait_data else "Неопределена",
+                "current_dynamic": portrait_data.get("current_dynamic") if portrait_data else "Трансформация",
+            } if portrait_data else None,
+            "deep_profile_data": portrait_data.get("deep_profile_data") if portrait_data else None
+        }
+
+        return hub
     except Exception as e:
         logger.error(f"Error fetching portrait for {user_id}: {e}")
         raise HTTPException(status_code=500, detail="Error fetching portrait data")
