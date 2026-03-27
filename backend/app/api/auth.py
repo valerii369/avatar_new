@@ -284,6 +284,12 @@ async def initialize_onboarding_layer(req: ProfileRequest):
 async def calculate_profile(request: ProfileRequest, background_tasks: BackgroundTasks):
     """Triggers the DSB Pipeline as a background task."""
     try:
+        # Mark onboarding as started immediately so the frontend
+        # doesn't get redirected back to onboarding while pipeline runs
+        supabase = get_supabase()
+        supabase.table("users").update({"onboarding_done": True})\
+            .eq("id", request.user_id).execute()
+
         background_tasks.add_task(initialize_onboarding_layer, request)
         return {"status": "processing", "message": "DSB Pipeline initialized"}
     except Exception as e:
