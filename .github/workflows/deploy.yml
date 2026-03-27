@@ -1,0 +1,61 @@
+name: Deploy
+
+on:
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+jobs:
+  # ── Backend → Timeweb VPS (только develop) ─────────────────────────
+  deploy-backend:
+    name: Backend → Timeweb
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.TIMEWEB_HOST }}
+          username: root
+          key: ${{ secrets.TIMEWEB_SSH_KEY }}
+          script: |
+            set -e
+            DEPLOY_DIR=/root/avatar-new
+
+            cd $DEPLOY_DIR && git fetch origin && git reset --hard origin/develop
+            cd backend
+
+            if [ ! -d "venv" ]; then
+              python3 -m venv venv
+            fi
+
+            venv/bin/pip install -r requirements.txt -q
+            systemctl restart avatar-new-backend
+            echo "✅ Backend deployed"
+
+  # ── Frontend → Vercel ───────────────────────────────────────────────
+  deploy-frontend:
+    name: Frontend → Vercel
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Deploy to Vercel
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            vercel --token ${{ secrets.VERCEL_TOKEN }} --prod --yes
+          else
+            vercel --token ${{ secrets.VERCEL_TOKEN }} --yes
+          fi
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

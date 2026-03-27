@@ -39,7 +39,7 @@ async def chat_with_assistant(req: ChatRequest):
         
         # We use gpt-4o-mini as specified in AVATAR_ARCHITECTURE_v2.1.md
         resp = await openai_client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4.1-mini",
             messages=messages,
             temperature=0.7,
             max_tokens=2000

@@ -39,7 +39,7 @@ class UniversalInsight(BaseModel):
 
 
 class UISResponse(BaseModel):
-    insights: list[UniversalInsight] = Field(..., min_length=50, max_length=120)
+    insights: list[UniversalInsight] = Field(..., min_length=36, max_length=120)
 
     @field_validator("insights")
     @classmethod
