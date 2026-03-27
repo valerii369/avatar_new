@@ -1,0 +1,26 @@
+name: Deploy Backend to Timeweb
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - 'backend/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.TIMEWEB_HOST }}
+          username: root
+          key: ${{ secrets.TIMEWEB_SSH_KEY }}
+          script: |
+            cd /var/www/avatar
+            git pull origin develop
+            cd backend
+            venv/bin/pip install -r requirements.txt -q
+            sudo systemctl restart avatar
+            echo "✅ Backend deployed"
