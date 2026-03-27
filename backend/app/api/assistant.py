@@ -26,11 +26,22 @@ class ChatMessage(BaseModel):
     content: str
 
 class ChatRequest(BaseModel):
-    user_id:  str
-    messages: List[ChatMessage]
+    user_id:    str
+    # Array format (internal/future)
+    messages:   Optional[List[ChatMessage]] = None
+    # Single-message format (frontend api.ts)
+    message:    Optional[str] = None
+    session_id: Optional[int] = None
 
 class ChatResponse(BaseModel):
     assistant_reply: str
+    # Also expose as 'reply' for frontend compatibility
+    reply: Optional[str] = None
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        if self.reply is None:
+            self.reply = self.assistant_reply
 
 # ─── Memory helpers ────────────────────────────────────────────────────────────
 
@@ -148,10 +159,15 @@ async def chat_with_assistant(req: ChatRequest):
       4. Build messages array and call GPT-4o-mini
       5. Save user message + response to user_memory
     """
-    if not req.messages:
+    # Normalise: accept both single-message and messages-array formats
+    if req.message:
+        messages_list = [ChatMessage(role="user", content=req.message)]
+    elif req.messages:
+        messages_list = req.messages
+    else:
         raise HTTPException(status_code=400, detail="No messages provided")
 
-    user_text = req.messages[-1].content
+    user_text = messages_list[-1].content
 
     # 1. Embed user message
     try:
@@ -177,7 +193,7 @@ async def chat_with_assistant(req: ChatRequest):
         system_parts.append(f"\n\n[Релевантные воспоминания пользователя]\n{mem_block}")
 
     messages = [{"role": "system", "content": "\n".join(system_parts)}]
-    messages.extend({"role": m.role, "content": m.content} for m in req.messages)
+    messages.extend({"role": m.role, "content": m.content} for m in messages_list)
 
     # 5. Call GPT-4o-mini
     try:

@@ -1,9 +1,10 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
-    SUPABASE_URL: str = "http://localhost:8000"
+    SUPABASE_URL: str = "https://localhost"
     SUPABASE_KEY: str = "mock-key"
     OPENAI_API_KEY: str = "mock-key"
+    DATABASE_URL: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",

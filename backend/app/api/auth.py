@@ -16,8 +16,13 @@ router = APIRouter()
 # ─── Request / Response models ─────────────────────────────────────────────────
 
 class LoginRequest(BaseModel):
-    tg_id: int
-    first_name: str
+    # Telegram Mini App format
+    init_data:    Optional[str] = ""
+    is_dev:       Optional[bool] = False
+    test_user_id: Optional[int] = None
+    # Direct format (fallback)
+    tg_id:      Optional[int] = None
+    first_name: Optional[str] = ""
     last_name:  Optional[str] = ""
     username:   Optional[str] = ""
     photo_url:  Optional[str] = ""
@@ -89,56 +94,94 @@ async def geocode(request: GeocodeRequest):
 @router.post("/login")
 async def login(request: LoginRequest):
     """
-    Upserts user by tg_id in the 'users' table.
-    Returns full user profile from DB.
+    Handles both TMA (init_data/is_dev) and direct (tg_id) login formats.
+    Upserts user by tg_id in the 'users' table and returns full profile.
     """
     supabase = get_supabase()
 
+    # Resolve tg_id from request format
+    resolved_tg_id = request.tg_id
+    resolved_first_name = request.first_name or ""
+    resolved_last_name = request.last_name or ""
+    resolved_username = request.username or ""
+    resolved_photo_url = request.photo_url or ""
+
+    if resolved_tg_id is None:
+        if request.is_dev or request.test_user_id:
+            # Dev mode: use test_user_id or generate a fixed dev ID
+            resolved_tg_id = request.test_user_id or 999999999
+            resolved_first_name = resolved_first_name or "Dev User"
+        elif request.init_data:
+            # Production: parse TMA init_data
+            # Example: "user=%7B%22id%22%3A123%2C%22first_name%22%3A%22Alex%22%7D&..."
+            import urllib.parse
+            try:
+                params = dict(urllib.parse.parse_qsl(request.init_data))
+                import json as _json
+                user_data = _json.loads(params.get("user", "{}"))
+                resolved_tg_id = user_data.get("id", 0)
+                resolved_first_name = user_data.get("first_name", "")
+                resolved_last_name = user_data.get("last_name", "")
+                resolved_username = user_data.get("username", "")
+                resolved_photo_url = user_data.get("photo_url", "")
+            except Exception:
+                resolved_tg_id = 0
+
+        if not resolved_tg_id:
+            raise HTTPException(status_code=400, detail="Cannot resolve tg_id from request")
+
     try:
-        existing = supabase.table("users").select("*").eq("tg_id", str(request.tg_id)).execute()
+        existing = supabase.table("users").select("*").eq("tg_id", str(resolved_tg_id)).execute()
 
         if existing.data:
             user = existing.data[0]
-            # Update name/photo if changed
             supabase.table("users").update({
-                "first_name": request.first_name,
-                "last_name":  request.last_name,
-                "username":   request.username,
-                "photo_url":  request.photo_url,
-            }).eq("tg_id", str(request.tg_id)).execute()
+                "first_name": resolved_first_name,
+                "last_name":  resolved_last_name,
+                "username":   resolved_username,
+                "photo_url":  resolved_photo_url,
+            }).eq("tg_id", str(resolved_tg_id)).execute()
         else:
-            defaults = _default_user_fields()
             new_user = {
-                "tg_id":      str(request.tg_id),
-                "first_name": request.first_name,
-                "last_name":  request.last_name,
-                "username":   request.username,
-                "photo_url":  request.photo_url,
-                **defaults,
+                "tg_id":      str(resolved_tg_id),
+                "first_name": resolved_first_name,
+                "last_name":  resolved_last_name,
+                "username":   resolved_username,
+                "photo_url":  resolved_photo_url,
+                **_default_user_fields(),
             }
             res = supabase.table("users").insert(new_user).execute()
             user = res.data[0] if res.data else new_user
 
-        return {
-            "user_id":        user.get("id") or user.get("tg_id"),
-            "tg_id":          request.tg_id,
-            "first_name":     user.get("first_name", request.first_name),
-            "token":          f"tg_{request.tg_id}",   # JWT / Supabase token в проде
-            "energy":         user.get("energy", 100),
-            "streak":         user.get("streak", 0),
-            "evolution_level": user.get("evolution_level", 1),
-            "title":          user.get("title", "Новичок"),
-            "onboarding_done": user.get("onboarding_done", False),
-            "xp":             user.get("xp", 0),
-            "xp_current":     user.get("xp_current", 0),
-            "xp_next":        user.get("xp_next", 1000),
-            "referral_code":  user.get("referral_code", ""),
-            "photo_url":      user.get("photo_url", ""),
-        }
+        return _build_login_response(user, resolved_tg_id, resolved_first_name)
 
     except Exception as e:
         logger.error(f"Login failed: {e}")
+        # Dev fallback: return mock user if DB tables not set up yet
+        if request.is_dev or request.test_user_id:
+            logger.warning("Returning mock login response (DB not ready)")
+            mock = {**_default_user_fields(), "first_name": resolved_first_name or "Dev User"}
+            return _build_login_response(mock, resolved_tg_id, resolved_first_name or "Dev User")
         raise HTTPException(status_code=500, detail="Login failed")
+
+
+def _build_login_response(user: dict, tg_id: int, first_name: str) -> dict:
+    return {
+        "user_id":         user.get("id") or str(tg_id),
+        "tg_id":           tg_id,
+        "first_name":      user.get("first_name", first_name),
+        "token":           f"tg_{tg_id}",
+        "energy":          user.get("energy", 100),
+        "streak":          user.get("streak", 0),
+        "evolution_level": user.get("evolution_level", 1),
+        "title":           user.get("title", "Новичок"),
+        "onboarding_done": user.get("onboarding_done", False),
+        "xp":              user.get("xp", 0),
+        "xp_current":      user.get("xp_current", 0),
+        "xp_next":         user.get("xp_next", 1000),
+        "referral_code":   user.get("referral_code", ""),
+        "photo_url":       user.get("photo_url", ""),
+    }
 
 # ─── /profile (GET) ───────────────────────────────────────────────────────────
 

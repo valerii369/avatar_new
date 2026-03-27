@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Setup ephemeris files path for pyswisseph
-    import requests
     import os
     import swisseph as swe
     

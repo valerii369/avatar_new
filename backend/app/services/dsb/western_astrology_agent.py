@@ -178,12 +178,41 @@ async def parse_and_validate(raw: str) -> UISResponse:
         data = {"insights": data}
     return UISResponse(**data)
 
+def _slim_chart_for_prompt(chart: dict) -> dict:
+    """Reduce chart payload size: keep top-15 aspects, strip raw longitudes."""
+    planets_slim = {
+        name: {
+            "sign":           p["sign"],
+            "house":          p["house"],
+            "degree_in_sign": p["degree_in_sign"],
+            "retrograde":     p["retrograde"],
+            "dignity_score":  p["dignity_score"],
+        }
+        for name, p in chart.get("planets", {}).items()
+    }
+    aspects_top = sorted(
+        chart.get("aspects", []),
+        key=lambda a: a.get("influence_weight", 0),
+        reverse=True
+    )[:15]
+    return {
+        "planets":         planets_slim,
+        "houses":          chart.get("houses", {}),
+        "angles":          chart.get("angles", {}),
+        "aspects":         aspects_top,
+        "aspect_patterns": chart.get("aspect_patterns", []),
+        "stelliums":       chart.get("stelliums", []),
+        "critical_degrees": chart.get("critical_degrees", []),
+    }
+
+
 async def generate_insights(chart: dict, attempt: int = 0) -> UISResponse:
     queries = build_queries(chart)
     context_chunks = await retrieve_context(queries)
 
     temp = 0.4 if attempt == 0 else 0.2
-    
+    slim_chart = _slim_chart_for_prompt(chart)
+
     try:
         response = await openai_client.chat.completions.create(
             model="gpt-4o",
@@ -191,7 +220,7 @@ async def generate_insights(chart: dict, attempt: int = 0) -> UISResponse:
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": json.dumps({
-                    "chart": chart,
+                    "chart": slim_chart,
                     "book_context": [
                         {"text": c["text"], "source": c["source"]}
                         for c in context_chunks
@@ -199,7 +228,7 @@ async def generate_insights(chart: dict, attempt: int = 0) -> UISResponse:
                 }, ensure_ascii=False)}
             ],
             temperature=temp,
-            max_tokens=8000
+            max_tokens=16000,
         )
         raw = response.choices[0].message.content
         return await parse_and_validate(raw)
