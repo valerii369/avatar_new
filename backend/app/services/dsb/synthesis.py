@@ -89,40 +89,46 @@ async def generate_portrait_summary(user_id: str, synthesized_data: dict) -> dic
         }
 
 async def save_to_supabase(user_id: str, result: dict, portrait: dict = None):
-    """Saves the fully synthesized insights and optional portrait summary to Supabase"""
+    """
+    Saves synthesized insights and optional portrait summary to Supabase.
+    Only deletes/replaces the specific spheres present in result (partial-safe).
+    """
     supabase = get_supabase()
     rows = []
-    
+
     for system, spheres in result.items():
         for sphere_id, insights in spheres.items():
             for rank, ins in enumerate(insights):
                 rows.append({
-                    "user_id":            user_id,
-                    "system":             system,
-                    "primary_sphere":     sphere_id,
-                    "rank":               rank,          # позиция внутри сферы
+                    "user_id":        user_id,
+                    "system":         system,
+                    "primary_sphere": sphere_id,
+                    "rank":           rank,
                     **ins.model_dump()
                 })
-                
+
     try:
-        # We delete existing insights for this user/system combo
-        # so recalculations are clean rewrites.
-        systems = list(result.keys())
-        for sys in systems:
-             supabase.table("user_insights").delete().eq("user_id", user_id).eq("system", sys).execute()
+        # Delete only the spheres we are about to write (partial-safe)
+        for system, spheres in result.items():
+            for sphere_id in spheres.keys():
+                supabase.table("user_insights")\
+                    .delete()\
+                    .eq("user_id", user_id)\
+                    .eq("system", system)\
+                    .eq("primary_sphere", sphere_id)\
+                    .execute()
 
-        # Insert new rows
-        supabase.table("user_insights").insert(rows).execute()
+        if rows:
+            supabase.table("user_insights").insert(rows).execute()
 
-        # Handle Portrait Summary
         if portrait:
             portrait_row = {
-                "user_id": user_id,
-                "core_identity": portrait.get("core_identity", ""),
-                "core_archetype": portrait.get("core_archetype", ""),
-                "narrative_role": portrait.get("narrative_role", ""),
-                "energy_type": portrait.get("energy_type", ""),
-                "current_dynamic": portrait.get("current_dynamic", ""),
+                "user_id":          user_id,
+                "core_identity":    portrait.get("core_identity", ""),
+                "core_archetype":   portrait.get("core_archetype", ""),
+                "narrative_role":   portrait.get("narrative_role", ""),
+                "energy_type":      portrait.get("energy_type", ""),
+                "current_dynamic":  portrait.get("current_dynamic", ""),
                 "deep_profile_data": {"polarities": portrait.get("polarities", {})}
             }
             supabase.table("user_portraits").delete().eq("user_id", user_id).execute()

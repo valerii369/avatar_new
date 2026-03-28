@@ -2,11 +2,12 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import Optional
 from app.services.dsb.natal_chart import calculate_chart
-from app.services.dsb.western_astrology_agent import generate_insights
-from app.services.dsb.synthesis import synthesize, save_to_supabase, generate_portrait_summary
+from app.services.dsb.sphere_agent import compute_sphere
+from app.services.dsb.synthesis import generate_portrait_summary, save_to_supabase
 from app.core.db import get_supabase
 from app.core.config import settings
 import logging
+import asyncio
 import httpx
 
 logger = logging.getLogger(__name__)
@@ -230,9 +231,16 @@ async def get_profile(user_id: str):
 
 # ─── DSB Pipeline background task ────────────────────────────────────────────
 
+FREE_SPHERES = [1, 10]  # Личность + Карьера — вычисляются при онбординге бесплатно
+
+
 async def initialize_onboarding_layer(req: ProfileRequest):
-    """Full 3-layer DSB Pipeline as background task."""
-    logger.info(f"Starting DSB Pipeline for user: {req.user_id}")
+    """
+    DSB Pipeline — Sphere-On-Demand edition.
+    При онбординге вычисляет только FREE_SPHERES (1 и 10) параллельно.
+    Остальные 10 сфер вычисляются по требованию (платно).
+    """
+    logger.info(f"Starting DSB Pipeline (free spheres {FREE_SPHERES}) for user: {req.user_id}")
     supabase = get_supabase()
 
     try:
@@ -247,30 +255,38 @@ async def initialize_onboarding_layer(req: ProfileRequest):
         supabase.table("user_birth_data").delete().eq("user_id", req.user_id).execute()
         supabase.table("user_birth_data").insert(birth_row).execute()
 
-        # Layer 1 — Astro chart
+        # Layer 1 — Natal chart (pyswisseph, no LLM)
         astro_chart = await calculate_chart(req.birth_date, req.birth_time, req.birth_place)
 
-        # Layer 2 — RAG + GPT-4o insights
-        uis_response = await generate_insights(astro_chart)
+        # Layer 2 — Compute FREE_SPHERES in parallel (GPT-4o-mini per sphere)
+        sphere_results = await asyncio.gather(
+            *[compute_sphere(s, astro_chart, req.user_id, save=True) for s in FREE_SPHERES],
+            return_exceptions=True,
+        )
 
-        # Layer 3 — Synthesis
-        synthesized_data = synthesize(uis_response.insights)
+        # Build partial synthesized_data for portrait summary
+        from collections import defaultdict
+        level_order = {"high": 0, "medium": 1, "low": 2}
+        synthesized_data: dict = {"western_astrology": defaultdict(list)}
+        for sphere_num, result in zip(FREE_SPHERES, sphere_results):
+            if isinstance(result, Exception):
+                logger.error(f"Sphere {sphere_num} failed: {result}")
+                continue
+            sorted_insights = sorted(result, key=lambda x: (level_order[x.influence_level], -x.weight))
+            synthesized_data["western_astrology"][sphere_num] = sorted_insights
 
-        # Layer 4 — Portrait summary
+        # Layer 3 — Portrait summary from free spheres
         portrait = await generate_portrait_summary(req.user_id, synthesized_data)
-
-        # Save everything
         await save_to_supabase(req.user_id, synthesized_data, portrait)
 
         # Mark onboarding done
         supabase.table("users").update({"onboarding_done": True})\
             .eq("id", req.user_id).execute()
 
-        logger.info(f"DSB Pipeline completed for user: {req.user_id}")
+        logger.info(f"DSB Pipeline completed (free spheres) for user: {req.user_id}")
 
     except Exception as e:
         logger.error(f"DSB Pipeline failed for user {req.user_id}: {e}")
-        # Log to uis_errors
         try:
             supabase.table("uis_errors").insert({
                 "user_id":       req.user_id,
