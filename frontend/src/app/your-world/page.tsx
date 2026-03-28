@@ -2,9 +2,10 @@
 
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Lock } from "lucide-react";
 import useSWR from "swr";
 import { useUserStore, useInsightsStore, type Insight } from "@/lib/store";
-import { masterHubAPI } from "@/lib/api";
+import { masterHubAPI, spheresAPI } from "@/lib/api";
 import { SPHERES, SPHERE_BY_ID, INFLUENCE_SORT } from "@/lib/constants";
 import SphereFilter from "@/components/SphereFilter";
 import InsightCard from "@/components/InsightCard";
@@ -13,6 +14,186 @@ import { SkeletonCard } from "@/components/Skeleton";
 import BottomNav from "@/components/BottomNav";
 
 type Tab = "portrait" | "breakdown" | "sides";
+
+// ─── Sphere Summary Card ──────────────────────────────────────────────────────
+function SphereSummaryCard({ summary, color }: { summary: string; color: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      style={{
+        padding: 16, borderRadius: 16, marginBottom: 14,
+        background: `linear-gradient(135deg, ${color}12, ${color}06)`,
+        border: `1px solid ${color}25`,
+        position: "relative", overflow: "hidden",
+      }}
+    >
+      <div style={{
+        position: "absolute", top: -16, right: -16,
+        width: 80, height: 80, borderRadius: "50%",
+        background: `${color}12`, filter: "blur(20px)",
+      }} />
+      <div style={{
+        fontSize: 8, fontWeight: 800, letterSpacing: "0.18em",
+        color: `${color}99`, textTransform: "uppercase", marginBottom: 8,
+      }}>
+        ● Суть сферы
+      </div>
+      <p style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", lineHeight: 1.65, margin: 0 }}>
+        {summary}
+      </p>
+    </motion.div>
+  );
+}
+
+// ─── Cross-Sphere Links ───────────────────────────────────────────────────────
+function CrossSphereLinks({ links, color }: { links: string[]; color: string }) {
+  if (!links?.length) return null;
+  return (
+    <div style={{
+      marginTop: 14, padding: "12px 14px", borderRadius: 14,
+      background: "rgba(255,255,255,0.025)",
+      border: "1px solid rgba(255,255,255,0.06)",
+    }}>
+      <div style={{
+        fontSize: 8, fontWeight: 800, letterSpacing: "0.15em",
+        color: `${color}80`, textTransform: "uppercase", marginBottom: 8,
+      }}>
+        ◈ Связи с другими сферами
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {links.map((link, i) => (
+          <p key={i} style={{
+            fontSize: 11, color: "rgba(255,255,255,0.55)",
+            lineHeight: 1.5, margin: 0, display: "flex", gap: 6,
+          }}>
+            <span style={{ color: `${color}60`, flexShrink: 0 }}>→</span>
+            {link}
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Locked Sphere Card ───────────────────────────────────────────────────────
+function LockedSphereCard({
+  sphereId, teaser, onUnlock, unlocking,
+}: {
+  sphereId: number;
+  teaser: string;
+  onUnlock: (sphereId: number) => void;
+  unlocking: boolean;
+}) {
+  const sphere = SPHERE_BY_ID[sphereId];
+  if (!sphere) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      style={{
+        borderRadius: 20, overflow: "hidden",
+        border: `1px solid ${sphere.color}20`,
+        position: "relative",
+      }}
+    >
+      {/* Header */}
+      <div style={{
+        padding: "14px 16px",
+        background: `${sphere.color}0a`,
+        borderBottom: `1px solid ${sphere.color}15`,
+        display: "flex", alignItems: "center", gap: 10,
+      }}>
+        <div style={{
+          width: 30, height: 30, borderRadius: 10,
+          background: `${sphere.color}18`, border: `1px solid ${sphere.color}28`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <sphere.icon size={15} style={{ color: sphere.color }} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
+            {sphere.name}
+          </h3>
+          <span style={{ fontSize: 10, color: "var(--text-muted)" }}>{sphere.subtitle}</span>
+        </div>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 4,
+          padding: "4px 10px", borderRadius: 8,
+          background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)",
+        }}>
+          <Lock size={10} style={{ color: "rgba(255,255,255,0.3)" }} />
+          <span style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", fontWeight: 600 }}>ЗАКРЫТО</span>
+        </div>
+      </div>
+
+      {/* Teaser + blur overlay */}
+      <div style={{ padding: 16, position: "relative" }}>
+        {/* Blurred fake cards background */}
+        <div style={{ filter: "blur(4px)", opacity: 0.3, pointerEvents: "none", marginBottom: 12 }}>
+          {[...Array(3)].map((_, i) => (
+            <div key={i} style={{
+              height: 52, borderRadius: 12, marginBottom: 8,
+              background: `${sphere.color}15`,
+              border: `1px solid ${sphere.color}20`,
+            }} />
+          ))}
+        </div>
+
+        {/* Teaser overlay */}
+        <div style={{
+          position: "absolute", top: 16, left: 16, right: 16,
+          padding: 14, borderRadius: 14,
+          background: "rgba(10,8,20,0.88)",
+          border: `1px solid ${sphere.color}30`,
+          backdropFilter: "blur(8px)",
+        }}>
+          {teaser ? (
+            <>
+              <div style={{
+                fontSize: 8, fontWeight: 800, letterSpacing: "0.15em",
+                color: `${sphere.color}90`, textTransform: "uppercase", marginBottom: 7,
+              }}>
+                ● Персональный разбор
+              </div>
+              <p style={{
+                fontSize: 12, color: "rgba(255,255,255,0.75)",
+                lineHeight: 1.6, margin: 0, marginBottom: 12,
+              }}>
+                {teaser}
+              </p>
+            </>
+          ) : (
+            <p style={{
+              fontSize: 12, color: "rgba(255,255,255,0.5)",
+              lineHeight: 1.5, margin: 0, marginBottom: 12, fontStyle: "italic",
+            }}>
+              Глубокий разбор сферы по твоей натальной карте...
+            </p>
+          )}
+
+          <button
+            onClick={() => onUnlock(sphereId)}
+            disabled={unlocking}
+            style={{
+              width: "100%", padding: "10px 0", borderRadius: 10,
+              background: unlocking
+                ? "rgba(255,255,255,0.06)"
+                : `linear-gradient(135deg, ${sphere.color}cc, ${sphere.color}88)`,
+              border: "none", cursor: unlocking ? "not-allowed" : "pointer",
+              fontSize: 12, fontWeight: 700,
+              color: unlocking ? "rgba(255,255,255,0.3)" : "#fff",
+              transition: "all 0.2s",
+            }}
+          >
+            {unlocking ? "Открываем..." : "Разблокировать сферу"}
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
 
 // ─── Portrait Tab ─────────────────────────────────────────────────────────────
 function PortraitTab({ hub }: { hub: any }) {
@@ -31,7 +212,9 @@ function PortraitTab({ hub }: { hub: any }) {
   }
 
   const p = hub.portrait_summary;
-  const polarities = hub.deep_profile_data?.polarities;
+  const polarities = hub.polarities;
+  const access = hub.sphere_access;
+  const unlocked = access?.unlocked?.length ?? 0;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingBottom: 16 }}>
@@ -77,6 +260,44 @@ function PortraitTab({ hub }: { hub: any }) {
           ))}
         </div>
       </div>
+
+      {/* Sphere progress */}
+      {access && (
+        <div style={{
+          padding: 16, borderRadius: 18,
+          background: "rgba(255,255,255,0.03)",
+          border: "1px solid rgba(255,255,255,0.06)",
+        }}>
+          <div style={{
+            display: "flex", alignItems: "center",
+            justifyContent: "space-between", marginBottom: 10,
+          }}>
+            <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.15em", color: "rgba(255,255,255,0.3)", textTransform: "uppercase" }}>
+              Прогресс разбора
+            </span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#8B5CF6" }}>
+              {unlocked} / 12 сфер
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: 4 }}>
+            {SPHERES.map(s => {
+              const isUnlocked = access.unlocked?.includes(s.id);
+              return (
+                <div key={s.id} style={{
+                  flex: 1, height: 4, borderRadius: 2,
+                  background: isUnlocked ? s.color : "rgba(255,255,255,0.07)",
+                  transition: "background 0.3s",
+                }} />
+              );
+            })}
+          </div>
+          <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", margin: "8px 0 0" }}>
+            {access.locked?.length > 0
+              ? `Ещё ${access.locked.length} сфер доступно для разблокировки`
+              : "Все сферы открыты"}
+          </p>
+        </div>
+      )}
 
       {/* Strengths / Shadows */}
       {polarities && (
@@ -128,7 +349,7 @@ function SphereDistribution({ hub }: { hub: any }) {
   return (
     <div style={{ padding: 16, borderRadius: 18, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
       <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.15em", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", marginBottom: 12 }}>
-        Активные сферы
+        Открытые сферы
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
         {activeSpheres.map(s => (
@@ -149,12 +370,20 @@ function SphereDistribution({ hub }: { hub: any }) {
 
 // ─── Breakdown Tab ────────────────────────────────────────────────────────────
 function BreakdownTab({
-  insights, loading, activeSphere, setActiveSphere, onSelect,
+  hub, insights, loading, activeSphere, setActiveSphere, onSelect, onUnlock, unlockingId,
 }: {
-  insights: Insight[]; loading: boolean;
-  activeSphere: number | null; setActiveSphere: (id: number | null) => void;
+  hub: any;
+  insights: Insight[];
+  loading: boolean;
+  activeSphere: number | null;
+  setActiveSphere: (id: number | null) => void;
   onSelect: (i: Insight) => void;
+  onUnlock: (sphereId: number) => void;
+  unlockingId: number | null;
 }) {
+  const lockedSpheres: { sphere_num: number; teaser: string }[] = hub?.locked_spheres ?? [];
+  const sphereMeta: Record<string, { summary?: string; cross_sphere_links?: string[] }> = hub?.sphere_meta ?? {};
+
   const filteredInsights = useMemo(() => {
     let result = insights;
     if (activeSphere !== null) result = result.filter(i => i.primary_sphere === activeSphere);
@@ -163,6 +392,10 @@ function BreakdownTab({
       return (INFLUENCE_SORT[b.influence_level] || 0) - (INFLUENCE_SORT[a.influence_level] || 0);
     });
   }, [insights, activeSphere]);
+
+  const openSphereIds = useMemo(() => {
+    return new Set(insights.map(i => i.primary_sphere));
+  }, [insights]);
 
   const groupedInsights = useMemo(() => {
     if (activeSphere !== null) return [{ sphereId: activeSphere, items: filteredInsights }];
@@ -179,11 +412,14 @@ function BreakdownTab({
     return groups;
   }, [filteredInsights, activeSphere]);
 
+  const showLocked = activeSphere === null;
+
   return (
     <>
       <div style={{ marginBottom: 12 }}>
         <SphereFilter activeSphere={activeSphere} onSelect={setActiveSphere} />
       </div>
+
       {loading && insights.length === 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
@@ -195,7 +431,7 @@ function BreakdownTab({
             Твой мир формируется
           </h3>
           <p style={{ fontSize: 13, color: "var(--text-muted)", maxWidth: 260, lineHeight: 1.5 }}>
-            Пройди онбординг для персонального расчёта по 12 сферам
+            Пройди онбординг для персонального расчёта
           </p>
         </div>
       ) : (
@@ -205,8 +441,10 @@ function BreakdownTab({
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             style={{ display: "flex", flexDirection: "column", gap: 20 }}
           >
+            {/* Open spheres with full content */}
             {groupedInsights.map(group => {
               const sphere = SPHERE_BY_ID[group.sphereId];
+              const meta = sphereMeta[String(group.sphereId)];
               return (
                 <div key={group.sphereId}>
                   {activeSphere === null && (
@@ -228,6 +466,12 @@ function BreakdownTab({
                       </div>
                     </div>
                   )}
+
+                  {/* Sphere summary (dense mode) */}
+                  {meta?.summary && (
+                    <SphereSummaryCard summary={meta.summary} color={sphere?.color ?? "#8B5CF6"} />
+                  )}
+
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     {group.items.map((insight, idx) => (
                       <InsightCard
@@ -237,9 +481,50 @@ function BreakdownTab({
                       />
                     ))}
                   </div>
+
+                  {/* Cross-sphere links (dense mode) */}
+                  {meta?.cross_sphere_links && meta.cross_sphere_links.length > 0 && (
+                    <CrossSphereLinks
+                      links={meta.cross_sphere_links}
+                      color={sphere?.color ?? "#8B5CF6"}
+                    />
+                  )}
                 </div>
               );
             })}
+
+            {/* Locked spheres */}
+            {showLocked && lockedSpheres.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 10, paddingLeft: 2,
+                }}>
+                  <div style={{
+                    flex: 1, height: 1,
+                    background: "linear-gradient(90deg, rgba(255,255,255,0.08), transparent)",
+                  }} />
+                  <span style={{
+                    fontSize: 9, fontWeight: 800, letterSpacing: "0.2em",
+                    color: "rgba(255,255,255,0.2)", textTransform: "uppercase", whiteSpace: "nowrap",
+                  }}>
+                    🔒 {lockedSpheres.length} сфер закрыто
+                  </span>
+                  <div style={{
+                    flex: 1, height: 1,
+                    background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08))",
+                  }} />
+                </div>
+                {lockedSpheres.map(({ sphere_num, teaser }) => (
+                  <LockedSphereCard
+                    key={sphere_num}
+                    sphereId={sphere_num}
+                    teaser={teaser}
+                    onUnlock={onUnlock}
+                    unlocking={unlockingId === sphere_num}
+                  />
+                ))}
+              </div>
+            )}
           </motion.div>
         </AnimatePresence>
       )}
@@ -271,7 +556,7 @@ function SidesTab({ insights }: { insights: Insight[] }) {
           Стороны не определены
         </h3>
         <p style={{ fontSize: 13, color: "var(--text-muted)", maxWidth: 260, lineHeight: 1.5 }}>
-          Пройди онбординг, чтобы раскрыть свет и тень каждой сферы жизни
+          Пройди онбординг, чтобы раскрыть свет и тень каждой сферы
         </p>
       </div>
     );
@@ -298,7 +583,6 @@ function SidesTab({ insights }: { insights: Insight[] }) {
                 borderRadius: 20, overflow: "hidden",
                 border: `1px solid ${sphere?.color || "#fff"}18`,
               }}>
-                {/* Sphere header */}
                 <div style={{
                   padding: "12px 16px",
                   background: `${sphere?.color || "#fff"}0d`,
@@ -324,7 +608,6 @@ function SidesTab({ insights }: { insights: Insight[] }) {
                   </div>
                 </div>
 
-                {/* Light + Shadow grid */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
                   <div style={{ padding: 14, borderRight: "1px solid rgba(16,185,129,0.1)", background: "rgba(16,185,129,0.03)" }}>
                     <div style={{
@@ -332,7 +615,7 @@ function SidesTab({ insights }: { insights: Insight[] }) {
                       textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 10,
                     }}>✦ Свет</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {lights.slice(0, 3).map((text, i) => (
+                      {lights.slice(0, 4).map((text, i) => (
                         <p key={i} style={{
                           fontSize: 11, color: "rgba(255,255,255,0.65)",
                           lineHeight: 1.4, fontWeight: 300, margin: 0,
@@ -350,7 +633,7 @@ function SidesTab({ insights }: { insights: Insight[] }) {
                       textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 10,
                     }}>◈ Тень</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {shadows.slice(0, 3).map((text, i) => (
+                      {shadows.slice(0, 4).map((text, i) => (
                         <p key={i} style={{
                           fontSize: 11, color: "rgba(255,255,255,0.55)",
                           lineHeight: 1.4, fontWeight: 300, margin: 0,
@@ -378,8 +661,9 @@ export default function YourWorldPage() {
   const { insights, setInsights, activeSphere, setActiveSphere } = useInsightsStore();
   const [activeTab, setActiveTab] = useState<Tab>("portrait");
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
+  const [unlockingId, setUnlockingId] = useState<number | null>(null);
 
-  const { data: hub, isValidating: loading } = useSWR(
+  const { data: hub, isValidating: loading, mutate } = useSWR(
     userId ? ["master-hub", userId] : null,
     async () => {
       const res = await masterHubAPI.get(userId!);
@@ -409,6 +693,25 @@ export default function YourWorldPage() {
     { revalidateOnFocus: false }
   );
 
+  const handleUnlock = async (sphereId: number) => {
+    if (!userId || unlockingId) return;
+    setUnlockingId(sphereId);
+    try {
+      await spheresAPI.unlock(userId, sphereId);
+      // Poll until sphere insights appear
+      let attempts = 0;
+      const poll = setInterval(async () => {
+        attempts++;
+        await mutate();
+        if (attempts >= 20) clearInterval(poll);
+      }, 3000);
+    } catch (e) {
+      console.error("Unlock failed", e);
+    } finally {
+      setUnlockingId(null);
+    }
+  };
+
   const totalCount = insights.length;
   const sphereCount = new Set(insights.map(i => i.primary_sphere)).size;
 
@@ -429,7 +732,9 @@ export default function YourWorldPage() {
           WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
         }}>Твой мир</h1>
         <p style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 400, margin: 0 }}>
-          {totalCount > 0 ? `${totalCount} инсайтов по ${sphereCount} сферам` : "Полный расчёт по 12 сферам жизни"}
+          {totalCount > 0
+            ? `${totalCount} инсайтов по ${sphereCount} из 12 сфер`
+            : "Полный расчёт по 12 сферам жизни"}
         </p>
       </div>
 
@@ -462,12 +767,17 @@ export default function YourWorldPage() {
             initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
           >
-            {activeTab === "portrait"  && <PortraitTab hub={hub} />}
+            {activeTab === "portrait" && <PortraitTab hub={hub} />}
             {activeTab === "breakdown" && (
               <BreakdownTab
-                insights={insights} loading={loading}
-                activeSphere={activeSphere} setActiveSphere={setActiveSphere}
+                hub={hub}
+                insights={insights}
+                loading={loading}
+                activeSphere={activeSphere}
+                setActiveSphere={setActiveSphere}
                 onSelect={setSelectedInsight}
+                onUnlock={handleUnlock}
+                unlockingId={unlockingId}
               />
             )}
             {activeTab === "sides" && <SidesTab insights={insights} />}

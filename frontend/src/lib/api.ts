@@ -61,6 +61,12 @@ export const gameAPI = {
   getState: (userId: string) => api.get(`/api/game/state?user_id=${userId}`),
 };
 
+export const spheresAPI = {
+  getAccess: (userId: string) => api.get(`/api/spheres/access/${userId}`),
+  unlock: (userId: string, sphereNum: number, paymentId?: string) =>
+    api.post(`/api/spheres/${sphereNum}/unlock`, { user_id: userId, payment_id: paymentId }),
+};
+
 export const paymentsAPI = {
   getOffers: () => api.get("/api/payments/offers"),
   createInvoice: (userId: string, offerId: string) =>
