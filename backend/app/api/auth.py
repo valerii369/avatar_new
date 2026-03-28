@@ -61,7 +61,11 @@ async def geocode(request: GeocodeRequest):
 
     cached = supabase.table("geocode_cache").select("*").eq("city_name", request.place).execute()
     if cached.data:
-        return cached.data[0]
+        row = cached.data[0]
+        # Normalize: add frontend-expected aliases
+        row["place"]   = row.get("city_name", request.place)
+        row["tz_name"] = row.get("timezone", "UTC")
+        return row
 
     try:
         async with httpx.AsyncClient() as client:
@@ -80,9 +84,11 @@ async def geocode(request: GeocodeRequest):
             lon = float(data[0]["lon"])
             tz  = tf.timezone_at(lat=lat, lng=lon) or "UTC"
 
-            result = {"city_name": request.place, "lat": lat, "lon": lon, "timezone": tz}
-            supabase.table("geocode_cache").insert(result).execute()
-            return result
+            # Store in DB with original column names
+            db_row = {"city_name": request.place, "lat": lat, "lon": lon, "timezone": tz}
+            supabase.table("geocode_cache").insert(db_row).execute()
+            # Return with frontend-expected aliases
+            return {**db_row, "place": request.place, "tz_name": tz}
     except HTTPException:
         raise
     except Exception as e:
