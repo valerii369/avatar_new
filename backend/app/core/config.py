@@ -5,6 +5,8 @@ class Settings(BaseSettings):
     SUPABASE_KEY: str = "mock-key"
     OPENAI_API_KEY: str = "mock-key"
     DATABASE_URL: str = ""
+    TELEGRAM_BOT_TOKEN: str = ""
+    MINI_APP_URL: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",
