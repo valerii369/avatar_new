@@ -52,7 +52,7 @@ async def get_portrait(user_id: str):
         # We assume 'western_astrology' as the primary system for now
         # matching the frontend expectation of a unified hub object
         hub = {
-            "insights": spheres.get("western_astrology", {}),
+            "insights": {sys: dict(sph) for sys, sph in spheres.items()},
             "portrait_summary": {
                 "core_identity": portrait_data.get("core_identity") if portrait_data else "Инициация...",
                 "core_archetype": portrait_data.get("core_archetype") if portrait_data else "Странник",
