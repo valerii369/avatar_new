@@ -131,7 +131,7 @@ async def login(request: LoginRequest):
             raise HTTPException(status_code=400, detail="Cannot resolve tg_id from request")
 
     try:
-        existing = supabase.table("users").select("*").eq("tg_id", str(resolved_tg_id)).execute()
+        existing = supabase.table("users").select("*").eq("tg_id", resolved_tg_id).execute()
 
         if existing.data:
             user = existing.data[0]
@@ -140,10 +140,10 @@ async def login(request: LoginRequest):
                 "last_name":  resolved_last_name,
                 "username":   resolved_username,
                 "photo_url":  resolved_photo_url,
-            }).eq("tg_id", str(resolved_tg_id)).execute()
+            }).eq("tg_id", resolved_tg_id).execute()
         else:
             new_user = {
-                "tg_id":      str(resolved_tg_id),
+                "tg_id":      resolved_tg_id,
                 "first_name": resolved_first_name,
                 "last_name":  resolved_last_name,
                 "username":   resolved_username,
@@ -151,17 +151,14 @@ async def login(request: LoginRequest):
                 **_default_user_fields(),
             }
             res = supabase.table("users").insert(new_user).execute()
-            user = res.data[0] if res.data else new_user
+            if not res.data:
+                raise Exception("Insert returned no data")
+            user = res.data[0]
 
         return _build_login_response(user, resolved_tg_id, resolved_first_name)
 
     except Exception as e:
         logger.error(f"Login failed: {e}")
-        # Dev fallback: return mock user if DB tables not set up yet
-        if request.is_dev or request.test_user_id:
-            logger.warning("Returning mock login response (DB not ready)")
-            mock = {**_default_user_fields(), "first_name": resolved_first_name or "Dev User"}
-            return _build_login_response(mock, resolved_tg_id, resolved_first_name or "Dev User")
         raise HTTPException(status_code=500, detail="Login failed")
 
 
@@ -283,13 +280,26 @@ async def initialize_onboarding_layer(req: ProfileRequest):
 @router.post("/calculate")
 async def calculate_profile(request: ProfileRequest, background_tasks: BackgroundTasks):
     """Triggers the DSB Pipeline as a background task."""
+    supabase = get_supabase()
+
+    # Mark onboarding as started immediately so the frontend
+    # doesn't get redirected back to onboarding while pipeline runs.
+    # user_id can be a UUID (id) or a tg_id — try both.
     try:
-        # Mark onboarding as started immediately so the frontend
-        # doesn't get redirected back to onboarding while pipeline runs
-        supabase = get_supabase()
+        import uuid as _uuid
+        _uuid.UUID(str(request.user_id))
+        # It's a valid UUID — update by id
         supabase.table("users").update({"onboarding_done": True})\
             .eq("id", request.user_id).execute()
+    except (ValueError, AttributeError):
+        # Not a UUID — must be tg_id
+        try:
+            supabase.table("users").update({"onboarding_done": True})\
+                .eq("tg_id", request.user_id).execute()
+        except Exception as e:
+            logger.warning(f"Could not set onboarding_done for user {request.user_id}: {e}")
 
+    try:
         background_tasks.add_task(initialize_onboarding_layer, request)
         return {"status": "processing", "message": "DSB Pipeline initialized"}
     except Exception as e:
