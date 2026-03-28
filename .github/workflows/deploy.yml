@@ -31,8 +31,15 @@ jobs:
             fi
 
             venv/bin/pip install -r requirements.txt -q
+
+            # Copy and enable bot service if not already installed
+            cp avatar-bot.service /etc/systemd/system/avatar-bot.service
+            systemctl daemon-reload
+            systemctl enable avatar-bot
+
             systemctl restart avatar-new-backend
-            echo "✅ Backend deployed"
+            systemctl restart avatar-bot
+            echo "✅ Backend + Bot deployed"
 
   # ── Frontend → Vercel ───────────────────────────────────────────────
   deploy-frontend:
