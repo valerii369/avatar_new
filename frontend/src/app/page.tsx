@@ -46,11 +46,15 @@ export default function HomePage() {
         const authRes = await authAPI.login(initData, isDev || isDebug, testUserId);
         const d = authRes.data;
 
+        // Preserve onboardingDone if already true in store (pipeline may still be running)
+        const prevOnboardingDone = useUserStore.getState().onboardingDone;
+        const onboardingDone = d.onboarding_done || prevOnboardingDone;
+
         setUser({
           userId: d.user_id, tgId: d.tg_id, firstName: d.first_name,
           token: d.token, energy: d.energy, streak: d.streak,
           evolutionLevel: d.evolution_level, title: d.title,
-          onboardingDone: d.onboarding_done,
+          onboardingDone: onboardingDone,
           xp: d.xp, xpCurrent: d.xp_current, xpNext: d.xp_next,
           referralCode: d.referral_code,
           photoUrl: d.photo_url || "",
@@ -59,7 +63,7 @@ export default function HomePage() {
         if (typeof window !== "undefined")
           localStorage.setItem("avatar_token", d.token);
 
-        if (!d.onboarding_done) {
+        if (!onboardingDone) {
           setStatus("redirecting");
           router.push("/onboarding");
           return;
@@ -80,15 +84,20 @@ export default function HomePage() {
     userId && status === "ready" ? ["profile", userId] : null,
     () => profileAPI.get(userId!).then(res => res.data),
     {
+      // Poll every 5s while portrait is still building
+      refreshInterval: (data) => (!data || !data.onboarding_done) ? 5000 : 0,
       onSuccess: (data) => {
-        if (!data.birth_date && !data.onboarding_done) router.push("/onboarding");
         setUser({
           xp: data.xp, xpCurrent: data.xp_current, xpNext: data.xp_next,
           evolutionLevel: data.evolution_level, title: data.title, energy: data.energy,
+          onboardingDone: data.onboarding_done,
         });
       }
     }
   );
+
+  // 2b. Building state — onboarding done in store but portrait not yet in DB
+  const isBuilding = status === "ready" && useUserStore.getState().onboardingDone && profile && !profile.onboarding_done;
 
   // 3. Master Hub
   const { data: hub } = useSWR(
@@ -100,6 +109,28 @@ export default function HomePage() {
   const levelRange = Math.max(xpNext - xpCurrent, 1);
   const xpCollectedInLevel = Math.max(xp - xpCurrent, 0);
   const levelProgress = Math.min(xpCollectedInLevel / levelRange, 1);
+
+  // ── Building Avatar screen ──
+  if (isBuilding) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-5 px-6" style={{ background: "var(--bg-deep)" }}>
+        <div style={{ position: "relative", width: 80, height: 80 }}>
+          <div className="w-20 h-20 rounded-full border-2 border-violet-500/30 border-t-violet-500 animate-spin absolute inset-0" />
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>✨</div>
+        </div>
+        <div className="text-center">
+          <p className="text-base font-bold text-white/80 mb-1">Строим твой Аватар</p>
+          <p className="text-xs text-white/30">Анализируем натальную карту и создаём портрет...</p>
+        </div>
+        <div style={{ display: "flex", gap: 6 }}>
+          {[0, 1, 2].map(i => (
+            <motion.div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(139,92,246,0.6)" }}
+              animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.4 }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   // ── Loading/Error ──
   if (status === "loading" || status === "redirecting" || !userId) {

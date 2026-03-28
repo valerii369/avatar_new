@@ -24,6 +24,8 @@ export const authAPI = {
 
 export const profileAPI = {
   get: (userId: string) => api.get(`/api/auth/profile?user_id=${userId}`),
+  reset: (userId: string | number) => api.post(`/api/auth/reset`, { user_id: userId }),
+  getReferrals: (userId: string) => api.get(`/api/auth/referrals?user_id=${userId}`),
 };
 
 export const calcAPI = {
@@ -43,6 +45,26 @@ export const assistantAPI = {
     api.post("/api/assistant/finish", { user_id: userId, session_id: sessionId }),
   saveToDiary: (userId: string, sessionId: number) =>
     api.post("/api/assistant/diary/save", { user_id: userId, session_id: sessionId }),
+};
+
+export const diaryAPI = {
+  list: (userId: string) => api.get(`/api/diary?user_id=${userId}`),
+  getAll: (userId: string, filter?: string, _cursor?: any, type?: string) =>
+    api.get(`/api/diary?user_id=${userId}${filter ? `&filter=${filter}` : ""}${type ? `&type=${type}` : ""}`),
+  get: (userId: string, entryId: string) => api.get(`/api/diary/${entryId}?user_id=${userId}`),
+  delete: (userId: string, entryId: string) => api.delete(`/api/diary/${entryId}?user_id=${userId}`),
+  updateIntegration: (userId: string, entryId: string | number, done: boolean) =>
+    api.patch(`/api/diary/${entryId}/integration`, { user_id: userId, done }),
+};
+
+export const gameAPI = {
+  getState: (userId: string) => api.get(`/api/game/state?user_id=${userId}`),
+};
+
+export const paymentsAPI = {
+  getOffers: () => api.get("/api/payments/offers"),
+  createInvoice: (userId: string, offerId: string) =>
+    api.post("/api/payments/invoice", { user_id: userId, offer_id: offerId }),
 };
 
 export const voiceAPI = {
