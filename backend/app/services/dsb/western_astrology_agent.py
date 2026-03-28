@@ -46,14 +46,10 @@ SYSTEM_PROMPT = """
 7. triggers — реальные жизненные ситуации, 2–6 штук.
 
 ═══ ФОРМУЛА WEIGHT ═══
-Начальное значение = 0.5
-+ 0.20 если personal planet (Солнце, Луна, Меркурий, Венера, Марс)
-+ 0.15 если угловой дом (1, 4, 7, 10)
-+ 0.10 если аспект точный (orb < 1.0°)
-+ 0.10 если dignity_score >= 4 (обитель или экзальтация)
-+ 0.10 если dignity_score <= -4 (изгнание или падение)
-- 0.05 если планета ретроградна
-Итог: нормализовать к диапазону 0.0–1.0, округлить до 2 знаков.
+В данных chart.planets[name] уже есть предвычисленное поле "position_weight" (0.0–1.0).
+Используй его напрямую как weight инсайта для планетных позиций.
+Для аспектов: возьми среднее position_weight двух планет аспекта, добавь +0.10 если orb < 1.0°.
+Нормализуй итог к диапазону 0.0–1.0, округли до 2 знаков.
 
 ═══ INFLUENCE_LEVEL ═══
 "high"   → weight >= 0.75
@@ -78,8 +74,12 @@ SYSTEM_PROMPT = """
 
 def build_queries(chart: dict) -> list[str]:
     queries = []
-    personal = ["sun", "moon", "mercury", "venus", "mars", "asc", "mc", "north_node", "chiron", "lilith"]
-    
+    personal = [
+        "sun", "moon", "mercury", "venus", "mars",
+        "asc", "mc", "north_node", "south_node",
+        "chiron", "lilith", "part_of_fortune",
+    ]
+
     planets = chart.get("planets", {})
     for planet in personal:
         p = planets.get(planet)
@@ -106,6 +106,31 @@ def build_queries(chart: dict) -> list[str]:
         p = planets.get(planet)
         if p:
             queries.append(f"critical degree {round(p['degree_in_sign'])} {p['sign']}")
+
+    # Balance-based queries
+    balance = chart.get("balance", {})
+    dominant_el = balance.get("dominant_element")
+    if dominant_el:
+        queries.append(f"dominant {dominant_el} element in chart")
+    dominant_mod = balance.get("dominant_modality")
+    if dominant_mod:
+        queries.append(f"dominant {dominant_mod} modality in chart")
+    hemi = balance.get("hemispheres", {})
+    if hemi.get("above", 0) > hemi.get("below", 0):
+        queries.append("above horizon emphasis public life career")
+    elif hemi.get("below", 0) > hemi.get("above", 0):
+        queries.append("below horizon emphasis private inner life")
+    if hemi.get("east", 0) > hemi.get("west", 0):
+        queries.append("eastern hemisphere self-directed independence")
+    elif hemi.get("west", 0) > hemi.get("east", 0):
+        queries.append("western hemisphere relationship-oriented")
+
+    # Mutual reception queries
+    for mr in chart.get("mutual_receptions", []):
+        queries.append(
+            f"mutual reception {mr['planet_a']} {mr['planet_b']} "
+            f"{mr['sign_a']} {mr['sign_b']}"
+        )
 
     return queries
 
@@ -135,7 +160,7 @@ async def retrieve_for_query(query: str, supabaseClient, min_score: float, limit
         return []
 
 async def retrieve_context(queries: list[str]) -> list[dict]:
-    MIN_SCORE = 0.72
+    MIN_SCORE = 0.65
     TOP_K_PER_QUERY = 4
     
     try:
@@ -170,7 +195,7 @@ async def retrieve_context(queries: list[str]) -> list[dict]:
                 })
 
     scored.sort(key=lambda x: x["score"], reverse=True)
-    return scored[:10]
+    return scored[:20]
 
 async def parse_and_validate(raw: str) -> UISResponse:
     data = json.loads(raw)
@@ -182,11 +207,13 @@ def _slim_chart_for_prompt(chart: dict) -> dict:
     """Reduce chart payload size: keep top-15 aspects, strip raw longitudes."""
     planets_slim = {
         name: {
-            "sign":           p["sign"],
-            "house":          p["house"],
-            "degree_in_sign": p["degree_in_sign"],
-            "retrograde":     p["retrograde"],
-            "dignity_score":  p["dignity_score"],
+            "sign":             p["sign"],
+            "house":            p["house"],
+            "degree_in_sign":   p["degree_in_sign"],
+            "retrograde":       p["retrograde"],
+            "stationary":       p.get("stationary", False),
+            "dignity_score":    p["dignity_score"],
+            "position_weight":  p.get("position_weight", 0.5),
         }
         for name, p in chart.get("planets", {}).items()
     }
@@ -196,13 +223,16 @@ def _slim_chart_for_prompt(chart: dict) -> dict:
         reverse=True
     )[:15]
     return {
-        "planets":         planets_slim,
-        "houses":          chart.get("houses", {}),
-        "angles":          chart.get("angles", {}),
-        "aspects":         aspects_top,
-        "aspect_patterns": chart.get("aspect_patterns", []),
-        "stelliums":       chart.get("stelliums", []),
-        "critical_degrees": chart.get("critical_degrees", []),
+        "planets":           planets_slim,
+        "houses":            chart.get("houses", {}),
+        "angles":            chart.get("angles", {}),
+        "aspects":           aspects_top,
+        "aspect_patterns":   chart.get("aspect_patterns", []),
+        "stelliums":         chart.get("stelliums", []),
+        "critical_degrees":  chart.get("critical_degrees", []),
+        "balance":           chart.get("balance", {}),
+        "mutual_receptions": chart.get("mutual_receptions", []),
+        "meta":              chart.get("meta", {}),
     }
 
 
