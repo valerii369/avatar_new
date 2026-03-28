@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import Optional
 from app.services.dsb.natal_chart import calculate_chart
-from app.services.dsb.sphere_agent import compute_sphere
+from app.services.dsb.sphere_agent import compute_sphere, generate_sphere_teasers, FREE_SPHERES as AGENT_FREE_SPHERES
 from app.services.dsb.synthesis import generate_portrait_summary, save_to_supabase
 from app.core.db import get_supabase
 from app.core.config import settings
@@ -231,16 +231,22 @@ async def get_profile(user_id: str):
 
 # ─── DSB Pipeline background task ────────────────────────────────────────────
 
-FREE_SPHERES = [1, 10]  # Личность + Карьера — вычисляются при онбординге бесплатно
+FREE_SPHERES = list(AGENT_FREE_SPHERES)  # [1, 10] — Личность + Карьера
 
 
 async def initialize_onboarding_layer(req: ProfileRequest):
     """
     DSB Pipeline — Sphere-On-Demand edition.
-    При онбординге вычисляет только FREE_SPHERES (1 и 10) параллельно.
-    Остальные 10 сфер вычисляются по требованию (платно).
+
+    Шаги:
+    1. Layer 1: натальная карта (pyswisseph, без LLM)
+    2. Параллельно:
+       a. FREE_SPHERES в DENSE-режиме: 12-15 карточек + sphere_summary + cross-sphere links
+       b. Тизеры для 10 закрытых сфер (1 дешёвый GPT вызов)
+    3. Портретное резюме на основе свободных сфер
+    4. Сохранить всё → onboarding_done = True
     """
-    logger.info(f"Starting DSB Pipeline (free spheres {FREE_SPHERES}) for user: {req.user_id}")
+    logger.info(f"DSB Pipeline started (free spheres {FREE_SPHERES}) for user {req.user_id}")
     supabase = get_supabase()
 
     try:
@@ -255,16 +261,21 @@ async def initialize_onboarding_layer(req: ProfileRequest):
         supabase.table("user_birth_data").delete().eq("user_id", req.user_id).execute()
         supabase.table("user_birth_data").insert(birth_row).execute()
 
-        # Layer 1 — Natal chart (pyswisseph, no LLM)
+        # Layer 1 — Natal chart
         astro_chart = await calculate_chart(req.birth_date, req.birth_time, req.birth_place)
 
-        # Layer 2 — Compute FREE_SPHERES in parallel (GPT-4o-mini per sphere)
-        sphere_results = await asyncio.gather(
-            *[compute_sphere(s, astro_chart, req.user_id, save=True) for s in FREE_SPHERES],
-            return_exceptions=True,
-        )
+        # Layer 2 — DENSE free spheres + teasers for locked spheres (all parallel)
+        free_sphere_tasks = [
+            compute_sphere(s, astro_chart, req.user_id, save=True)
+            for s in FREE_SPHERES
+        ]
+        teasers_task = generate_sphere_teasers(astro_chart, FREE_SPHERES)
 
-        # Build partial synthesized_data for portrait summary
+        results = await asyncio.gather(*free_sphere_tasks, teasers_task, return_exceptions=True)
+        sphere_results = results[:len(FREE_SPHERES)]
+        teasers_result = results[len(FREE_SPHERES)]
+
+        # Build synthesized_data for portrait summary
         from collections import defaultdict
         level_order = {"high": 0, "medium": 1, "low": 2}
         synthesized_data: dict = {"western_astrology": defaultdict(list)}
@@ -272,18 +283,28 @@ async def initialize_onboarding_layer(req: ProfileRequest):
             if isinstance(result, Exception):
                 logger.error(f"Sphere {sphere_num} failed: {result}")
                 continue
-            sorted_insights = sorted(result, key=lambda x: (level_order[x.influence_level], -x.weight))
+            sorted_insights = sorted(
+                result.insights,
+                key=lambda x: (level_order[x.influence_level], -x.weight),
+            )
             synthesized_data["western_astrology"][sphere_num] = sorted_insights
 
-        # Layer 3 — Portrait summary from free spheres
+        # Layer 3 — Portrait summary
         portrait = await generate_portrait_summary(req.user_id, synthesized_data)
+
+        # Embed teasers into portrait.deep_profile_data
+        if isinstance(teasers_result, dict) and teasers_result:
+            portrait["sphere_teasers"] = teasers_result
+        elif isinstance(teasers_result, Exception):
+            logger.warning(f"Teasers generation failed: {teasers_result}")
+
         await save_to_supabase(req.user_id, synthesized_data, portrait)
 
         # Mark onboarding done
         supabase.table("users").update({"onboarding_done": True})\
             .eq("id", req.user_id).execute()
 
-        logger.info(f"DSB Pipeline completed (free spheres) for user: {req.user_id}")
+        logger.info(f"DSB Pipeline completed for user {req.user_id}")
 
     except Exception as e:
         logger.error(f"DSB Pipeline failed for user {req.user_id}: {e}")

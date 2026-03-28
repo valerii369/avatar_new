@@ -122,14 +122,19 @@ async def save_to_supabase(user_id: str, result: dict, portrait: dict = None):
             supabase.table("user_insights").insert(rows).execute()
 
         if portrait:
+            # deep_profile_data carries polarities + sphere_teasers + sphere_meta
+            deep: dict = {"polarities": portrait.get("polarities", {})}
+            if "sphere_teasers" in portrait:
+                deep["sphere_teasers"] = portrait["sphere_teasers"]
+
             portrait_row = {
-                "user_id":          user_id,
-                "core_identity":    portrait.get("core_identity", ""),
-                "core_archetype":   portrait.get("core_archetype", ""),
-                "narrative_role":   portrait.get("narrative_role", ""),
-                "energy_type":      portrait.get("energy_type", ""),
-                "current_dynamic":  portrait.get("current_dynamic", ""),
-                "deep_profile_data": {"polarities": portrait.get("polarities", {})}
+                "user_id":           user_id,
+                "core_identity":     portrait.get("core_identity", ""),
+                "core_archetype":    portrait.get("core_archetype", ""),
+                "narrative_role":    portrait.get("narrative_role", ""),
+                "energy_type":       portrait.get("energy_type", ""),
+                "current_dynamic":   portrait.get("current_dynamic", ""),
+                "deep_profile_data": deep,
             }
             supabase.table("user_portraits").delete().eq("user_id", user_id).execute()
             supabase.table("user_portraits").insert(portrait_row).execute()
