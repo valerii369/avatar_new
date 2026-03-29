@@ -7,6 +7,7 @@ import { useUserStore } from "@/lib/store";
 import { authAPI, profileAPI, masterHubAPI } from "@/lib/api";
 import { EnergyIcon } from "@/components/EnergyIcon";
 import BottomNav from "@/components/BottomNav";
+import { useTmaSafeArea } from "@/lib/useTmaSafeArea";
 
 function formatScore(n: number): string {
   return n.toLocaleString("ru-RU").replace(/,/g, " ");
@@ -14,6 +15,7 @@ function formatScore(n: number): string {
 
 export default function HomePage() {
   const router = useRouter();
+  const tmaSafeTop = useTmaSafeArea();
   const {
     userId, setUser, energy, evolutionLevel, title, firstName,
     xp, xpCurrent, xpNext, photoUrl,
@@ -218,7 +220,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "var(--bg-deep)", paddingBottom: 100 }}>
+    <div className="min-h-screen flex flex-col" style={{ background: "var(--bg-deep)", paddingBottom: 100, paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}>
 
       {/* Header */}
       <div style={{ padding: "16px 20px 12px" }}>
