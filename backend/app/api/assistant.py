@@ -70,7 +70,7 @@ async def init_session(user_id: str, background_tasks: BackgroundTasks):
 
     try:
         resp = await openai_client.chat.completions.create(
-            model="gpt-4.1-mini",
+            model=settings.MODEL_LIGHT,
             messages=[
                 {"role": "system", "content": _build_system(portrait_context)},
                 {"role": "user", "content": "Привет!"},
@@ -150,7 +150,7 @@ async def chat(req: ChatRequest):
 
     try:
         resp = await openai_client.chat.completions.create(
-            model="gpt-4.1-mini",
+            model=settings.MODEL_LIGHT,
             messages=messages,
             temperature=0.75,
             max_tokens=800,
@@ -184,7 +184,7 @@ async def finish_session(req: FinishRequest):
 
     try:
         resp = await openai_client.chat.completions.create(
-            model="gpt-4.1-mini",
+            model=settings.MODEL_LIGHT,
             messages=[
                 {"role": "system", "content": "Составь краткое резюме разговора для личного дневника. 1-2 предложения, суть главного инсайта или открытия. По-русски."},
                 {"role": "user", "content": conversation},

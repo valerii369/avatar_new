@@ -40,7 +40,9 @@ async def generate_portrait_summary(user_id: str, synthesized_data: dict) -> dic
                 top_insights.append({
                     "sphere": item.primary_sphere,
                     "theme": item.core_theme,
-                    "energy": item.energy_description
+                    "description": item.description,
+                    "insight": item.insight,
+                    "gift": item.gift
                 })
 
     prompt = f"""
@@ -68,7 +70,7 @@ async def generate_portrait_summary(user_id: str, synthesized_data: dict) -> dic
     client = openai.AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
     try:
         response = await client.chat.completions.create(
-            model="gpt-4.1-mini",
+            model=settings.MODEL_LIGHT,
             messages=[
                 {"role": "system", "content": "You are a master of psychological and evolutionary astrology."},
                 {"role": "user", "content": prompt}

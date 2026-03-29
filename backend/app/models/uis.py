@@ -14,11 +14,14 @@ class UniversalInsight(BaseModel):
     position: str = Field(..., min_length=2, max_length=150)
 
     # --- Контент карточки ---
-    # Relaxed min_length: GPT sometimes returns valid but concise values
     core_theme: str = Field(..., min_length=3, max_length=120)
-    energy_description: str = Field(..., min_length=5, max_length=400)
+    description: str = Field(..., min_length=5, max_length=150)
     light_aspect: str = Field(..., min_length=3, max_length=300)
     shadow_aspect: str = Field(..., min_length=3, max_length=300)
+    insight: str = Field(..., min_length=5, max_length=400)
+    gift: str = Field(..., min_length=3, max_length=200)
+
+    # --- Детальный экран ---
     developmental_task: str = Field(..., min_length=5, max_length=200)
     integration_key: str = Field(..., min_length=5, max_length=200)
     triggers: list[str] = Field(..., min_length=1, max_length=8)
