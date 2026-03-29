@@ -26,12 +26,43 @@ export default function HomePage() {
     const initAuth = async () => {
       try {
         const tg = (window as any).Telegram?.WebApp;
-        if (tg) { tg.ready(); tg.expand(); }
+        if (tg) {
+          tg.ready();
+          tg.expand();
+          // Full screen for TMA v8+
+          if (typeof tg.requestFullscreen === "function") {
+            try { tg.requestFullscreen(); } catch {}
+          }
+          // Disable vertical swipe to close (keeps app open on swipe down)
+          if (typeof tg.disableVerticalSwipes === "function") {
+            tg.disableVerticalSwipes();
+          }
+        }
 
-        const initData = tg?.initData || "";
         const isDev = process.env.NODE_ENV === "development";
         const isDebug = new URLSearchParams(window.location.search).get("debug") === "true";
         const testUserId = parseInt(new URLSearchParams(window.location.search).get("user_id") || "0") || undefined;
+        const initData = tg?.initData || "";
+
+        // Fast path: if we have a cached session, show UI immediately
+        const cached = useUserStore.getState();
+        if (cached.userId && cached.token && cached.onboardingDone) {
+          setStatus("ready");
+          // Refresh in background (non-blocking)
+          authAPI.login(initData, isDev || isDebug, testUserId).then(res => {
+            const d = res.data;
+            setUser({
+              userId: d.user_id, tgId: d.tg_id, firstName: d.first_name,
+              token: d.token, energy: d.energy, streak: d.streak,
+              evolutionLevel: d.evolution_level, title: d.title,
+              onboardingDone: d.onboarding_done || true,
+              xp: d.xp, xpCurrent: d.xp_current, xpNext: d.xp_next,
+              referralCode: d.referral_code,
+              photoUrl: d.photo_url || "",
+            });
+          }).catch(() => {});
+          return;
+        }
 
         if (!initData && !isDev && !isDebug) {
           throw new Error("Telegram context missing. Please open via the bot or use ?debug=true for testing.");
@@ -40,7 +71,7 @@ export default function HomePage() {
         const authRes = await authAPI.login(initData, isDev || isDebug, testUserId);
         const d = authRes.data;
 
-        const prevOnboardingDone = useUserStore.getState().onboardingDone;
+        const prevOnboardingDone = cached.onboardingDone;
         const onboardingDone = d.onboarding_done || prevOnboardingDone;
 
         setUser({
