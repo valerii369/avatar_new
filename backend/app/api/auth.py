@@ -228,6 +228,43 @@ async def get_profile(user_id: str):
         logger.error(f"Get profile failed for {user_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch profile")
 
+# ─── /reset ──────────────────────────────────────────────────────────────────
+
+class ResetRequest(BaseModel):
+    user_id: Optional[str] = None
+    tg_id: Optional[int] = None
+
+@router.post("/reset")
+async def reset_user(request: ResetRequest):
+    """Reset user data: delete insights, portraits, birth data, memory. Reset onboarding flag."""
+    supabase = get_supabase()
+
+    # Resolve user_id
+    user_id = request.user_id
+    if not user_id and request.tg_id:
+        res = supabase.table("users").select("id").eq("tg_id", request.tg_id).execute()
+        if res.data:
+            user_id = res.data[0]["id"]
+
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id or tg_id required")
+
+    try:
+        supabase.table("user_insights").delete().eq("user_id", user_id).execute()
+        supabase.table("user_portraits").delete().eq("user_id", user_id).execute()
+        supabase.table("user_birth_data").delete().eq("user_id", user_id).execute()
+        supabase.table("user_memory").delete().eq("user_id", user_id).execute()
+        supabase.table("users").update({
+            "onboarding_done": False,
+            **_default_user_fields(),
+        }).eq("id", user_id).execute()
+
+        return {"status": "ok", "message": f"User {user_id} reset"}
+    except Exception as e:
+        logger.error(f"Reset failed for {user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Reset failed")
+
+
 # ─── DSB Pipeline background task ────────────────────────────────────────────
 
 async def initialize_onboarding_layer(req: ProfileRequest):

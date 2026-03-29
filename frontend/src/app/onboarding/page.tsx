@@ -367,6 +367,19 @@ export default function OnboardingPage() {
     const progress = ((step + 1) / totalAstroSteps) * 100;
 
     useEffect(() => {
+        // TMA fullscreen
+        const tg = (window as any).Telegram?.WebApp;
+        if (tg) {
+            tg.ready();
+            tg.expand();
+            if (typeof tg.requestFullscreen === "function") {
+                try { tg.requestFullscreen(); } catch {}
+            }
+            if (typeof tg.disableVerticalSwipes === "function") {
+                tg.disableVerticalSwipes();
+            }
+        }
+
         const checkDebug = async () => {
             const params = new URLSearchParams(window.location.search);
             const isDebug = params.get("debug") === "true";
