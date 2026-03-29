@@ -9,8 +9,8 @@ class Settings(BaseSettings):
     MINI_APP_URL: str = ""
 
     # OpenAI models
-    MODEL_HEAVY: str = "o4-mini"           # complex: DSB Layer 2 (RAG + insights)
-    MODEL_LIGHT: str = "gpt-5.4-mini"      # simple: chat, portrait, summaries
+    MODEL_HEAVY: str = "gpt-4o"             # complex: DSB Layer 2 (RAG + insights)
+    MODEL_LIGHT: str = "gpt-4o-mini"       # simple: chat, portrait, summaries
 
     model_config = SettingsConfigDict(
         env_file=".env",

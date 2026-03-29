@@ -196,13 +196,13 @@ export default function AssistantPage() {
         })), []);
 
     return (
-        <div 
-            className="fixed inset-0 flex flex-col bg-[#060818] overflow-hidden" 
-            style={{ zIndex: 10 }}
+        <div
+            className="fixed inset-0 flex flex-col bg-[#060818] overflow-hidden"
+            style={{ zIndex: 10, paddingTop: "env(safe-area-inset-top, 0px)" }}
         >
 
-            {/* Top bar */}
-            <div style={{ padding: "12px 16px 8px", borderBottom: "1px solid rgba(255,255,255,0.05)", flexShrink: 0, position: "relative", zIndex: 20 }}>
+            {/* Top bar — offset for TMA header */}
+            <div style={{ padding: "14px 16px 8px", borderBottom: "1px solid rgba(255,255,255,0.05)", flexShrink: 0, position: "relative", zIndex: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <button
                         onClick={() => router.push("/")}
