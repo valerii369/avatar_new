@@ -58,10 +58,15 @@ async def reset_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     try:
         import httpx
         async with httpx.AsyncClient(timeout=15) as client:
+            # Try new endpoint first, fall back to legacy
             resp = await client.post(
-                "http://127.0.0.1:8000/api/auth/reset",
-                json={"tg_id": tg_id},
+                f"http://127.0.0.1:8000/api/profile/tg/{tg_id}/reset",
             )
+            if resp.status_code == 404:
+                resp = await client.post(
+                    "http://127.0.0.1:8000/api/auth/reset",
+                    json={"tg_id": tg_id},
+                )
             if resp.status_code == 200:
                 await update.message.reply_text(
                     "✅ Данные сброшены. Нажми /start чтобы пройти онбординг заново."
