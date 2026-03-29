@@ -1,9 +1,10 @@
 import axios from "axios";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
+// In production, Next.js rewrites proxy /api/* → backend (see next.config.ts).
+// No baseURL needed — all requests go to the same origin, avoiding mixed content.
+// In development, rewrites also handle it via NEXT_PUBLIC_API_URL.
 export const api = axios.create({
-  baseURL: API_BASE_URL,
+  timeout: 15000,
 });
 
 // Auto-inject token if exists
