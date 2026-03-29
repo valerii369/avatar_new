@@ -56,18 +56,23 @@ jobs:
             systemctl enable avatar-bot
             systemctl enable avatar-new-backend
 
-            # Stop any conflicting services and kill stale processes on port 8000
-            systemctl stop avatar-backend 2>/dev/null || true
-            systemctl stop avatar 2>/dev/null || true
-            pkill -f "uvicorn" 2>/dev/null || true
-            sleep 2
-            fuser -k -9 8000/tcp 2>/dev/null || true
-            sleep 2
+            # Find and show what's running on port 8000 before we change anything
+            echo "=== Port 8000 before restart ==="
+            ss -tlnp 2>/dev/null | grep :8000 || echo "(none)"
 
+            # Kill any process holding port 8000
+            fuser -k 8000/tcp 2>/dev/null || true
+            sleep 3
+
+            # Start our backend fresh
             systemctl restart avatar-new-backend
             sleep 5
+
+            # Verify it's running correctly
+            echo "=== Port 8000 after restart ==="
+            ss -tlnp 2>/dev/null | grep :8000 || echo "(none)"
             systemctl status avatar-new-backend --no-pager || true
-            echo "Port 8000 owner: $(fuser 8000/tcp 2>/dev/null || echo none)"
+
             systemctl restart avatar-bot
             echo "✅ Backend + Bot deployed"
 
