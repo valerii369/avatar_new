@@ -23,7 +23,11 @@ jobs:
             set -e
             DEPLOY_DIR=/root/avatar-new
 
-            cd $DEPLOY_DIR && git fetch origin && git reset --hard origin/develop
+            cd $DEPLOY_DIR
+            echo "Remote URL: $(git remote get-url origin)"
+            git remote set-url origin https://github.com/valerii369/avatar_new.git
+            git fetch origin && git reset --hard origin/develop
+            echo "Current commit: $(git rev-parse HEAD)"
             cd backend
 
             if [ ! -d "venv" ]; then
