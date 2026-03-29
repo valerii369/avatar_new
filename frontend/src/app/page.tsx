@@ -108,6 +108,8 @@ export default function HomePage() {
         console.error("Init error", e);
         const msg = e?.code === "ECONNABORTED" || e?.message?.includes("timeout")
           ? "Сервер не отвечает. Проверь подключение и попробуй снова."
+          : e?.code === "ERR_NETWORK" || e?.message === "Network Error"
+          ? "Нет соединения с сервером. Попробуй снова."
           : e?.response?.status === 404
           ? "Сервис временно недоступен. Попробуй позже."
           : e.message || "Ошибка инициализации";
@@ -148,6 +150,27 @@ export default function HomePage() {
   const levelRange = Math.max(xpNext - xpCurrent, 1);
   const xpCollectedInLevel = Math.max(xp - xpCurrent, 0);
   const levelProgress = Math.min(xpCollectedInLevel / levelRange, 1);
+
+  // Error state — must come before loading to avoid !userId masking it
+  if (status === "error") {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-8 text-center" style={{ background: "var(--bg-deep)" }}>
+        <div style={{ width: 48, height: 48, borderRadius: 16, background: "rgba(239,68,68,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, marginBottom: 20 }}>!</div>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>Ошибка инициализации</h2>
+        <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 24, maxWidth: 280, lineHeight: 1.5 }}>{errorInfo}</p>
+        <button
+          onClick={() => window.location.reload()}
+          style={{
+            padding: "12px 32px", background: "var(--violet)",
+            color: "white", borderRadius: 14, fontWeight: 600,
+            border: "none", cursor: "pointer", fontSize: 14,
+          }}
+        >
+          Попробовать снова
+        </button>
+      </div>
+    );
+  }
 
   // Building Avatar screen
   if (isBuilding) {
@@ -190,26 +213,6 @@ export default function HomePage() {
         <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
           {status === "redirecting" ? "Подготовка онбординга..." : "Инициализация..."}
         </p>
-      </div>
-    );
-  }
-
-  if (status === "error") {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-8 text-center" style={{ background: "var(--bg-deep)" }}>
-        <div style={{ width: 48, height: 48, borderRadius: 16, background: "rgba(239,68,68,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, marginBottom: 20 }}>!</div>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>Ошибка инициализации</h2>
-        <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 24, maxWidth: 280, lineHeight: 1.5 }}>{errorInfo}</p>
-        <button
-          onClick={() => window.location.reload()}
-          style={{
-            padding: "12px 32px", background: "var(--violet)",
-            color: "white", borderRadius: 14, fontWeight: 600,
-            border: "none", cursor: "pointer", fontSize: 14,
-          }}
-        >
-          Попробовать снова
-        </button>
       </div>
     );
   }
