@@ -52,9 +52,32 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 
+async def reset_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /reset — clear all user data and restart onboarding."""
+    tg_id = update.effective_user.id
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.post(
+                "http://127.0.0.1:8000/api/auth/reset",
+                json={"tg_id": tg_id},
+            )
+            if resp.status_code == 200:
+                await update.message.reply_text(
+                    "✅ Данные сброшены. Нажми /start чтобы пройти онбординг заново."
+                )
+            else:
+                await update.message.reply_text(
+                    f"⚠️ Ошибка сброса: {resp.text}"
+                )
+    except Exception as e:
+        logger.error(f"Reset command failed for tg_id={tg_id}: {e}")
+        await update.message.reply_text("⚠️ Не удалось сбросить данные. Бэкенд недоступен.")
+
+
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
-        "Используй /start чтобы открыть AVATAR MATRIX."
+        "Команды:\n/start — открыть AVATAR MATRIX\n/reset — сбросить данные и пройти онбординг заново"
     )
 
 
@@ -66,6 +89,7 @@ def main() -> None:
 
     app = Application.builder().token(token).build()
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("reset", reset_command))
     app.add_handler(CommandHandler("help", help_command))
 
     logger.info("AVATAR Matrix bot started (polling)...")
