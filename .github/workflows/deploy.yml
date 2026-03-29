@@ -56,7 +56,13 @@ jobs:
             systemctl enable avatar-bot
             systemctl enable avatar-new-backend
 
+            # Kill any stale process holding port 8000
+            fuser -k 8000/tcp 2>/dev/null || true
+            sleep 2
+
             systemctl restart avatar-new-backend
+            sleep 3
+            systemctl status avatar-new-backend --no-pager || true
             systemctl restart avatar-bot
             echo "✅ Backend + Bot deployed"
 
