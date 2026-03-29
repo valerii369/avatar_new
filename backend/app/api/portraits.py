@@ -36,13 +36,15 @@ async def get_portrait(user_id: str):
                 "weight": row["weight"],
                 "position": row["position"],
                 "core_theme": row["core_theme"],
-                "energy_description": row["energy_description"],
+                "description": row.get("description") or row.get("energy_description", ""),
                 "light_aspect": row["light_aspect"],
                 "shadow_aspect": row["shadow_aspect"],
+                "insight": row.get("insight", ""),
+                "gift": row.get("gift", ""),
                 "developmental_task": row["developmental_task"],
                 "integration_key": row["integration_key"],
                 "triggers": row["triggers"],
-                "source": row.get("source")
+                "source": row.get("source"),
             }
             spheres[sys][str(sphere)].append(insight)
 

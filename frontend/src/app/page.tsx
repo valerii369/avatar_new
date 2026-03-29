@@ -1,21 +1,16 @@
 "use client";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import useSWR from "swr";
 import { useUserStore } from "@/lib/store";
 import { authAPI, profileAPI, masterHubAPI } from "@/lib/api";
 import { EnergyIcon } from "@/components/EnergyIcon";
-import TabButton from "@/components/TabButton";
 import BottomNav from "@/components/BottomNav";
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatScore(n: number): string {
   return n.toLocaleString("ru-RU").replace(/,/g, " ");
 }
-
-// ─── Home Page ────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
   const router = useRouter();
@@ -25,7 +20,6 @@ export default function HomePage() {
   } = useUserStore();
   const [status, setStatus] = useState<"loading" | "redirecting" | "ready" | "error">("loading");
   const [errorInfo, setErrorInfo] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<"avatar" | "about">("avatar");
 
   // 1. Auth & Init
   useEffect(() => {
@@ -46,7 +40,6 @@ export default function HomePage() {
         const authRes = await authAPI.login(initData, isDev || isDebug, testUserId);
         const d = authRes.data;
 
-        // Preserve onboardingDone if already true in store (pipeline may still be running)
         const prevOnboardingDone = useUserStore.getState().onboardingDone;
         const onboardingDone = d.onboarding_done || prevOnboardingDone;
 
@@ -84,7 +77,6 @@ export default function HomePage() {
     userId && status === "ready" ? ["profile", userId] : null,
     () => profileAPI.get(userId!).then(res => res.data),
     {
-      // Poll every 5s while portrait is still building
       refreshInterval: (data) => (!data || !data.onboarding_done) ? 5000 : 0,
       onSuccess: (data) => {
         setUser({
@@ -96,7 +88,6 @@ export default function HomePage() {
     }
   );
 
-  // 2b. Building state — onboarding done in store but portrait not yet in DB
   const isBuilding = status === "ready" && useUserStore.getState().onboardingDone && profile && !profile.onboarding_done;
 
   // 3. Master Hub
@@ -110,34 +101,45 @@ export default function HomePage() {
   const xpCollectedInLevel = Math.max(xp - xpCurrent, 0);
   const levelProgress = Math.min(xpCollectedInLevel / levelRange, 1);
 
-  // ── Building Avatar screen ──
+  // Building Avatar screen
   if (isBuilding) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-5 px-6" style={{ background: "var(--bg-deep)" }}>
-        <div style={{ position: "relative", width: 80, height: 80 }}>
-          <div className="w-20 h-20 rounded-full border-2 border-violet-500/30 border-t-violet-500 animate-spin absolute inset-0" />
-          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>✨</div>
+      <div className="flex flex-col items-center justify-center min-h-screen gap-6 px-6" style={{ background: "var(--bg-deep)" }}>
+        <div className="relative" style={{ width: 72, height: 72 }}>
+          <div className="absolute inset-0 rounded-full animate-spin"
+            style={{ border: "2px solid rgba(139,92,246,0.15)", borderTopColor: "var(--violet)" }} />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--violet)", boxShadow: "0 0 16px var(--violet)" }} />
+          </div>
         </div>
         <div className="text-center">
-          <p className="text-base font-bold text-white/80 mb-1">Строим твой Аватар</p>
-          <p className="text-xs text-white/30">Анализируем натальную карту и создаём портрет...</p>
+          <p style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 }}>
+            Строим твой Аватар
+          </p>
+          <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
+            Анализируем натальную карту и создаём портрет...
+          </p>
         </div>
         <div style={{ display: "flex", gap: 6 }}>
           {[0, 1, 2].map(i => (
-            <motion.div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(139,92,246,0.6)" }}
-              animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.4 }} />
+            <motion.div key={i}
+              style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--violet)" }}
+              animate={{ opacity: [0.2, 0.8, 0.2] }}
+              transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.35 }}
+            />
           ))}
         </div>
       </div>
     );
   }
 
-  // ── Loading/Error ──
+  // Loading/Error
   if (status === "loading" || status === "redirecting" || !userId) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen" style={{ background: "var(--bg-deep)" }}>
-        <div className="w-12 h-12 border-2 border-violet-500 border-t-transparent rounded-full mb-4 animate-spin" />
-        <p className="text-xs animate-pulse" style={{ color: "var(--text-muted)" }}>
+        <div className="w-10 h-10 border-2 rounded-full mb-4 animate-spin"
+          style={{ borderColor: "rgba(139,92,246,0.2)", borderTopColor: "var(--violet)" }} />
+        <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
           {status === "redirecting" ? "Подготовка онбординга..." : "Инициализация..."}
         </p>
       </div>
@@ -146,16 +148,16 @@ export default function HomePage() {
 
   if (status === "error") {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center" style={{ background: "var(--bg-deep)" }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
-        <h2 className="text-xl font-bold text-white mb-2">Ошибка инициализации</h2>
-        <p className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>{errorInfo}</p>
+      <div className="flex flex-col items-center justify-center min-h-screen p-8 text-center" style={{ background: "var(--bg-deep)" }}>
+        <div style={{ width: 48, height: 48, borderRadius: 16, background: "rgba(239,68,68,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, marginBottom: 20 }}>!</div>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>Ошибка инициализации</h2>
+        <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 24, maxWidth: 280, lineHeight: 1.5 }}>{errorInfo}</p>
         <button
           onClick={() => window.location.reload()}
           style={{
-            padding: "10px 24px", background: "var(--violet)",
-            color: "white", borderRadius: 12, fontWeight: 600,
-            border: "none", cursor: "pointer",
+            padding: "12px 32px", background: "var(--violet)",
+            color: "white", borderRadius: 14, fontWeight: 600,
+            border: "none", cursor: "pointer", fontSize: 14,
           }}
         >
           Попробовать снова
@@ -165,240 +167,166 @@ export default function HomePage() {
   }
 
   return (
-    <div
-      className="min-h-screen flex flex-col"
-      style={{ background: "var(--bg-deep)", paddingBottom: 96 }}
-    >
-      {/* ── Header ── */}
-      <div className="px-4 pt-5 pb-3">
-        <div
-          className="flex items-center gap-3 p-3"
-          style={{
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid var(--border)",
-            borderRadius: 18,
-          }}
-        >
+    <div className="min-h-screen flex flex-col" style={{ background: "var(--bg-deep)", paddingBottom: 100 }}>
+
+      {/* Header */}
+      <div style={{ padding: "16px 20px 12px" }}>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 12,
+          padding: "10px 14px",
+          background: "rgba(255,255,255,0.03)",
+          border: "1px solid var(--border)",
+          borderRadius: 16,
+        }}>
           <div style={{
-            width: 44, height: 44, borderRadius: "50%",
-            background: "rgba(255,255,255,0.1)",
-            border: "1px solid var(--border)",
+            width: 40, height: 40, borderRadius: "50%", flexShrink: 0,
+            background: "rgba(255,255,255,0.06)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 20, color: "var(--text-muted)", flexShrink: 0,
             overflow: "hidden",
           }}>
             {photoUrl ? (
-              <img src={photoUrl} alt={firstName}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            ) : "👤"}
+              <img src={photoUrl} alt={firstName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              <span style={{ fontSize: 16, color: "var(--text-muted)" }}>
+                {firstName ? firstName[0].toUpperCase() : "?"}
+              </span>
+            )}
           </div>
-          <div className="flex-1 flex justify-between items-center">
-            <div className="flex flex-col">
-              <span className="font-semibold text-base" style={{ color: "var(--text-primary)" }}>
-                {firstName || "Пользователь"}
-              </span>
-              <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500, marginTop: -2 }}>
-                Level <span style={{ color: "var(--text-primary)", fontWeight: 700 }}>{evolutionLevel}</span>/100
-              </span>
+
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.2 }}>
+              {firstName || "Пользователь"}
             </div>
-            <span className="font-semibold text-base flex items-center gap-0.5" style={{ color: "#F59E0B" }}>
-              <EnergyIcon size={20} color="#F59E0B" />
-              {energy}
+            <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500, marginTop: 2 }}>
+              {title || "Новичок"} · Ур.{evolutionLevel}
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <EnergyIcon size={16} color="#F59E0B" />
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#F59E0B" }}>{energy}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Level Display */}
+      <div className="flex-1 flex flex-col items-center justify-center" style={{ padding: "12px 20px 24px" }}>
+        <div style={{ position: "relative", width: 160, height: 160 }}>
+          <svg width="160" height="160" viewBox="0 0 160 160" style={{ position: "absolute", inset: 0 }}>
+            <circle cx="80" cy="80" r="75" fill="none" stroke="rgba(139,92,246,0.08)" strokeWidth="1.5" />
+            <circle cx="80" cy="80" r="75" fill="none" stroke="url(#levelGrad)" strokeWidth="2"
+              strokeDasharray={`${levelProgress * 471} 471`}
+              strokeLinecap="round"
+              transform="rotate(-90 80 80)"
+              style={{ transition: "stroke-dasharray 1s ease-out" }}
+            />
+            <defs>
+              <linearGradient id="levelGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="var(--violet)" />
+                <stop offset="100%" stopColor="var(--cyan)" />
+              </linearGradient>
+            </defs>
+          </svg>
+
+          <div style={{
+            position: "absolute", inset: 18,
+            borderRadius: "50%",
+            background: "radial-gradient(circle at 40% 35%, rgba(139,92,246,0.12), transparent 70%)",
+            border: "1px solid rgba(139,92,246,0.08)",
+            display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+          }}>
+            <span style={{
+              fontSize: 40, fontWeight: 800,
+              fontFamily: "'Outfit', sans-serif",
+              background: "linear-gradient(135deg, var(--violet-l), var(--gold))",
+              WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+              lineHeight: 1,
+            }}>
+              {evolutionLevel}
+            </span>
+            <span style={{
+              fontSize: 10, fontWeight: 600, color: "var(--text-muted)",
+              textTransform: "uppercase", letterSpacing: "0.12em", marginTop: 4,
+            }}>
+              уровень
             </span>
           </div>
         </div>
+
+        <p style={{
+          fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.2)",
+          textTransform: "uppercase", letterSpacing: "0.15em", marginTop: 16,
+        }}>
+          Уровень Сознания
+        </p>
       </div>
 
-      {/* ── Tab Switcher ── */}
-      <div className="px-4 mb-4">
-        <div
-          className="grid grid-cols-2 gap-1 p-1"
-          style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid var(--border)",
-            borderRadius: 14,
-          }}
-        >
-          <TabButton active={activeTab === "avatar"} onClick={() => setActiveTab("avatar")} label="Твой AVATAR" />
-          <TabButton active={activeTab === "about"} onClick={() => setActiveTab("about")} label="О тебе" />
-        </div>
-      </div>
+      {/* Portrait Summary */}
+      <div style={{ padding: "0 20px" }}>
+        {hub?.portrait_summary ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
 
-      <AnimatePresence mode="wait">
-        {activeTab === "avatar" && (
-          <motion.div
-            key="avatar-tab"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="flex-1 flex flex-col"
-          >
-            {/* Rank + Level Progress */}
-            <div className="px-4 mb-3">
-              <div className="flex items-center justify-between mb-1">
-                <span style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 500 }}>
-                  {title || "Новичок"}
-                </span>
-                <span style={{ fontSize: 12, fontWeight: 400 }}>
-                  <span style={{ color: "var(--text-muted)" }}>
-                    ({formatScore(xpCollectedInLevel)} / {formatScore(levelRange)} XP)
-                  </span>{" "}
-                  <span style={{ color: "var(--text-secondary)", fontWeight: 500 }}>
-                    {Math.round(levelProgress * 100)}%
-                  </span>
-                </span>
-              </div>
+            <div style={{
+              padding: "16px 18px", borderRadius: 14,
+              background: "linear-gradient(145deg, rgba(139,92,246,0.06), rgba(59,130,246,0.03))",
+              border: "1px solid rgba(139,92,246,0.12)",
+            }}>
               <div style={{
-                height: 3, background: "rgba(255,255,255,0.08)", borderRadius: 2, overflow: "hidden",
+                fontSize: 10, fontWeight: 700, color: "rgba(139,92,246,0.5)",
+                textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 8,
               }}>
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${levelProgress * 100}%` }}
-                  transition={{ duration: 1, ease: "easeOut", delay: 0.3 }}
-                  style={{
-                    height: "100%",
-                    background: "linear-gradient(90deg, #10B981, #06B6D4)",
-                    borderRadius: 2,
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Main Visualization Area */}
-            <div className="flex-1 flex flex-col items-center justify-center px-4 py-8">
-              <div style={{
-                width: 200, height: 200,
-                borderRadius: "50%",
-                background: "radial-gradient(circle, rgba(139,92,246,0.15) 0%, rgba(139,92,246,0.03) 50%, transparent 70%)",
-                border: "1px solid rgba(139,92,246,0.15)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                position: "relative",
-              }}>
-                <div style={{
-                  width: 140, height: 140,
-                  borderRadius: "50%",
-                  background: "radial-gradient(circle, rgba(139,92,246,0.2) 0%, transparent 70%)",
-                  border: "1px solid rgba(139,92,246,0.1)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  <div style={{
-                    fontSize: 48, fontWeight: 800,
-                    fontFamily: "'Outfit', sans-serif",
-                    background: "linear-gradient(135deg, var(--violet-l), var(--gold))",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                  }}>
-                    {evolutionLevel}
-                  </div>
-                </div>
-                {/* Orbiting dots */}
-                {[0, 60, 120, 180, 240, 300].map((deg, i) => (
-                  <div key={i} style={{
-                    position: "absolute",
-                    width: 6, height: 6, borderRadius: "50%",
-                    background: `hsl(${260 + i * 15}, 70%, 60%)`,
-                    top: `${50 - 48 * Math.cos(deg * Math.PI / 180)}%`,
-                    left: `${50 + 48 * Math.sin(deg * Math.PI / 180)}%`,
-                    transform: "translate(-50%, -50%)",
-                    boxShadow: `0 0 8px hsl(${260 + i * 15}, 70%, 60%)`,
-                  }} />
-                ))}
+                Идентификация
               </div>
               <p style={{
-                fontSize: 12, fontWeight: 600,
-                color: "rgba(255,255,255,0.3)",
-                textTransform: "uppercase",
-                letterSpacing: "0.1em",
-                marginTop: 16,
+                fontSize: 13, fontWeight: 500, color: "var(--text-primary)",
+                lineHeight: 1.6, margin: 0,
               }}>
-                Уровень Сознания
+                {hub.portrait_summary.core_identity}
               </p>
             </div>
-          </motion.div>
-        )}
 
-        {activeTab === "about" && (
-          <motion.div
-            key="about-tab"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="flex-1 px-4"
-          >
-            {hub ? (
-              <div className="space-y-4">
-                {/* Portrait Summary */}
-                {hub.portrait_summary && (
-                  <div style={{
-                    padding: 20, borderRadius: 20,
-                    background: "linear-gradient(135deg, rgba(139,92,246,0.08), rgba(59,130,246,0.04))",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    position: "relative", overflow: "hidden",
-                  }}>
-                    <div style={{
-                      position: "absolute", top: -10, right: -10,
-                      width: 120, height: 120,
-                      background: "rgba(139,92,246,0.08)",
-                      borderRadius: "50%", filter: "blur(40px)",
-                    }} />
-                    <div style={{
-                      fontSize: 9, fontWeight: 800,
-                      color: "rgba(139,92,246,0.6)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.2em",
-                      marginBottom: 10,
-                    }}>
-                      ● Идентификация Аватара
-                    </div>
-                    <p style={{
-                      fontSize: 14, fontWeight: 500,
-                      color: "var(--text-primary)",
-                      lineHeight: 1.5,
-                    }}>
-                      {hub.portrait_summary.core_identity}
-                    </p>
-                    <div style={{
-                      display: "grid", gridTemplateColumns: "1fr 1fr",
-                      gap: 8, marginTop: 12,
-                    }}>
-                      <InfoTag label="Архетип" value={hub.portrait_summary.core_archetype} color="var(--violet)" />
-                      <InfoTag label="Роль" value={hub.portrait_summary.narrative_role} color="#3B82F6" />
-                      <InfoTag label="Энергия" value={hub.portrait_summary.energy_type} color="#10B981" />
-                      <InfoTag label="Фокус" value={hub.portrait_summary.current_dynamic} color="#F59E0B" />
-                    </div>
-                  </div>
-                )}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <AttributeCard label="Архетип" value={hub.portrait_summary.core_archetype} color="#8B5CF6" />
+              <AttributeCard label="Роль" value={hub.portrait_summary.narrative_role} color="#3B82F6" />
+              <AttributeCard label="Энергия" value={hub.portrait_summary.energy_type} color="#10B981" />
+              <AttributeCard label="Фокус" value={hub.portrait_summary.current_dynamic} color="#F59E0B" />
+            </div>
 
-                {/* Strengths/Shadows */}
-                {hub.deep_profile_data?.polarities && (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    <PolarityBlock
-                      title="Сильные стороны"
-                      items={hub.deep_profile_data.polarities.core_strengths || []}
-                      color="#10B981"
-                    />
-                    <PolarityBlock
-                      title="Теневые аспекты"
-                      items={hub.deep_profile_data.polarities.shadow_aspects || []}
-                      color="#EF4444"
-                    />
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center p-10 text-center" style={{ opacity: 0.5 }}>
-                <div style={{ fontSize: 48, marginBottom: 16 }}>✨</div>
-                <p style={{ fontSize: 14, fontWeight: 500 }}>
-                  Твой портрет формируется...
-                </p>
-                <p style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4 }}>
-                  Пройди онбординг для создания расчёта
-                </p>
+            {hub.deep_profile_data?.polarities && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <PolarityCard
+                  title="Сильные стороны"
+                  items={hub.deep_profile_data.polarities.core_strengths || []}
+                  color="#10B981"
+                />
+                <PolarityCard
+                  title="Теневые аспекты"
+                  items={hub.deep_profile_data.polarities.shadow_aspects || []}
+                  color="#EF4444"
+                />
               </div>
             )}
-          </motion.div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center" style={{ padding: "40px 20px", textAlign: "center" }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: 14,
+              background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.1)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              marginBottom: 12,
+            }}>
+              <div style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--violet)", opacity: 0.4 }} />
+            </div>
+            <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 4 }}>
+              Портрет формируется
+            </p>
+            <p style={{ fontSize: 12, color: "var(--text-muted)", maxWidth: 240, lineHeight: 1.5 }}>
+              Пройди онбординг для создания расчёта
+            </p>
+          </div>
         )}
-      </AnimatePresence>
+      </div>
 
       <BottomNav />
     </div>
@@ -407,53 +335,53 @@ export default function HomePage() {
 
 // ── Sub-components ──
 
-function InfoTag({ label, value, color }: { label: string; value: string; color: string }) {
+function AttributeCard({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <div style={{
-      padding: 8, borderRadius: 10,
-      background: `${color}10`,
-      border: `1px solid ${color}20`,
+      padding: "12px 14px", borderRadius: 14,
+      background: `${color}08`,
+      border: `1px solid ${color}15`,
     }}>
-      <span style={{
-        fontSize: 8, fontWeight: 700,
-        color: `${color}80`,
-        textTransform: "uppercase",
-        display: "block", marginBottom: 2,
-      }}>{label}</span>
-      <span style={{
-        fontSize: 12, fontWeight: 700,
-        color, letterSpacing: "-0.01em",
-      }}>{value}</span>
+      <div style={{
+        fontSize: 10, fontWeight: 700, color: `${color}80`,
+        textTransform: "uppercase", letterSpacing: "0.08em",
+        marginBottom: 4,
+      }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 13, fontWeight: 700, color, lineHeight: 1.3 }}>
+        {value}
+      </div>
     </div>
   );
 }
 
-function PolarityBlock({ title, items, color }: { title: string; items: string[]; color: string }) {
+function PolarityCard({ title, items, color }: { title: string; items: string[]; color: string }) {
   return (
     <div style={{
-      padding: 16, borderRadius: 20,
-      background: "rgba(255,255,255,0.03)",
-      border: "1px solid rgba(255,255,255,0.05)",
+      padding: 14, borderRadius: 14,
+      background: "rgba(255,255,255,0.02)",
+      border: `1px solid ${color}10`,
     }}>
       <div style={{
-        display: "flex", alignItems: "center", gap: 6,
-        color, marginBottom: 10,
+        fontSize: 10, fontWeight: 700, color,
+        textTransform: "uppercase", letterSpacing: "0.08em",
+        marginBottom: 10,
       }}>
-        <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase" }}>{title}</span>
+        {title}
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {items.length > 0 ? items.map((item, i) => (
           <div key={i} style={{
-            fontSize: 11, color: "rgba(255,255,255,0.7)",
-            lineHeight: 1.3, fontWeight: 300,
-            display: "flex", gap: 6,
+            fontSize: 12, color: "rgba(255,255,255,0.6)",
+            lineHeight: 1.4, fontWeight: 400,
+            display: "flex", gap: 8, alignItems: "flex-start",
           }}>
-            <span style={{ opacity: 0.3 }}>•</span> {item}
+            <span style={{ color, opacity: 0.5, flexShrink: 0, lineHeight: 1.4 }}>·</span>
+            <span>{item}</span>
           </div>
         )) : (
-          <span style={{ fontSize: 10, fontStyle: "italic", color: "rgba(255,255,255,0.2)" }}>
-            Исследуется...
-          </span>
+          <span style={{ fontSize: 11, color: "var(--text-muted)", fontStyle: "italic" }}>Исследуется...</span>
         )}
       </div>
     </div>

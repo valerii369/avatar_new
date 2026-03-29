@@ -11,62 +11,35 @@ interface SphereFilterProps {
 export default function SphereFilter({ activeSphere, onSelect, showAll = true }: SphereFilterProps) {
   return (
     <div
-      className="scrollbar-hide"
-      style={{
-        display: "flex",
-        gap: 8,
-        overflowX: "auto",
-        padding: "0 16px 8px",
-        margin: "0 -16px",
-      }}
+      className="flex gap-2 overflow-x-auto pb-1"
+      style={{ scrollbarWidth: "none" }}
     >
       {showAll && (
         <button
           onClick={() => onSelect(null)}
+          className="flex-none px-3 py-1.5 rounded-full text-[11px] font-medium transition-all whitespace-nowrap"
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "8px 14px",
-            borderRadius: 12,
-            border: `1px solid ${activeSphere === null ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.05)"}`,
-            background: activeSphere === null ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.02)",
-            color: activeSphere === null ? "var(--text-primary)" : "var(--text-muted)",
-            fontSize: 12,
-            fontWeight: 600,
-            whiteSpace: "nowrap",
-            cursor: "pointer",
-            transition: "all 0.2s",
+            background: activeSphere === null ? "rgba(139,92,246,0.1)" : "transparent",
+            color: activeSphere === null ? "var(--violet-l)" : "var(--text-muted)",
+            border: `1px solid ${activeSphere === null ? "var(--violet-l)" : "var(--border)"}`,
           }}
         >
-          Все сферы
+          Все
         </button>
       )}
       {SPHERES.map((sphere: SphereMeta) => {
         const isActive = activeSphere === sphere.id;
-        const Icon = sphere.icon;
         return (
           <button
             key={sphere.id}
             onClick={() => onSelect(sphere.id)}
+            className="flex-none px-3 py-1.5 rounded-full text-[11px] font-medium transition-all whitespace-nowrap"
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "8px 14px",
-              borderRadius: 12,
-              border: `1px solid ${isActive ? `${sphere.color}40` : "rgba(255,255,255,0.05)"}`,
-              background: isActive ? `${sphere.color}15` : "rgba(255,255,255,0.02)",
-              color: isActive ? sphere.color : "var(--text-muted)",
-              fontSize: 11,
-              fontWeight: isActive ? 700 : 500,
-              whiteSpace: "nowrap",
-              cursor: "pointer",
-              transition: "all 0.2s",
-              transform: isActive ? "scale(1.02)" : "scale(1)",
+              background: isActive ? "rgba(139,92,246,0.1)" : "transparent",
+              color: isActive ? "var(--violet-l)" : "var(--text-muted)",
+              border: `1px solid ${isActive ? "var(--violet-l)" : "var(--border)"}`,
             }}
           >
-            <Icon size={14} />
             {sphere.name}
           </button>
         );

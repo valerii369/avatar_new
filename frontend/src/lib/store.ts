@@ -10,9 +10,11 @@ export interface Insight {
   weight: number;
   position: string;
   core_theme: string;
-  energy_description: string;
+  description: string;
   light_aspect: string;
   shadow_aspect: string;
+  insight: string;
+  gift: string;
   developmental_task: string;
   integration_key: string;
   triggers: string[];
