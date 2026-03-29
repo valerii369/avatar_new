@@ -9,7 +9,7 @@ import logging
 import os
 import sys
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, BotCommand
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 # Allow running from backend/ directory
@@ -91,6 +91,16 @@ def main() -> None:
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("reset", reset_command))
     app.add_handler(CommandHandler("help", help_command))
+
+    # Register commands in Telegram menu (visible when user types "/")
+    async def post_init(application: Application) -> None:
+        await application.bot.set_my_commands([
+            BotCommand("start", "Открыть AVATAR MATRIX"),
+            BotCommand("reset", "Сбросить данные и пройти онбординг заново"),
+            BotCommand("help", "Список команд"),
+        ])
+
+    app.post_init = post_init
 
     logger.info("AVATAR Matrix bot started (polling)...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
