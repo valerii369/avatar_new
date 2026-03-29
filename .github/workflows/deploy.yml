@@ -45,10 +45,12 @@ jobs:
             set_env TELEGRAM_BOT_TOKEN "${{ secrets.TELEGRAM_BOT_TOKEN }}"
             set_env MINI_APP_URL "${{ secrets.MINI_APP_URL }}"
 
-            # Copy and enable bot service if not already installed
+            # Copy service files (always overwrite to pick up any changes)
             cp avatar-bot.service /etc/systemd/system/avatar-bot.service
+            cp avatar-backend.service /etc/systemd/system/avatar-new-backend.service
             systemctl daemon-reload
             systemctl enable avatar-bot
+            systemctl enable avatar-new-backend
 
             systemctl restart avatar-new-backend
             systemctl restart avatar-bot
