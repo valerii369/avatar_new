@@ -39,12 +39,18 @@ def _insight_to_text(ins: dict) -> str:
     sp = ins.get("primary_sphere", "?")
     sp_name = SPHERE_NAMES.get(sp, f"Сфера {sp}")
     triggers = ins.get("triggers") or []
+    # Support both new field name (description) and legacy (energy_description)
+    desc = ins.get('description') or ins.get('energy_description', '')
+    insight_text = ins.get('insight', '')
+    gift_text = ins.get('gift', '')
     return (
         f"Сфера: {sp_name} [{ins.get('influence_level', '')}] | Позиция: {ins.get('position', '')}\n"
         f"Тема: {ins.get('core_theme', '')}\n"
-        f"Энергия: {ins.get('energy_description', '')}\n"
+        f"Описание: {desc}\n"
+        f"Инсайт: {insight_text}\n"
         f"Свет: {ins.get('light_aspect', '')}\n"
         f"Тень: {ins.get('shadow_aspect', '')}\n"
+        f"Дар: {gift_text}\n"
         f"Задача развития: {ins.get('developmental_task', '')}\n"
         f"Ключ интеграции: {ins.get('integration_key', '')}\n"
         f"Триггеры: {', '.join(triggers)}"
