@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { assistantAPI, voiceAPI } from "@/lib/api";
 import { useUserStore } from "@/lib/store";
+import { useTmaSafeArea } from "@/lib/useTmaSafeArea";
 
 const MicIcon = ({ className }: { className?: string }) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -67,6 +68,7 @@ const useVoiceRecorder = (userId: string | null, setInput: React.Dispatch<React.
 
 export default function AssistantPage() {
     const router = useRouter();
+    const tmaSafeTop = useTmaSafeArea();
     const { userId, assistantMessages, setAssistantMessages } = useUserStore();
     const [messages, setMessages] = useState<{ role: string, content: string }[]>(assistantMessages);
     const [input, setInput] = useState("");
@@ -198,7 +200,7 @@ export default function AssistantPage() {
     return (
         <div
             className="fixed inset-0 flex flex-col bg-[#060818] overflow-hidden"
-            style={{ zIndex: 10, paddingTop: "env(safe-area-inset-top, 0px)" }}
+            style={{ zIndex: 10, paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}
         >
 
             {/* Top bar — offset for TMA header */}

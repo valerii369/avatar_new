@@ -7,6 +7,7 @@ import { useUserStore } from "@/lib/store";
 import { authAPI, profileAPI, masterHubAPI } from "@/lib/api";
 import { EnergyIcon } from "@/components/EnergyIcon";
 import BottomNav from "@/components/BottomNav";
+import { useTmaSafeArea } from "@/lib/useTmaSafeArea";
 
 function formatScore(n: number): string {
   return n.toLocaleString("ru-RU").replace(/,/g, " ");
@@ -14,6 +15,7 @@ function formatScore(n: number): string {
 
 export default function HomePage() {
   const router = useRouter();
+  const tmaSafeTop = useTmaSafeArea();
   const {
     userId, setUser, energy, evolutionLevel, title, firstName,
     xp, xpCurrent, xpNext, photoUrl,
@@ -23,6 +25,8 @@ export default function HomePage() {
 
   // 1. Auth & Init
   useEffect(() => {
+    let cancelled = false;
+
     const initAuth = async () => {
       try {
         const tg = (window as any).Telegram?.WebApp;
@@ -34,9 +38,11 @@ export default function HomePage() {
             try { tg.requestFullscreen(); } catch {}
           }
           // Disable vertical swipe to close (keeps app open on swipe down)
-          if (typeof tg.disableVerticalSwipes === "function") {
-            tg.disableVerticalSwipes();
-          }
+          try {
+            if (typeof tg.disableVerticalSwipes === "function") {
+              tg.disableVerticalSwipes();
+            }
+          } catch {}
         }
 
         const isDev = process.env.NODE_ENV === "development";
@@ -47,28 +53,33 @@ export default function HomePage() {
         // Fast path: if we have a cached session, show UI immediately
         const cached = useUserStore.getState();
         if (cached.userId && cached.token && cached.onboardingDone) {
-          setStatus("ready");
+          if (!cancelled) setStatus("ready");
           // Refresh in background (non-blocking)
           authAPI.login(initData, isDev || isDebug, testUserId).then(res => {
+            if (cancelled) return;
             const d = res.data;
             setUser({
               userId: d.user_id, tgId: d.tg_id, firstName: d.first_name,
               token: d.token, energy: d.energy, streak: d.streak,
               evolutionLevel: d.evolution_level, title: d.title,
-              onboardingDone: d.onboarding_done || true,
+              onboardingDone: d.onboarding_done,
               xp: d.xp, xpCurrent: d.xp_current, xpNext: d.xp_next,
               referralCode: d.referral_code,
               photoUrl: d.photo_url || "",
             });
+            if (!d.onboarding_done) {
+              router.push("/onboarding");
+            }
           }).catch(() => {});
           return;
         }
 
         if (!initData && !isDev && !isDebug) {
-          throw new Error("Telegram context missing. Please open via the bot or use ?debug=true for testing.");
+          throw new Error("Открой приложение через Telegram бот.");
         }
 
         const authRes = await authAPI.login(initData, isDev || isDebug, testUserId);
+        if (cancelled) return;
         const d = authRes.data;
 
         const prevOnboardingDone = cached.onboardingDone;
@@ -93,14 +104,24 @@ export default function HomePage() {
           return;
         }
 
-        setStatus("ready");
+        if (!cancelled) setStatus("ready");
       } catch (e: any) {
+        if (cancelled) return;
         console.error("Init error", e);
-        setErrorInfo(e.message || "Unknown error");
+        const msg = e?.code === "ECONNABORTED" || e?.message?.includes("timeout")
+          ? "Сервер не отвечает. Проверь подключение и попробуй снова."
+          : e?.code === "ERR_NETWORK" || e?.message === "Network Error"
+          ? "Нет соединения с сервером. Попробуй снова."
+          : e?.response?.status === 404
+          ? "Сервис временно недоступен. Попробуй позже."
+          : e.message || "Ошибка инициализации";
+        setErrorInfo(msg);
         setStatus("error");
       }
     };
+
     initAuth();
+    return () => { cancelled = true; };
   }, [router, setUser]);
 
   // 2. Profile fetch
@@ -131,6 +152,27 @@ export default function HomePage() {
   const levelRange = Math.max(xpNext - xpCurrent, 1);
   const xpCollectedInLevel = Math.max(xp - xpCurrent, 0);
   const levelProgress = Math.min(xpCollectedInLevel / levelRange, 1);
+
+  // Error state — must come before loading to avoid !userId masking it
+  if (status === "error") {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-8 text-center" style={{ background: "var(--bg-deep)" }}>
+        <div style={{ width: 48, height: 48, borderRadius: 16, background: "rgba(239,68,68,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, marginBottom: 20 }}>!</div>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>Ошибка инициализации</h2>
+        <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 24, maxWidth: 280, lineHeight: 1.5 }}>{errorInfo}</p>
+        <button
+          onClick={() => window.location.reload()}
+          style={{
+            padding: "12px 32px", background: "var(--violet)",
+            color: "white", borderRadius: 14, fontWeight: 600,
+            border: "none", cursor: "pointer", fontSize: 14,
+          }}
+        >
+          Попробовать снова
+        </button>
+      </div>
+    );
+  }
 
   // Building Avatar screen
   if (isBuilding) {
@@ -177,28 +219,8 @@ export default function HomePage() {
     );
   }
 
-  if (status === "error") {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-8 text-center" style={{ background: "var(--bg-deep)" }}>
-        <div style={{ width: 48, height: 48, borderRadius: 16, background: "rgba(239,68,68,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, marginBottom: 20 }}>!</div>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>Ошибка инициализации</h2>
-        <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 24, maxWidth: 280, lineHeight: 1.5 }}>{errorInfo}</p>
-        <button
-          onClick={() => window.location.reload()}
-          style={{
-            padding: "12px 32px", background: "var(--violet)",
-            color: "white", borderRadius: 14, fontWeight: 600,
-            border: "none", cursor: "pointer", fontSize: 14,
-          }}
-        >
-          Попробовать снова
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "var(--bg-deep)", paddingBottom: 100 }}>
+    <div className="min-h-screen flex flex-col" style={{ background: "var(--bg-deep)", paddingBottom: 100, paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}>
 
       {/* Header */}
       <div style={{ padding: "16px 20px 12px" }}>

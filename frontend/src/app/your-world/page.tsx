@@ -11,6 +11,7 @@ import InsightCard from "@/components/InsightCard";
 import InsightDetailModal from "@/components/InsightDetailModal";
 import { SkeletonCard } from "@/components/Skeleton";
 import BottomNav from "@/components/BottomNav";
+import { useTmaSafeArea } from "@/lib/useTmaSafeArea";
 
 type Tab = "portrait" | "breakdown" | "sides";
 
@@ -419,6 +420,7 @@ function SidesTab({ insights }: { insights: Insight[] }) {
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 export default function YourWorldPage() {
+  const tmaSafeTop = useTmaSafeArea();
   const { userId } = useUserStore();
   const { insights, setInsights, activeSphere, setActiveSphere } = useInsightsStore();
   const [activeTab, setActiveTab] = useState<Tab>("portrait");
@@ -464,7 +466,7 @@ export default function YourWorldPage() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "var(--bg-deep)", paddingBottom: 100 }}>
+    <div className="min-h-screen flex flex-col" style={{ background: "var(--bg-deep)", paddingBottom: 100, paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}>
 
       {/* Header */}
       <div style={{ padding: "20px 20px 12px" }}>
