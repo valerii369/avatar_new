@@ -40,10 +40,9 @@ class GeocodeRequest(BaseModel):
 # ─── Helpers ───────────────────────────────────────────────────────────────────
 
 def _default_user_fields() -> dict:
+    """Fields that exist in the Supabase 'users' table."""
     return {
         "xp":             0,
-        "xp_current":     0,
-        "xp_next":        1000,
         "evolution_level": 1,
         "title":          "Новичок",
         "energy":         100,
@@ -51,6 +50,14 @@ def _default_user_fields() -> dict:
         "referral_code":  "",
         "onboarding_done": False,
     }
+
+def _computed_xp_fields(user: dict) -> dict:
+    """XP level boundaries computed from xp value (not stored in DB)."""
+    xp = user.get("xp", 0)
+    level = user.get("evolution_level", 1)
+    xp_current = (level - 1) * 1000
+    xp_next = level * 1000
+    return {"xp_current": xp_current, "xp_next": xp_next}
 
 # ─── /geocode ─────────────────────────────────────────────────────────────────
 
@@ -169,6 +176,7 @@ async def login(request: LoginRequest):
 
 
 def _build_login_response(user: dict, tg_id: int, first_name: str) -> dict:
+    xp_fields = _computed_xp_fields(user)
     return {
         "user_id":         user.get("id") or str(tg_id),
         "tg_id":           tg_id,
@@ -180,8 +188,8 @@ def _build_login_response(user: dict, tg_id: int, first_name: str) -> dict:
         "title":           user.get("title", "Новичок"),
         "onboarding_done": user.get("onboarding_done", False),
         "xp":              user.get("xp", 0),
-        "xp_current":      user.get("xp_current", 0),
-        "xp_next":         user.get("xp_next", 1000),
+        "xp_current":      xp_fields["xp_current"],
+        "xp_next":         xp_fields["xp_next"],
         "referral_code":   user.get("referral_code", ""),
         "photo_url":       user.get("photo_url", ""),
     }
@@ -209,6 +217,7 @@ async def get_profile(user_id: str):
         portrait_res = supabase.table("user_portraits").select("user_id").eq("user_id", user_id).execute()
         onboarding_done = bool(portrait_res.data)
 
+        xp_fields = _computed_xp_fields(user)
         return {
             "user_id":        user_id,
             "first_name":     user.get("first_name", ""),
@@ -216,8 +225,8 @@ async def get_profile(user_id: str):
             "birth_date":     birth.get("birth_date", ""),
             "birth_place":    birth.get("birth_place", ""),
             "xp":             user.get("xp", 0),
-            "xp_current":     user.get("xp_current", 0),
-            "xp_next":        user.get("xp_next", 1000),
+            "xp_current":     xp_fields["xp_current"],
+            "xp_next":        xp_fields["xp_next"],
             "evolution_level": user.get("evolution_level", 1),
             "title":          user.get("title", "Новичок"),
             "energy":         user.get("energy", 100),
