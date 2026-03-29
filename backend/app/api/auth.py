@@ -164,8 +164,8 @@ async def login(request: LoginRequest):
         return _build_login_response(user, resolved_tg_id, resolved_first_name)
 
     except Exception as e:
-        logger.error(f"Login failed: {e}")
-        raise HTTPException(status_code=500, detail="Login failed")
+        logger.error(f"Login failed for tg_id={resolved_tg_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Login failed: {e}")
 
 
 def _build_login_response(user: dict, tg_id: int, first_name: str) -> dict:
