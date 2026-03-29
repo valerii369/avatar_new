@@ -23,6 +23,8 @@ export default function HomePage() {
 
   // 1. Auth & Init
   useEffect(() => {
+    let cancelled = false;
+
     const initAuth = async () => {
       try {
         const tg = (window as any).Telegram?.WebApp;
@@ -34,9 +36,11 @@ export default function HomePage() {
             try { tg.requestFullscreen(); } catch {}
           }
           // Disable vertical swipe to close (keeps app open on swipe down)
-          if (typeof tg.disableVerticalSwipes === "function") {
-            tg.disableVerticalSwipes();
-          }
+          try {
+            if (typeof tg.disableVerticalSwipes === "function") {
+              tg.disableVerticalSwipes();
+            }
+          } catch {}
         }
 
         const isDev = process.env.NODE_ENV === "development";
@@ -47,28 +51,33 @@ export default function HomePage() {
         // Fast path: if we have a cached session, show UI immediately
         const cached = useUserStore.getState();
         if (cached.userId && cached.token && cached.onboardingDone) {
-          setStatus("ready");
+          if (!cancelled) setStatus("ready");
           // Refresh in background (non-blocking)
           authAPI.login(initData, isDev || isDebug, testUserId).then(res => {
+            if (cancelled) return;
             const d = res.data;
             setUser({
               userId: d.user_id, tgId: d.tg_id, firstName: d.first_name,
               token: d.token, energy: d.energy, streak: d.streak,
               evolutionLevel: d.evolution_level, title: d.title,
-              onboardingDone: d.onboarding_done || true,
+              onboardingDone: d.onboarding_done,
               xp: d.xp, xpCurrent: d.xp_current, xpNext: d.xp_next,
               referralCode: d.referral_code,
               photoUrl: d.photo_url || "",
             });
+            if (!d.onboarding_done) {
+              router.push("/onboarding");
+            }
           }).catch(() => {});
           return;
         }
 
         if (!initData && !isDev && !isDebug) {
-          throw new Error("Telegram context missing. Please open via the bot or use ?debug=true for testing.");
+          throw new Error("Открой приложение через Telegram бот.");
         }
 
         const authRes = await authAPI.login(initData, isDev || isDebug, testUserId);
+        if (cancelled) return;
         const d = authRes.data;
 
         const prevOnboardingDone = cached.onboardingDone;
@@ -93,14 +102,22 @@ export default function HomePage() {
           return;
         }
 
-        setStatus("ready");
+        if (!cancelled) setStatus("ready");
       } catch (e: any) {
+        if (cancelled) return;
         console.error("Init error", e);
-        setErrorInfo(e.message || "Unknown error");
+        const msg = e?.code === "ECONNABORTED" || e?.message?.includes("timeout")
+          ? "Сервер не отвечает. Проверь подключение и попробуй снова."
+          : e?.response?.status === 404
+          ? "Сервис временно недоступен. Попробуй позже."
+          : e.message || "Ошибка инициализации";
+        setErrorInfo(msg);
         setStatus("error");
       }
     };
+
     initAuth();
+    return () => { cancelled = true; };
   }, [router, setUser]);
 
   // 2. Profile fetch
