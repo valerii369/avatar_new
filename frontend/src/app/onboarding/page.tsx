@@ -386,7 +386,7 @@ export default function OnboardingPage() {
             const testUserId = params.get("user_id");
             if (isDebug) {
                 try {
-                    const authRes = await api.post("/api/auth", { initData: "", test_mode: true, test_user_id: testUserId ? parseInt(testUserId) : 12345678 });
+                    const authRes = await api.post("/api/auth/login", { init_data: "", is_dev: true, test_user_id: testUserId ? parseInt(testUserId) : 12345678 });
                     const d = authRes.data;
                     setUser({ userId: d.user_id, tgId: d.tg_id, firstName: d.first_name, token: d.token, energy: d.energy, streak: d.streak, evolutionLevel: d.evolution_level, title: d.title, onboardingDone: d.onboarding_done });
                     if (typeof window !== "undefined") localStorage.setItem("avatar_token", d.token);
