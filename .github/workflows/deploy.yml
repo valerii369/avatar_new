@@ -91,6 +91,18 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel
 
+      - name: Set NEXT_PUBLIC_API_URL in Vercel project
+        run: |
+          curl -s -X POST "https://api.vercel.com/v10/projects/${{ secrets.VERCEL_PROJECT_ID }}/env" \
+            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "key": "NEXT_PUBLIC_API_URL",
+              "value": "http://103.74.92.72:8000",
+              "type": "plain",
+              "target": ["production", "preview", "development"]
+            }' | grep -E '"id"|"error"' || true
+
       - name: Deploy to Vercel
         run: |
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
