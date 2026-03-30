@@ -17,9 +17,9 @@ export function useTmaSafeArea(): number {
       const safeArea = tg.safeAreaInset || { top: 0 };
       const contentSafeArea = tg.contentSafeAreaInset || { top: 0 };
       let top = (safeArea.top || 0) + (contentSafeArea.top || 0);
-      // Fullscreen mode — TG header buttons are ~44px from top on most devices
+      // Fullscreen mode — status bar (~54px on iPhone) + TG header buttons (~36px)
       if (top === 0 && tg.isFullscreen) {
-        top = 44;
+        top = 90;
       }
       setTopInset(top);
     };
