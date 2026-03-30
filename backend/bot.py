@@ -40,7 +40,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton(
-            text="🌌 Открыть AVATAR MATRIX",
+            text="AVATAR",
             web_app=WebAppInfo(url=mini_app_url),
         )]
     ])
