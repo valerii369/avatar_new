@@ -1,5 +1,5 @@
 "use client";
-import { T, typo } from "@/lib/typography";
+import { T, typo, S, R, Layout } from "@/lib/tokens";
 
 const TOKENS = [
   { key: "heading",     label: "heading",      desc: "Заголовки страниц", size: T.heading.size,     weight: T.heading.weight,     font: "Outfit" },
@@ -114,6 +114,56 @@ export default function TypographyPage() {
           </div>
         </Card>
 
+      </div>
+
+      {/* ── SPACING ── */}
+      <h2 style={{ ...typo("heading"), color: "#fff", marginTop: 48, marginBottom: 24 }}>Отступы (Spacing)</h2>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {(Object.entries(S) as [string, number][]).map(([name, value]) => (
+          <div key={name} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ ...typo("body"), fontWeight: 700, color: "#a78bfa", width: 40 }}>{name}</span>
+            <div style={{ width: value, height: 24, borderRadius: 4, background: "linear-gradient(90deg, #8b5cf6, #a78bfa)", opacity: 0.6 }} />
+            <span style={{ ...typo("caption"), color: "rgba(255,255,255,0.4)" }}>{value}px</span>
+            <span style={{ ...typo("caption"), color: "rgba(255,255,255,0.25)" }}>
+              {name === "xs" && "зазор label↔значение"}
+              {name === "sm" && "gap grid, между badge"}
+              {name === "md" && "padding карточки, gap элементов"}
+              {name === "base" && "padding страницы, gap карточек"}
+              {name === "lg" && "padding секций, header"}
+              {name === "xl" && "padding модалок, между секциями"}
+              {name === "xxl" && "между блоками контента"}
+              {name === "page" && "верхний отступ empty state"}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* ── RADIUS ── */}
+      <h2 style={{ ...typo("heading"), color: "#fff", marginTop: 48, marginBottom: 24 }}>Радиусы (Radius)</h2>
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+        {(Object.entries(R) as [string, number | string][]).map(([name, value]) => (
+          <div key={name} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+            <div style={{
+              width: 56, height: 56,
+              borderRadius: value,
+              background: "rgba(139,92,246,0.15)",
+              border: "2px solid rgba(139,92,246,0.4)",
+            }} />
+            <span style={{ ...typo("label"), color: "#a78bfa" }}>{name}</span>
+            <span style={{ ...typo("micro"), color: "rgba(255,255,255,0.3)" }}>{typeof value === "number" ? `${value}px` : value}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* ── LAYOUT ── */}
+      <h2 style={{ ...typo("heading"), color: "#fff", marginTop: 48, marginBottom: 24 }}>Layout</h2>
+      <div style={{ padding: 20, borderRadius: R.xl, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+        {(Object.entries(Layout) as [string, number][]).map(([name, value]) => (
+          <div key={name} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+            <span style={{ ...typo("body"), color: "#a78bfa", fontWeight: 600 }}>{name}</span>
+            <span style={{ ...typo("body"), color: "rgba(255,255,255,0.6)" }}>{value}px</span>
+          </div>
+        ))}
       </div>
 
       {/* Summary table */}
