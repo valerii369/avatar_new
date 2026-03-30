@@ -532,7 +532,7 @@ export default function YourWorldPage() {
         <h1 style={{
           fontSize: 22, fontWeight: 800, fontFamily: "'Outfit', sans-serif",
           margin: 0,
-          background: "linear-gradient(135deg, var(--violet-l), var(--cyan))",
+          background: "linear-gradient(135deg, var(--violet-l), var(--violet))",
           WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
         }}>
           Твой мир
