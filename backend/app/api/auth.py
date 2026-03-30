@@ -343,13 +343,48 @@ async def get_pipeline_errors(user_id: str = "", limit: int = 5):
 
 @router.post("/calculate-sync")
 async def calculate_sync(request: ProfileRequest):
-    """Runs DSB Pipeline synchronously for debugging. Returns error details if it fails."""
+    """Runs DSB Pipeline synchronously for debugging — bypasses internal try/except."""
+    import traceback
+    supabase = get_supabase()
+    steps = []
     try:
-        await initialize_onboarding_layer(request)
-        return {"status": "done", "message": "Pipeline completed successfully"}
+        # Step 1: Save birth data
+        birth_row = {
+            "user_id": request.user_id, "birth_date": request.birth_date,
+            "birth_time": request.birth_time, "birth_place": request.birth_place, "gender": request.gender,
+        }
+        supabase.table("user_birth_data").delete().eq("user_id", request.user_id).execute()
+        supabase.table("user_birth_data").insert(birth_row).execute()
+        steps.append("birth_data: saved")
+
+        # Step 2: Astro chart
+        astro_chart = await calculate_chart(request.birth_date, request.birth_time, request.birth_place)
+        steps.append(f"chart: {len(astro_chart.get('planets',{}))} planets, {len(astro_chart.get('aspects',[]))} aspects")
+
+        # Step 3: Generate insights
+        uis_response = await generate_insights(astro_chart)
+        steps.append(f"insights: {len(uis_response.insights)} generated")
+
+        # Step 4: Synthesis
+        synthesized_data = synthesize(uis_response.insights)
+        steps.append(f"synthesis: {len(synthesized_data)} items")
+
+        # Step 5: Portrait
+        portrait = await generate_portrait_summary(request.user_id, synthesized_data)
+        steps.append(f"portrait: {bool(portrait)}")
+
+        # Step 6: Save
+        await save_to_supabase(request.user_id, synthesized_data, portrait)
+        steps.append("saved to supabase")
+
+        # Step 7: Mark onboarding done
+        supabase.table("users").update({"onboarding_done": True}).eq("id", request.user_id).execute()
+        steps.append("onboarding_done: True")
+
+        return {"status": "done", "steps": steps}
     except Exception as e:
-        import traceback
-        return {"status": "error", "message": str(e), "traceback": traceback.format_exc()}
+        steps.append(f"FAILED: {e}")
+        return {"status": "error", "steps": steps, "error": str(e), "traceback": traceback.format_exc()}
 
 @router.post("/calculate")
 async def calculate_profile(request: ProfileRequest, background_tasks: BackgroundTasks):
