@@ -15,11 +15,11 @@ class UniversalInsight(BaseModel):
 
     # --- Контент карточки ---
     core_theme: str = Field(..., min_length=3, max_length=120)
-    description: str = Field(..., min_length=5, max_length=150)
-    light_aspect: str = Field(..., min_length=3, max_length=300)
-    shadow_aspect: str = Field(..., min_length=3, max_length=300)
-    insight: str = Field(..., min_length=5, max_length=400)
-    gift: str = Field(..., min_length=3, max_length=200)
+    description: str = Field(..., min_length=5, max_length=500)
+    light_aspect: str = Field(..., min_length=3, max_length=500)
+    shadow_aspect: str = Field(..., min_length=3, max_length=500)
+    insight: str = Field(..., min_length=5, max_length=800)
+    gift: str = Field(..., min_length=3, max_length=500)
 
     # --- Детальный экран ---
     developmental_task: str = Field(..., min_length=5, max_length=200)

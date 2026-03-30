@@ -281,12 +281,15 @@ async def _parse_batch(raw: str) -> list:
     if isinstance(data, dict):
         data = data.get("insights", [])
     valid = []
+    skipped = 0
     for item in data:
         try:
             from app.models.uis import UniversalInsight
             valid.append(UniversalInsight(**item))
         except Exception as e:
-            logger.warning(f"Skipping invalid insight: {e}")
+            skipped += 1
+            logger.warning(f"Skipping insight '{item.get('core_theme','?')[:30]}': {str(e)[:150]}")
+    logger.info(f"_parse_batch: {len(valid)} valid, {skipped} skipped out of {len(data)}")
     return valid
 
 def _slim_chart_for_prompt(chart: dict) -> dict:
