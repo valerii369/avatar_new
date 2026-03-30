@@ -525,7 +525,7 @@ export default function YourWorldPage() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "var(--bg-deep)", paddingBottom: 100, paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}>
+    <div className="flex flex-col" style={{ background: "var(--bg-deep)", height: "100dvh", overflow: "hidden", paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}>
 
       {/* Header */}
       <div style={{ padding: "20px 20px 12px" }}>
@@ -574,8 +574,8 @@ export default function YourWorldPage() {
         </div>
       </div>
 
-      {/* Content */}
-      <div style={{ flex: 1, padding: "0 20px" }}>
+      {/* Content — scrollable */}
+      <div style={{ flex: 1, padding: "0 20px", overflowY: "auto", paddingBottom: 90, WebkitOverflowScrolling: "touch" }}>
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
