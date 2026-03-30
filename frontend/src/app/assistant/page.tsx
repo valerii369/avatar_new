@@ -197,15 +197,15 @@ export default function AssistantPage() {
 
     return (
         <div
-            className="flex flex-col bg-[#060818] overflow-hidden"
-            style={{ height: "100dvh", paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}
+            className="fixed inset-0 flex flex-col bg-[#060818] overflow-hidden"
+            style={{ zIndex: 10, paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}
         >
 
             {/* Top bar — offset for TMA header */}
             <div style={{ padding: "14px 16px 8px", borderBottom: "1px solid rgba(255,255,255,0.05)", flexShrink: 0, position: "relative", zIndex: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <button
-                        onClick={() => router.push("/")}
+                        onClick={() => router.back()}
                         style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}
                     >
                         ← Назад
@@ -312,8 +312,8 @@ export default function AssistantPage() {
                 </AnimatePresence>
             </div>
 
-            {/* Bottom panel — above BottomNav (72px = nav height + bottom offset) */}
-            <div style={{ flexShrink: 0, padding: "10px 16px 12px", marginBottom: 72, borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", flexDirection: "column", gap: 8, position: "relative", zIndex: 20, background: "rgba(6,8,24,0.95)", backdropFilter: "blur(10px)", opacity: isFinished ? 0.3 : 1, pointerEvents: isFinished ? "none" : "auto" }}>
+            {/* Bottom panel */}
+            <div style={{ flexShrink: 0, padding: "10px 16px 20px", borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", flexDirection: "column", gap: 8, position: "relative", zIndex: 20, background: "rgba(6,8,24,0.95)", backdropFilter: "blur(10px)", opacity: isFinished ? 0.3 : 1, pointerEvents: isFinished ? "none" : "auto" }}>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", position: "relative" }}>
                     <div style={{ flex: 1, position: "relative" }}>
                         <textarea
@@ -395,8 +395,6 @@ export default function AssistantPage() {
                     </button>
                 </div>
             </div>
-
-            <BottomNav />
         </div>
     );
 }
