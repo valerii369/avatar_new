@@ -220,7 +220,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="flex flex-col" style={{ background: "var(--bg-deep)", height: "100vh", overflow: "hidden", paddingBottom: 80, paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}>
+    <div className="flex flex-col" style={{ background: "var(--bg-deep)", height: "100dvh", overflow: "hidden", paddingBottom: 80, paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}>
 
       {/* Header */}
       <div style={{ padding: "4px 16px 10px" }}>

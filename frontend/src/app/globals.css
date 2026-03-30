@@ -40,7 +40,7 @@ body {
   -webkit-font-smoothing: antialiased;
   height: 100%;
   overflow-x: hidden;
-  padding-top: env(safe-area-inset-top, 0px);
+  overscroll-behavior: none;
 }
 
 /* Scrollbar */
