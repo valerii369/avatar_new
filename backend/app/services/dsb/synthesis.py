@@ -46,23 +46,24 @@ async def generate_portrait_summary(user_id: str, synthesized_data: dict) -> dic
                 })
 
     prompt = f"""
-    You are the AVATAR Synthesis Engine. 
-    Based on the following astrological insights, generate a cohesive character portrait.
-    Provide the response in STRICT JSON format.
+    Ты — движок синтеза AVATAR.
+    На основе астрологических инсайтов составь целостный психологический портрет.
+    ВЕСЬ ТЕКСТ СТРОГО НА РУССКОМ ЯЗЫКЕ.
+    Ответ в формате JSON.
 
-    Insights:
+    Инсайты:
     {json.dumps(top_insights, ensure_ascii=False)}
 
-    JSON Structure:
+    Структура JSON:
     {{
-        "core_identity": "A 1-sentence powerful description of the soul's essence",
-        "core_archetype": "A creative title (e.g. The Cosmic Architect)",
-        "narrative_role": "Their role in the social/universal play",
-        "energy_type": "Description of their dominant vibration",
-        "current_dynamic": "What they are currently integrating or facing",
+        "core_identity": "Одно предложение — суть души человека (на русском)",
+        "core_archetype": "Творческое название архетипа (например: Космический Архитектор)",
+        "narrative_role": "Роль в социальном и духовном контексте (на русском)",
+        "energy_type": "Описание доминирующей вибрации / типа энергии (на русском)",
+        "current_dynamic": "Что человек сейчас интегрирует или с чем сталкивается (на русском)",
         "polarities": {{
-            "core_strengths": ["list of 3 key strengths"],
-            "shadow_aspects": ["list of 3 key shadow traits"]
+            "core_strengths": ["3 ключевые сильные стороны на русском"],
+            "shadow_aspects": ["3 ключевые теневые черты на русском"]
         }}
     }}
     """
@@ -72,7 +73,7 @@ async def generate_portrait_summary(user_id: str, synthesized_data: dict) -> dic
         response = await client.chat.completions.create(
             model=settings.MODEL_LIGHT,
             messages=[
-                {"role": "system", "content": "You are a master of psychological and evolutionary astrology."},
+                {"role": "system", "content": "Ты — мастер психологической и эволюционной астрологии. Отвечай ТОЛЬКО на русском языке."},
                 {"role": "user", "content": prompt}
             ],
             response_format={"type": "json_object"}

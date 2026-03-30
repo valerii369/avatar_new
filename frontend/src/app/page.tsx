@@ -315,51 +315,20 @@ export default function HomePage() {
         </p>
       </div>
 
-      {/* Portrait Summary */}
+      {/* Brief identity — full portrait lives in "Твой мир" */}
       <div style={{ padding: "0 20px" }}>
         {hub?.portrait_summary ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-
-            <div style={{
-              padding: "16px 18px", borderRadius: 14,
-              background: "linear-gradient(145deg, rgba(139,92,246,0.06), rgba(59,130,246,0.03))",
-              border: "1px solid rgba(139,92,246,0.12)",
+          <div style={{
+            padding: "16px 18px", borderRadius: 14,
+            background: "linear-gradient(145deg, rgba(139,92,246,0.06), rgba(59,130,246,0.03))",
+            border: "1px solid rgba(139,92,246,0.12)",
+          }}>
+            <p style={{
+              fontSize: 13, fontWeight: 500, color: "var(--text-primary)",
+              lineHeight: 1.6, margin: 0, textAlign: "center",
             }}>
-              <div style={{
-                fontSize: 10, fontWeight: 700, color: "rgba(139,92,246,0.5)",
-                textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 8,
-              }}>
-                Идентификация
-              </div>
-              <p style={{
-                fontSize: 13, fontWeight: 500, color: "var(--text-primary)",
-                lineHeight: 1.6, margin: 0,
-              }}>
-                {hub.portrait_summary.core_identity}
-              </p>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              <AttributeCard label="Архетип" value={hub.portrait_summary.core_archetype} color="#8B5CF6" />
-              <AttributeCard label="Роль" value={hub.portrait_summary.narrative_role} color="#3B82F6" />
-              <AttributeCard label="Энергия" value={hub.portrait_summary.energy_type} color="#10B981" />
-              <AttributeCard label="Фокус" value={hub.portrait_summary.current_dynamic} color="#F59E0B" />
-            </div>
-
-            {hub.deep_profile_data?.polarities && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                <PolarityCard
-                  title="Сильные стороны"
-                  items={hub.deep_profile_data.polarities.core_strengths || []}
-                  color="#10B981"
-                />
-                <PolarityCard
-                  title="Теневые аспекты"
-                  items={hub.deep_profile_data.polarities.shadow_aspects || []}
-                  color="#EF4444"
-                />
-              </div>
-            )}
+              {hub.portrait_summary.core_identity}
+            </p>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center" style={{ padding: "40px 20px", textAlign: "center" }}>
