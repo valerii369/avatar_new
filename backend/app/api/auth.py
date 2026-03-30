@@ -341,6 +341,16 @@ async def get_pipeline_errors(user_id: str = "", limit: int = 5):
 
 # ─── /calculate ───────────────────────────────────────────────────────────────
 
+@router.post("/calculate-sync")
+async def calculate_sync(request: ProfileRequest):
+    """Runs DSB Pipeline synchronously for debugging. Returns error details if it fails."""
+    try:
+        await initialize_onboarding_layer(request)
+        return {"status": "done", "message": "Pipeline completed successfully"}
+    except Exception as e:
+        import traceback
+        return {"status": "error", "message": str(e), "traceback": traceback.format_exc()}
+
 @router.post("/calculate")
 async def calculate_profile(request: ProfileRequest, background_tasks: BackgroundTasks):
     """Triggers the DSB Pipeline as a background task."""
