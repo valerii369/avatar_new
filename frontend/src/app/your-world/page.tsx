@@ -528,22 +528,24 @@ export default function YourWorldPage() {
     <div className="flex flex-col" style={{ background: "var(--bg-deep)", height: "100dvh", overflow: "hidden", paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}>
 
       {/* Header */}
-      <div style={{ padding: "20px 20px 12px" }}>
+      <div style={{ padding: "6px 20px 8px", display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
         <h1 style={{
           fontSize: 22, fontWeight: 800, fontFamily: "'Outfit', sans-serif",
-          margin: 0, marginBottom: 4,
+          margin: 0,
           background: "linear-gradient(135deg, var(--violet-l), var(--gold))",
           WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
         }}>
           Твой мир
         </h1>
-        <p style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 400, margin: 0 }}>
-          {totalCount > 0 ? `${totalCount} инсайтов по ${sphereCount} сферам` : "Полный расчёт по 12 сферам жизни"}
-        </p>
+        {totalCount > 0 && (
+          <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>
+            {totalCount} · {sphereCount} сфер
+          </span>
+        )}
       </div>
 
-      {/* Tab switcher — diary style */}
-      <div className="px-4 mb-4">
+      {/* Tab switcher */}
+      <div className="px-4 mb-3">
         <div
           className="grid grid-cols-3 gap-1 p-1"
           style={{
