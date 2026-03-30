@@ -14,10 +14,12 @@ async def lifespan(app: FastAPI):
     import os
     import swisseph as swe
 
-    eph_dir = os.path.join(os.path.dirname(__file__), "ephe")
+    eph_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ephe")
     os.makedirs(eph_dir, exist_ok=True)
     swe.set_ephe_path(eph_dir)
-    logger.info("PySwisseph ephemeris path configured.")
+    # Verify files exist
+    se1_files = [f for f in os.listdir(eph_dir) if f.endswith(".se1")]
+    logger.info(f"PySwisseph ephe path: {eph_dir} ({len(se1_files)} .se1 files: {se1_files})")
 
     yield
 
@@ -39,7 +41,16 @@ app.add_middleware(
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "version": "v2.1"}
+    import os
+    import swisseph as swe
+    eph_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ephe")
+    se1_files = [f for f in os.listdir(eph_dir) if f.endswith(".se1")] if os.path.isdir(eph_dir) else []
+    return {
+        "status": "healthy", "version": "v2.1",
+        "ephe_path": eph_dir,
+        "ephe_files": len(se1_files),
+        "swe_path": swe.get_library_path() if hasattr(swe, 'get_library_path') else "n/a",
+    }
 
 # Core routers
 app.include_router(auth.router,       prefix="/api/auth",      tags=["auth"])
