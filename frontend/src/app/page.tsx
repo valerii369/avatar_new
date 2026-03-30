@@ -223,7 +223,7 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col" style={{ background: "var(--bg-deep)", paddingBottom: 100, paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}>
 
       {/* Header */}
-      <div style={{ padding: "16px 20px 12px" }}>
+      <div style={{ padding: "12px 10px 10px" }}>
         <div style={{
           display: "flex", alignItems: "center", gap: 12,
           padding: "10px 14px",
