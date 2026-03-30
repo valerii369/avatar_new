@@ -313,6 +313,9 @@ async def generate_insights(chart: dict, attempt: int = 0) -> UISResponse:
 
     slim_chart = _slim_chart_for_prompt(chart)
 
+    logger.info(f"generate_insights: model={settings.MODEL_HEAVY}, attempt={attempt}, "
+                f"context_chunks={len(context_chunks)}, queries={len(queries)}")
+
     try:
         response = await openai_client.chat.completions.create(
             model=settings.MODEL_HEAVY,
@@ -327,7 +330,7 @@ async def generate_insights(chart: dict, attempt: int = 0) -> UISResponse:
                     ]
                 }, ensure_ascii=False)}
             ],
-            max_completion_tokens=65000,
+            max_completion_tokens=16000,
         )
         raw = response.choices[0].message.content
         return await parse_and_validate(raw)

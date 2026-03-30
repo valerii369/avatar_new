@@ -16,7 +16,12 @@ export function useTmaSafeArea(): number {
     const update = () => {
       const safeArea = tg.safeAreaInset || { top: 0 };
       const contentSafeArea = tg.contentSafeAreaInset || { top: 0 };
-      setTopInset((safeArea.top || 0) + (contentSafeArea.top || 0));
+      let top = (safeArea.top || 0) + (contentSafeArea.top || 0);
+      // Fullscreen mode on iOS needs minimum safe area even if TG reports 0
+      if (top === 0 && tg.isFullscreen) {
+        top = 60; // approximate status bar + TMA header
+      }
+      setTopInset(top);
     };
 
     update();

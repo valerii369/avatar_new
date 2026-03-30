@@ -45,11 +45,13 @@ async def health_check():
     import swisseph as swe
     eph_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ephe")
     se1_files = [f for f in os.listdir(eph_dir) if f.endswith(".se1")] if os.path.isdir(eph_dir) else []
+    from app.core.config import settings as _s
     return {
         "status": "healthy", "version": "v2.1",
         "ephe_path": eph_dir,
         "ephe_files": len(se1_files),
-        "swe_path": swe.get_library_path() if hasattr(swe, 'get_library_path') else "n/a",
+        "model_heavy": _s.MODEL_HEAVY,
+        "model_light": _s.MODEL_LIGHT,
     }
 
 # Core routers
