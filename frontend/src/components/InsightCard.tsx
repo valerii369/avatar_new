@@ -19,7 +19,7 @@ export default function InsightCard({ insight, onClick }: InsightCardProps) {
       whileTap={{ scale: 0.985 }}
       onClick={onClick}
       style={{
-        padding: "12px 14px",
+        padding: "14px 16px",
         borderRadius: 14,
         background: "rgba(255,255,255,0.025)",
         border: "1px solid rgba(255,255,255,0.06)",
@@ -27,12 +27,12 @@ export default function InsightCard({ insight, onClick }: InsightCardProps) {
         transition: "border-color 0.2s",
         display: "flex",
         flexDirection: "column",
-        gap: 6,
+        gap: 8,
       }}
     >
-      {/* Top row: system + position | influence badge */}
+      {/* Top row: system · sphere | influence badge */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <div style={{
             width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
             background: sphere?.color || "#8B5CF6",
@@ -41,23 +41,15 @@ export default function InsightCard({ insight, onClick }: InsightCardProps) {
             fontSize: 10, fontWeight: 700,
             color: "var(--text-muted)",
             textTransform: "uppercase",
-            letterSpacing: "0.1em",
+            letterSpacing: "0.08em",
           }}>
-            {systemLabel}
-          </span>
-          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.2)" }}>·</span>
-          <span style={{
-            fontSize: 10, color: "rgba(255,255,255,0.25)",
-            fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-          }}>
-            {insight.position}
+            {systemLabel} · {sphere?.name || `Сфера ${insight.primary_sphere}`}
           </span>
         </div>
         <div style={{
-          padding: "3px 8px", borderRadius: 6, flexShrink: 0, marginLeft: 8,
-          fontSize: 9, fontWeight: 800, letterSpacing: "0.05em",
+          padding: "2px 8px", borderRadius: 8, flexShrink: 0,
+          fontSize: 9, fontWeight: 700, letterSpacing: "0.05em",
           background: influence.bg, color: influence.color,
-          border: `1px solid ${influence.color}18`,
         }}>
           {influence.label}
         </div>
@@ -65,83 +57,65 @@ export default function InsightCard({ insight, onClick }: InsightCardProps) {
 
       {/* Title */}
       <h4 style={{
-        fontSize: 14, fontWeight: 700,
-        color: "rgba(255,255,255,0.9)",
-        lineHeight: 1.35, margin: 0,
+        fontSize: 15, fontWeight: 700,
+        color: "rgba(255,255,255,0.92)",
+        lineHeight: 1.3, margin: 0,
       }}>
         {insight.core_theme}
       </h4>
 
-      {/* Description */}
+      {/* Description — 2 lines max */}
       <p style={{
-        fontSize: 12, color: "rgba(255,255,255,0.45)",
+        fontSize: 13, color: "rgba(255,255,255,0.4)",
         lineHeight: 1.5, fontWeight: 400, margin: 0,
+        display: "-webkit-box",
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: "vertical",
+        overflow: "hidden",
       }}>
         {insight.description}
       </p>
 
-      {/* Light / Shadow */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-        <div style={{
-          padding: "8px 10px", borderRadius: 10,
-          background: "rgba(16,185,129,0.04)",
-          border: "1px solid rgba(16,185,129,0.08)",
-        }}>
+      {/* Compact tags: свет + тень + triggers */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+        {insight.light_aspect && (
           <span style={{
-            fontSize: 9, fontWeight: 700, color: "#10B981",
-            textTransform: "uppercase", letterSpacing: "0.1em",
-            display: "block", marginBottom: 4,
-          }}>Свет</span>
-          <p style={{
-            fontSize: 11, color: "rgba(255,255,255,0.55)",
-            lineHeight: 1.4, margin: 0, fontWeight: 400,
-            display: "-webkit-box",
-            WebkitLineClamp: 3,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
+            padding: "3px 8px", borderRadius: 8,
+            fontSize: 10, fontWeight: 500,
+            color: "#10B981",
+            background: "rgba(16,185,129,0.08)",
+            border: "1px solid rgba(16,185,129,0.12)",
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            maxWidth: 160,
           }}>
             {insight.light_aspect}
-          </p>
-        </div>
-        <div style={{
-          padding: "8px 10px", borderRadius: 10,
-          background: "rgba(239,68,68,0.03)",
-          border: "1px solid rgba(239,68,68,0.06)",
-        }}>
+          </span>
+        )}
+        {insight.shadow_aspect && (
           <span style={{
-            fontSize: 9, fontWeight: 700, color: "#EF4444",
-            textTransform: "uppercase", letterSpacing: "0.1em",
-            display: "block", marginBottom: 4,
-          }}>Тень</span>
-          <p style={{
-            fontSize: 11, color: "rgba(255,255,255,0.45)",
-            lineHeight: 1.4, margin: 0, fontWeight: 400,
-            display: "-webkit-box",
-            WebkitLineClamp: 3,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
+            padding: "3px 8px", borderRadius: 8,
+            fontSize: 10, fontWeight: 500,
+            color: "#EF4444",
+            background: "rgba(239,68,68,0.06)",
+            border: "1px solid rgba(239,68,68,0.1)",
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            maxWidth: 160,
           }}>
             {insight.shadow_aspect}
-          </p>
-        </div>
+          </span>
+        )}
+        {insight.triggers?.slice(0, 2).map((t, i) => (
+          <span key={i} style={{
+            padding: "3px 8px", borderRadius: 8,
+            fontSize: 10, fontWeight: 500,
+            color: "rgba(255,255,255,0.3)",
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(255,255,255,0.05)",
+          }}>
+            {t}
+          </span>
+        ))}
       </div>
-
-      {/* Triggers */}
-      {insight.triggers?.length > 0 && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-          {insight.triggers.slice(0, 3).map((t, i) => (
-            <span key={i} style={{
-              padding: "2px 8px", borderRadius: 10,
-              fontSize: 10, fontWeight: 500,
-              color: "rgba(255,255,255,0.35)",
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(255,255,255,0.05)",
-            }}>
-              {t}
-            </span>
-          ))}
-        </div>
-      )}
     </motion.div>
   );
 }

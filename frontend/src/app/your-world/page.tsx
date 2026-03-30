@@ -296,24 +296,24 @@ function BreakdownTab({
                 <div key={group.sphereId}>
                   {activeSphere === null && (
                     <div style={{
-                      display: "flex", alignItems: "center", gap: 10,
-                      marginBottom: 12, paddingLeft: 2,
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      marginBottom: 10, paddingLeft: 2,
                     }}>
-                      <div style={{
-                        width: 32, height: 32, borderRadius: 10,
-                        background: `${sphere?.color}0a`, border: `1px solid ${sphere?.color}18`,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                      }}>
-                        {sphere && <sphere.icon size={15} style={{ color: sphere.color }} />}
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.2 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{
+                          width: 6, height: 6, borderRadius: "50%",
+                          background: sphere?.color || "#8B5CF6",
+                        }} />
+                        <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
                           {sphere?.name}
-                        </div>
-                        <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 1 }}>
-                          {group.items.length} инсайтов · {sphere?.subtitle}
-                        </div>
+                        </span>
+                        <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>
+                          {sphere?.subtitle}
+                        </span>
                       </div>
+                      <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 500 }}>
+                        {group.items.length}
+                      </span>
                     </div>
                   )}
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
