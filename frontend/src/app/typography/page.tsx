@@ -2,16 +2,16 @@
 import { T, typo, S, R, Layout } from "@/lib/tokens";
 
 const TOKENS = [
-  { key: "heading",     label: "heading",      desc: "Заголовки страниц", size: T.heading.size,     weight: T.heading.weight,     font: "Outfit" },
-  { key: "headingNum",  label: "heading-num",   desc: "Число уровня (в круге)", size: T.headingNum.size,  weight: T.headingNum.weight,  font: "Outfit" },
-  { key: "title",       label: "title",         desc: "Заголовки карточек, имя, модалки", size: T.title.size,       weight: T.title.weight,       font: "Inter" },
-  { key: "titleBold",   label: "title-bold",    desc: "Акцентные заголовки (имя, значения)", size: T.titleBold.size,   weight: T.titleBold.weight,   font: "Inter" },
-  { key: "body",        label: "body",          desc: "Основной текст, описания", size: T.body.size,        weight: T.body.weight,        font: "Inter" },
-  { key: "caption",     label: "caption",       desc: "Табы, фильтры, подписи, счётчики", size: T.caption.size,     weight: T.caption.weight,     font: "Inter" },
-  { key: "capsDisplay", label: "caps-display",  desc: "Декоративные CAPS (УРОВЕНЬ СОЗНАНИЯ)", size: T.capsDisplay.size, weight: T.capsDisplay.weight, font: "Inter · CAPS", caps: true },
-  { key: "label",       label: "label",         desc: "Uppercase лейблы, секции, бейджи", size: T.label.size,       weight: T.label.weight,       font: "Inter · CAPS", caps: true },
-  { key: "micro",       label: "micro",         desc: "Нижнее меню, influence badge", size: T.micro.size,       weight: T.micro.weight,       font: "Inter" },
-  { key: "microBold",   label: "micro-bold",    desc: "Badge текст (СИЛЬНОЕ, СРЕДНЕЕ)", size: T.microBold.size,   weight: T.microBold.weight,   font: "Inter" },
+  { key: "heading",     label: "heading",      desc: "Заголовки страниц", size: T.heading.size,     weight: T.heading.weight,     lh: T.heading.lh,     font: "Outfit" },
+  { key: "headingNum",  label: "heading-num",   desc: "Число уровня (в круге)", size: T.headingNum.size,  weight: T.headingNum.weight,  lh: T.headingNum.lh,  font: "Outfit" },
+  { key: "title",       label: "title",         desc: "Заголовки карточек, имя, модалки", size: T.title.size,       weight: T.title.weight,       lh: T.title.lh,       font: "Inter" },
+  { key: "titleBold",   label: "title-bold",    desc: "Акцентные заголовки (имя, значения)", size: T.titleBold.size,   weight: T.titleBold.weight,   lh: T.titleBold.lh,   font: "Inter" },
+  { key: "body",        label: "body",          desc: "Основной текст, описания", size: T.body.size,        weight: T.body.weight,        lh: T.body.lh,        font: "Inter" },
+  { key: "caption",     label: "caption",       desc: "Табы, фильтры, подписи, счётчики", size: T.caption.size,     weight: T.caption.weight,     lh: T.caption.lh,     font: "Inter" },
+  { key: "capsDisplay", label: "caps-display",  desc: "Декоративные CAPS (УРОВЕНЬ СОЗНАНИЯ)", size: T.capsDisplay.size, weight: T.capsDisplay.weight, lh: T.capsDisplay.lh, font: "Inter · CAPS", caps: true },
+  { key: "label",       label: "label",         desc: "Uppercase лейблы, секции, бейджи", size: T.label.size,       weight: T.label.weight,       lh: T.label.lh,       font: "Inter · CAPS", caps: true },
+  { key: "micro",       label: "micro",         desc: "Нижнее меню, influence badge", size: T.micro.size,       weight: T.micro.weight,       lh: T.micro.lh,       font: "Inter" },
+  { key: "microBold",   label: "micro-bold",    desc: "Badge текст (СИЛЬНОЕ, СРЕДНЕЕ)", size: T.microBold.size,   weight: T.microBold.weight,   lh: T.microBold.lh,   font: "Inter" },
 ] as const;
 
 export default function TypographyPage() {
@@ -27,14 +27,14 @@ export default function TypographyPage() {
       <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
 
         {/* HEADING */}
-        <Card token="heading" desc="Заголовки страниц" spec="22px · 800 · Outfit">
+        <Card token="heading" desc="Заголовки страниц" spec="22px · 800 · lh 1.2 · Outfit">
           <span style={{ ...typo("heading"), color: "#fff" }}>Твой мир</span>
           <span style={{ ...typo("heading"), background: "linear-gradient(135deg, #a78bfa, #8b5cf6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Дневник</span>
           <span style={{ ...typo("heading"), background: "linear-gradient(135deg, #a78bfa, #8b5cf6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Профиль</span>
         </Card>
 
         {/* HEADING NUM */}
-        <Card token="heading-num" desc="Число уровня (в круге)" spec="40px · 800 · Outfit">
+        <Card token="heading-num" desc="Число уровня (в круге)" spec="40px · 800 · lh 1.0 · Outfit">
           <div style={{ display: "flex", gap: 24 }}>
             <span style={{ ...typo("headingNum"), background: "linear-gradient(135deg, #a78bfa, #f59e0b)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>1</span>
             <span style={{ ...typo("headingNum"), background: "linear-gradient(135deg, #a78bfa, #f59e0b)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>42</span>
@@ -42,19 +42,19 @@ export default function TypographyPage() {
         </Card>
 
         {/* TITLE */}
-        <Card token="title" desc="Заголовки карточек, имя, модалки" spec="15px · 600 · Inter">
+        <Card token="title" desc="Заголовки карточек, имя, модалки" spec="15px · 600 · lh 1.3 · Inter">
           <span style={{ ...typo("title"), color: "#fff" }}>Валерий</span>
           <span style={{ ...typo("title"), color: "#fff" }}>Внешняя Нелюбовь</span>
         </Card>
 
         {/* TITLE BOLD */}
-        <Card token="title-bold" desc="Акцентные заголовки (значения карточек)" spec="15px · 700 · Inter">
+        <Card token="title-bold" desc="Акцентные заголовки (значения карточек)" spec="15px · 700 · lh 1.3 · Inter">
           <span style={{ ...typo("titleBold"), color: "#8b5cf6" }}>Сострадающий Алхимик</span>
           <span style={{ ...typo("titleBold"), color: "#fff" }}>Валерий</span>
         </Card>
 
         {/* BODY */}
-        <Card token="body" desc="Основной текст, описания" spec="13px · 500 · Inter">
+        <Card token="body" desc="Основной текст, описания" spec="13px · 500 · lh 1.6 · Inter">
           <span style={{ ...typo("body"), color: "rgba(255,255,255,0.95)", lineHeight: "1.6" }}>
             Раненый, но светящийся строитель мостов, превращающий внутренние разломы в мудрость и сочувствие.
           </span>
@@ -63,7 +63,7 @@ export default function TypographyPage() {
         </Card>
 
         {/* CAPTION */}
-        <Card token="caption" desc="Табы, фильтры, подписи, счётчики" spec="11px · 500 · Inter">
+        <Card token="caption" desc="Табы, фильтры, подписи, счётчики" spec="11px · 500 · lh 1.4 · Inter">
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <Chip active>Портрет</Chip>
             <Chip>Разбор</Chip>
@@ -80,13 +80,13 @@ export default function TypographyPage() {
         </Card>
 
         {/* CAPS DISPLAY */}
-        <Card token="caps-display" desc="Декоративные CAPS надписи" spec="11px · 600 · Inter · CAPS · 0.15em">
+        <Card token="caps-display" desc="Декоративные CAPS надписи" spec="11px · 600 · lh 1.2 · Inter · CAPS">
           <span style={{ ...typo("capsDisplay"), color: "rgba(255,255,255,0.2)" }}>Уровень Сознания</span>
           <span style={{ ...typo("capsDisplay"), color: "rgba(255,255,255,0.25)" }}>☼ Чат с внутренним миром</span>
         </Card>
 
         {/* LABEL */}
-        <Card token="label" desc="Uppercase лейблы, секции, даты, бейджи" spec="10px · 700 · Inter · CAPS · 0.08em">
+        <Card token="label" desc="Uppercase лейблы, секции, даты, бейджи" spec="10px · 700 · lh 1.2 · Inter · CAPS">
           <span style={{ ...typo("label"), color: "rgba(139,92,246,0.5)" }}>Идентификация Аватара</span>
           <span style={{ ...typo("label"), color: "rgba(139,92,246,0.8)" }}>Архетип</span>
           <span style={{ ...typo("label"), color: "#10b981" }}>Сильные стороны</span>
@@ -95,7 +95,7 @@ export default function TypographyPage() {
         </Card>
 
         {/* MICRO */}
-        <Card token="micro" desc="Нижнее меню подписи" spec="9px · 600 · Inter">
+        <Card token="micro" desc="Нижнее меню подписи" spec="9px · 600 · lh 1.3 · Inter">
           <div style={{ display: "flex", gap: 16 }}>
             <span style={{ ...typo("micro"), color: "#fff" }}>Главная</span>
             <span style={{ ...typo("micro"), color: "rgba(255,255,255,0.35)" }}>Твой мир</span>
@@ -106,7 +106,7 @@ export default function TypographyPage() {
         </Card>
 
         {/* MICRO BOLD */}
-        <Card token="micro-bold" desc="Badge текст (influence)" spec="9px · 700 · Inter">
+        <Card token="micro-bold" desc="Badge текст (influence)" spec="9px · 700 · lh 1.3 · Inter">
           <div style={{ display: "flex", gap: 8 }}>
             <Badge color="#10b981">СИЛЬНОЕ</Badge>
             <Badge color="#f59e0b">СРЕДНЕЕ</Badge>
@@ -175,6 +175,7 @@ export default function TypographyPage() {
               <th style={{ padding: "6px 0", fontWeight: 600 }}>Токен</th>
               <th style={{ padding: "6px 0", fontWeight: 600 }}>px</th>
               <th style={{ padding: "6px 0", fontWeight: 600 }}>wt</th>
+              <th style={{ padding: "6px 0", fontWeight: 600 }}>lh</th>
               <th style={{ padding: "6px 0", fontWeight: 600 }}>Шрифт</th>
               <th style={{ padding: "6px 0", fontWeight: 600 }}>CAPS</th>
             </tr>
@@ -185,6 +186,7 @@ export default function TypographyPage() {
                 <td style={{ padding: "8px 0", color: "#a78bfa", fontWeight: 600 }}>{t.label}</td>
                 <td style={{ padding: "8px 0" }}>{t.size}</td>
                 <td style={{ padding: "8px 0" }}>{t.weight}</td>
+                <td style={{ padding: "8px 0" }}>{t.lh}</td>
                 <td style={{ padding: "8px 0", color: "rgba(255,255,255,0.4)" }}>{t.font}</td>
                 <td style={{ padding: "8px 0" }}>{t.caps ? "✓" : ""}</td>
               </tr>

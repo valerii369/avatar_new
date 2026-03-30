@@ -7,16 +7,16 @@
 // ─── Typography ──────────────────────────────────────────────────────────────
 
 export const T = {
-  heading:     { size: 22, weight: 800, font: "'Outfit', sans-serif" },
-  headingNum:  { size: 40, weight: 800, font: "'Outfit', sans-serif" },
-  title:       { size: 15, weight: 600, font: "inherit" },
-  titleBold:   { size: 15, weight: 700, font: "inherit" },
-  body:        { size: 13, weight: 500, font: "inherit" },
-  caption:     { size: 11, weight: 500, font: "inherit" },
-  label:       { size: 10, weight: 700, font: "inherit", caps: true, spacing: "0.08em" },
-  capsDisplay: { size: 11, weight: 600, font: "inherit", caps: true, spacing: "0.15em" },
-  micro:       { size: 9,  weight: 600, font: "inherit" },
-  microBold:   { size: 9,  weight: 700, font: "inherit" },
+  heading:     { size: 22, weight: 800, font: "'Outfit', sans-serif", lh: 1.2 },
+  headingNum:  { size: 40, weight: 800, font: "'Outfit', sans-serif", lh: 1.0 },
+  title:       { size: 15, weight: 600, font: "inherit", lh: 1.3 },
+  titleBold:   { size: 15, weight: 700, font: "inherit", lh: 1.3 },
+  body:        { size: 13, weight: 500, font: "inherit", lh: 1.6 },
+  caption:     { size: 11, weight: 500, font: "inherit", lh: 1.4 },
+  label:       { size: 10, weight: 700, font: "inherit", lh: 1.2, caps: true, spacing: "0.08em" },
+  capsDisplay: { size: 11, weight: 600, font: "inherit", lh: 1.2, caps: true, spacing: "0.15em" },
+  micro:       { size: 9,  weight: 600, font: "inherit", lh: 1.3 },
+  microBold:   { size: 9,  weight: 700, font: "inherit", lh: 1.3 },
 } as const;
 
 export function typo(token: keyof typeof T): React.CSSProperties {
@@ -25,6 +25,7 @@ export function typo(token: keyof typeof T): React.CSSProperties {
     fontSize: t.size,
     fontWeight: t.weight,
     fontFamily: t.font,
+    lineHeight: t.lh,
     ...('caps' in t && t.caps ? { textTransform: "uppercase" as const, letterSpacing: t.spacing } : {}),
   };
 }
