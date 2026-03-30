@@ -188,7 +188,7 @@ export default function TypographyPage() {
                 <td style={{ padding: "8px 0" }}>{t.weight}</td>
                 <td style={{ padding: "8px 0" }}>{t.lh}</td>
                 <td style={{ padding: "8px 0", color: "rgba(255,255,255,0.4)" }}>{t.font}</td>
-                <td style={{ padding: "8px 0" }}>{t.caps ? "✓" : ""}</td>
+                <td style={{ padding: "8px 0" }}>{"caps" in t && t.caps ? "✓" : ""}</td>
               </tr>
             ))}
           </tbody>
