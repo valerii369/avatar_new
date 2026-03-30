@@ -307,35 +307,59 @@ def _slim_chart_for_prompt(chart: dict) -> dict:
     }
 
 
+async def _call_llm(system: str, user_content: str, attempt: int = 0) -> str:
+    """Single LLM call with retry."""
+    try:
+        response = await openai_client.chat.completions.create(
+            model=settings.MODEL_HEAVY,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user_content},
+            ],
+            max_completion_tokens=16000,
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        logger.error(f"LLM call failed attempt {attempt}: {e}")
+        if attempt < 2:
+            return await _call_llm(system, user_content, attempt + 1)
+        raise e
+
+
 async def generate_insights(chart: dict, attempt: int = 0) -> UISResponse:
     queries = build_queries(chart)
     context_chunks = await retrieve_context(queries)
 
     slim_chart = _slim_chart_for_prompt(chart)
 
-    logger.info(f"generate_insights: model={settings.MODEL_HEAVY}, attempt={attempt}, "
+    user_payload = json.dumps({
+        "chart": slim_chart,
+        "book_context": [
+            {"text": c["text"], "source": c["source"]}
+            for c in context_chunks
+        ]
+    }, ensure_ascii=False)
+
+    logger.info(f"generate_insights: model={settings.MODEL_HEAVY}, "
                 f"context_chunks={len(context_chunks)}, queries={len(queries)}")
 
-    try:
-        response = await openai_client.chat.completions.create(
-            model=settings.MODEL_HEAVY,
-            response_format={"type": "json_object"},
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": json.dumps({
-                    "chart": slim_chart,
-                    "book_context": [
-                        {"text": c["text"], "source": c["source"]}
-                        for c in context_chunks
-                    ]
-                }, ensure_ascii=False)}
-            ],
-            max_completion_tokens=32000,
-        )
-        raw = response.choices[0].message.content
-        return await parse_and_validate(raw)
-    except Exception as e:
-        logger.error(f"UIS Generation failed on attempt {attempt}: {e}")
-        if attempt < 2:
-            return await generate_insights(chart, attempt=attempt + 1)
-        raise e
+    # Split into 2 calls: spheres 1-6 and 7-12 (each ~30 insights fits in 16k)
+    batch_prompts = [
+        SYSTEM_PROMPT + "\n\n═══ ЗАДАНИЕ ═══\nСгенерируй инсайты ТОЛЬКО для сфер 1–6 (Личность, Ресурсы, Связи, Корни, Творчество, Служение). Сферы 7–12 НЕ включай. Итого 28–35 инсайтов.",
+        SYSTEM_PROMPT + "\n\n═══ ЗАДАНИЕ ═══\nСгенерируй инсайты ТОЛЬКО для сфер 7–12 (Партнерство, Психология, Мировоззрение, Реализация, Сообщества, Запредельное). Сферы 1–6 НЕ включай. Итого 28–35 инсайтов.",
+    ]
+
+    all_insights = []
+    for i, sys_prompt in enumerate(batch_prompts):
+        logger.info(f"Batch {i+1}/2: spheres {1+i*6}–{6+i*6}")
+        raw = await _call_llm(sys_prompt, user_payload)
+        try:
+            batch = await parse_and_validate(raw)
+            all_insights.extend(batch.insights)
+            logger.info(f"Batch {i+1}: {len(batch.insights)} insights")
+        except Exception as e:
+            logger.error(f"Batch {i+1} parse failed: {e}")
+
+    logger.info(f"Total insights: {len(all_insights)}")
+    return UISResponse(insights=all_insights)
