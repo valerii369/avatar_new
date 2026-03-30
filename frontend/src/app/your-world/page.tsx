@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR from "swr";
 import { useUserStore, useInsightsStore, type Insight } from "@/lib/store";
@@ -39,6 +39,14 @@ function PortraitTab({ hub }: { hub: any }) {
 
   const p = hub.portrait_summary;
   const polarities = hub.deep_profile_data?.polarities;
+  const [expandedCard, setExpandedCard] = useState<{ label: string; value: string; color: string } | null>(null);
+
+  const attrs = [
+    { label: "Архетип",  value: p.core_archetype,  color: "#8B5CF6" },
+    { label: "Роль",     value: p.narrative_role,   color: "#3B82F6" },
+    { label: "Энергия",  value: p.energy_type,      color: "#10B981" },
+    { label: "Динамика", value: p.current_dynamic,  color: "#F59E0B" },
+  ];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -60,27 +68,78 @@ function PortraitTab({ hub }: { hub: any }) {
         </p>
       </div>
 
-      {/* Attributes */}
+      {/* Attributes — truncated, tap to expand */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-        {[
-          { label: "Архетип",  value: p.core_archetype,  color: "#8B5CF6" },
-          { label: "Роль",     value: p.narrative_role,  color: "#3B82F6" },
-          { label: "Энергия",  value: p.energy_type,     color: "#10B981" },
-          { label: "Динамика", value: p.current_dynamic, color: "#F59E0B" },
-        ].map(({ label, value, color }) => (
-          <div key={label} style={{
-            padding: "12px 14px", borderRadius: 14,
-            background: `${color}08`, border: `1px solid ${color}15`,
-          }}>
-            <span style={{
-              fontSize: 10, fontWeight: 700, color: `${color}80`,
-              textTransform: "uppercase", letterSpacing: "0.08em",
-              display: "block", marginBottom: 4,
-            }}>{label}</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color, lineHeight: 1.3 }}>{value}</span>
-          </div>
-        ))}
+        {attrs.map(({ label, value, color }) => {
+          const truncated = value && value.length > 40 ? value.slice(0, 37) + "..." : value;
+          return (
+            <div key={label} onClick={() => setExpandedCard({ label, value, color })} style={{
+              padding: "12px 14px", borderRadius: 14,
+              background: `${color}08`, border: `1px solid ${color}15`,
+              cursor: "pointer", minHeight: 70, display: "flex", flexDirection: "column", justifyContent: "space-between",
+            }}>
+              <span style={{
+                fontSize: 10, fontWeight: 700, color: `${color}80`,
+                textTransform: "uppercase", letterSpacing: "0.08em",
+                display: "block", marginBottom: 6,
+              }}>{label}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color, lineHeight: 1.3 }}>
+                {truncated}
+              </span>
+            </div>
+          );
+        })}
       </div>
+
+      {/* Expanded card modal */}
+      <AnimatePresence>
+        {expandedCard && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setExpandedCard(null)}
+            style={{
+              position: "fixed", inset: 0, zIndex: 100,
+              background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: 24,
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: "100%", maxWidth: 340, borderRadius: 20,
+                background: "var(--bg-card)", border: `1px solid ${expandedCard.color}25`,
+                padding: 24,
+              }}
+            >
+              <span style={{
+                fontSize: 10, fontWeight: 700, color: `${expandedCard.color}80`,
+                textTransform: "uppercase", letterSpacing: "0.12em",
+                display: "block", marginBottom: 12,
+              }}>
+                {expandedCard.label}
+              </span>
+              <p style={{
+                fontSize: 15, fontWeight: 600, color: expandedCard.color,
+                lineHeight: 1.5, margin: 0, marginBottom: 16,
+              }}>
+                {expandedCard.value}
+              </p>
+              <button
+                onClick={() => setExpandedCard(null)}
+                style={{
+                  width: "100%", padding: "10px 0", borderRadius: 12,
+                  background: `${expandedCard.color}15`, border: "none",
+                  color: expandedCard.color, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                }}
+              >
+                Закрыть
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Strengths / Shadows */}
       {polarities && (
