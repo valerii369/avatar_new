@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Sparkles, AlertCircle, Zap, Target, Key, Lightbulb, Star } from "lucide-react";
 import { SPHERE_BY_ID, INFLUENCE_CONFIG, SYSTEM_SHORT } from "@/lib/constants";
 import type { Insight } from "@/lib/store";
+import { useTmaSafeArea } from "@/lib/useTmaSafeArea";
 
 interface InsightDetailModalProps {
   insight: Insight | null;
@@ -11,6 +12,8 @@ interface InsightDetailModalProps {
 }
 
 export default function InsightDetailModal({ insight, onClose }: InsightDetailModalProps) {
+  const tmaSafeTop = useTmaSafeArea();
+
   if (!insight) return null;
 
   const sphere = SPHERE_BY_ID[insight.primary_sphere];
@@ -27,6 +30,7 @@ export default function InsightDetailModal({ insight, onClose }: InsightDetailMo
           position: "fixed", inset: 0, zIndex: 200,
           background: "var(--bg-deep)",
           display: "flex", flexDirection: "column",
+          paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined,
         }}
       >
         {/* Header */}
