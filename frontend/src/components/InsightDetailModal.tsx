@@ -36,29 +36,41 @@ export default function InsightDetailModal({ insight, onClose }: InsightDetailMo
         {/* Header */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "20px 20px 16px",
+          padding: "16px 20px 12px",
           borderBottom: "1px solid var(--border)",
+          flexShrink: 0,
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{
-              padding: "4px 10px", borderRadius: 6,
-              fontSize: 9, fontWeight: 800,
-              background: influence.bg, color: influence.color,
-              border: `1px solid ${influence.color}18`,
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {/* Sphere pill — styled like filter chip */}
+            <span style={{
+              padding: "3px 10px", borderRadius: 20,
+              fontSize: 11, fontWeight: 500,
+              color: sphere?.color || "var(--violet-l)",
+              background: `${sphere?.color || "#8B5CF6"}10`,
+              border: `1px solid ${sphere?.color || "#8B5CF6"}`,
             }}>
-              {influence.label}
-            </div>
+              {sphere?.name}
+            </span>
+            <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 500 }}>·</span>
             <span style={{
               fontSize: 10, fontWeight: 700, color: "var(--text-muted)",
-              textTransform: "uppercase", letterSpacing: "0.1em",
+              textTransform: "uppercase", letterSpacing: "0.08em",
             }}>
               {SYSTEM_SHORT[insight.system] || insight.system.toUpperCase()}
             </span>
+            <span style={{
+              fontSize: 9, color: "rgba(255,255,255,0.15)",
+              fontWeight: 500, maxWidth: 100,
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>
+              {insight.position}
+            </span>
           </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button
             onClick={onClose}
             style={{
-              width: 36, height: 36, borderRadius: 12,
+              width: 34, height: 34, borderRadius: 12,
               background: "rgba(255,255,255,0.04)",
               border: "1px solid var(--border)",
               cursor: "pointer",
@@ -66,116 +78,156 @@ export default function InsightDetailModal({ insight, onClose }: InsightDetailMo
               color: "var(--text-muted)",
             }}
           >
-            <X size={18} />
+            <X size={16} />
           </button>
+          </div>
         </div>
 
         {/* Body */}
         <div style={{
-          flex: 1, overflowY: "auto",
-          padding: "24px 20px 120px",
+          flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch",
+          padding: "20px 20px 120px",
           display: "flex", flexDirection: "column", gap: 22,
         }}>
           {/* Title block */}
           <div>
             <div style={{
-              display: "flex", alignItems: "center", gap: 6,
-              fontSize: 12, color: sphere?.color || "var(--text-muted)",
-              fontWeight: 600, marginBottom: 6,
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              gap: 10,
             }}>
-              <div style={{ width: 7, height: 7, borderRadius: "50%", background: sphere?.color }} />
-              {sphere?.name} · {sphere?.subtitle}
+              <h2 style={{
+                fontSize: 22, fontWeight: 700, color: "white",
+                letterSpacing: "-0.3px", lineHeight: 1.25, margin: 0,
+                flex: 1,
+              }}>
+                {insight.core_theme}
+              </h2>
+              <div style={{
+                padding: "3px 10px", borderRadius: 8, flexShrink: 0,
+                fontSize: 9, fontWeight: 700, letterSpacing: "0.05em",
+                background: influence.bg, color: influence.color,
+              }}>
+                {influence.label}
+              </div>
             </div>
-            <div style={{
-              fontSize: 11, color: "rgba(255,255,255,0.25)",
-              marginBottom: 10, fontWeight: 500,
-            }}>
-              {insight.position}
-            </div>
-            <h2 style={{
-              fontSize: 22, fontWeight: 700, color: "white",
-              letterSpacing: "-0.3px", lineHeight: 1.25, margin: 0,
-            }}>
-              {insight.core_theme}
-            </h2>
-            {/* Description — concise summary */}
             <p style={{
-              fontSize: 14, color: "rgba(255,255,255,0.55)",
+              fontSize: 14, color: "rgba(255,255,255,0.5)",
               lineHeight: 1.6, fontWeight: 400, margin: 0, marginTop: 10,
             }}>
               {insight.description}
             </p>
           </div>
 
-          {/* Insight — deep psychological understanding */}
+          {/* Инсайт — text with subtle left border */}
           {insight.insight && (
-            <Section title="Инсайт" icon={Lightbulb} color="#A78BFA">
-              <p style={{ fontSize: 14, color: "rgba(255,255,255,0.75)", lineHeight: 1.65, fontWeight: 400, margin: 0 }}>
+            <div style={{
+              paddingLeft: 16,
+              borderLeft: "2px solid rgba(167,139,250,0.4)",
+            }}>
+              <div style={{
+                display: "flex", alignItems: "center", gap: 6, marginBottom: 8,
+                color: "#A78BFA",
+              }}>
+                <Lightbulb size={12} />
+                <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                  Инсайт
+                </span>
+              </div>
+              <p style={{ fontSize: 14, color: "rgba(255,255,255,0.75)", lineHeight: 1.65, margin: 0 }}>
                 {insight.insight}
               </p>
-            </Section>
+            </div>
           )}
 
-          {/* Light */}
-          <Section title="Свет" icon={Sparkles} color="#10B981">
-            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 1.65, fontWeight: 400, margin: 0 }}>
-              {insight.light_aspect}
-            </p>
-          </Section>
-
-          {/* Shadow */}
-          <Section title="Тень" icon={AlertCircle} color="#EF4444">
-            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", lineHeight: 1.65, fontWeight: 400, margin: 0 }}>
-              {insight.shadow_aspect}
-            </p>
-          </Section>
-
-          {/* Gift — unique talent */}
+          {/* Дар — text with subtle left border (gold) */}
           {insight.gift && (
-            <Section title="Дар" icon={Star} color="#F59E0B">
-              <p style={{ fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 1.65, fontWeight: 400, margin: 0 }}>
+            <div style={{
+              paddingLeft: 16,
+              borderLeft: "2px solid rgba(245,158,11,0.4)",
+            }}>
+              <div style={{
+                display: "flex", alignItems: "center", gap: 6, marginBottom: 8,
+                color: "#F59E0B",
+              }}>
+                <Star size={12} />
+                <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                  Дар
+                </span>
+              </div>
+              <p style={{ fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 1.65, margin: 0 }}>
                 {insight.gift}
               </p>
-            </Section>
+            </div>
           )}
 
-          {/* Task + Key */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            <div style={{
-              padding: 16, borderRadius: 14,
-              background: "rgba(255,255,255,0.025)",
-              border: "1px solid var(--border)",
-            }}>
-              <div style={{
-                fontSize: 10, fontWeight: 700, color: "var(--text-muted)",
-                textTransform: "uppercase", letterSpacing: "0.1em",
-                display: "flex", alignItems: "center", gap: 5, marginBottom: 10,
-              }}>
-                <Target size={11} /> Задача развития
-              </div>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", lineHeight: 1.5, fontWeight: 400, margin: 0 }}>
-                {insight.developmental_task}
-              </p>
+          {/* Свет — green left border */}
+          <div style={{ paddingLeft: 16, borderLeft: "2px solid rgba(16,185,129,0.4)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, color: "#10B981" }}>
+              <Sparkles size={12} />
+              <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Свет</span>
             </div>
-            <div style={{
-              padding: 16, borderRadius: 14,
-              background: "rgba(139,92,246,0.03)",
-              border: "1px solid rgba(139,92,246,0.08)",
-            }}>
+            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 1.65, margin: 0 }}>
+              {insight.light_aspect}
+            </p>
+          </div>
+
+          {/* Тень — red left border */}
+          <div style={{ paddingLeft: 16, borderLeft: "2px solid rgba(239,68,68,0.35)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, color: "#EF4444" }}>
+              <AlertCircle size={12} />
+              <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Тень</span>
+            </div>
+            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", lineHeight: 1.65, margin: 0 }}>
+              {insight.shadow_aspect}
+            </p>
+          </div>
+
+          {/* Divider before practical section */}
+          <div style={{ height: 1, background: "var(--border)" }} />
+
+          {/* Задача + Ключ — redesigned as action items */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
               <div style={{
-                fontSize: 10, fontWeight: 700, color: "rgba(139,92,246,0.5)",
-                textTransform: "uppercase", letterSpacing: "0.1em",
-                display: "flex", alignItems: "center", gap: 5, marginBottom: 10,
+                width: 28, height: 28, borderRadius: 8, flexShrink: 0, marginTop: 2,
+                background: "rgba(59,130,246,0.08)",
+                display: "flex", alignItems: "center", justifyContent: "center",
               }}>
-                <Key size={11} /> Ключ интеграции
+                <Target size={13} style={{ color: "#3B82F6" }} />
               </div>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", lineHeight: 1.5, fontWeight: 400, margin: 0 }}>
-                {insight.integration_key}
-              </p>
+              <div>
+                <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(59,130,246,0.6)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                  Задача развития
+                </span>
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", lineHeight: 1.5, margin: 0, marginTop: 4 }}>
+                  {insight.developmental_task}
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: 8, flexShrink: 0, marginTop: 2,
+                background: "rgba(139,92,246,0.08)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <Key size={13} style={{ color: "#8B5CF6" }} />
+              </div>
+              <div>
+                <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(139,92,246,0.6)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                  Ключ интеграции
+                </span>
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", lineHeight: 1.5, margin: 0, marginTop: 4 }}>
+                  {insight.integration_key}
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Triggers */}
+          {/* Divider before triggers */}
+          {insight.triggers?.length > 0 && <div style={{ height: 1, background: "var(--border)" }} />}
+
+          {/* Триггеры */}
           {insight.triggers?.length > 0 && (
             <Section title="Триггеры проявления" icon={Zap}>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
