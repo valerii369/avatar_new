@@ -8,6 +8,7 @@ import logging
 from datetime import datetime
 from itertools import combinations
 
+import os
 import pytz
 import swisseph as swe
 from timezonefinder import TimezoneFinder
@@ -15,6 +16,16 @@ from timezonefinder import TimezoneFinder
 from app.core.db import get_supabase
 
 logger = logging.getLogger(__name__)
+
+# Set ephemeris path at module load — must happen before any swe.calc_ut()
+# natal_chart.py is at: backend/app/services/dsb/natal_chart.py
+# ephe dir is at:       backend/app/ephe/
+# So: __file__/../../ephe/
+_this_dir = os.path.dirname(os.path.abspath(__file__))
+_ephe_dir = os.path.normpath(os.path.join(_this_dir, "..", "..", "ephe"))
+swe.set_ephe_path(_ephe_dir)
+_se1_count = len([f for f in os.listdir(_ephe_dir) if f.endswith(".se1")]) if os.path.isdir(_ephe_dir) else 0
+logger.info(f"natal_chart: swe.set_ephe_path({_ephe_dir}) — {_se1_count} .se1 files")
 
 limiter = anyio.CapacityLimiter(20)
 tf = TimezoneFinder()
