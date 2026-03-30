@@ -54,7 +54,7 @@ export default function DiaryPage() {
     return (
         <div className="flex flex-col" style={{ background: "var(--bg-deep)", height: "100dvh", overflow: "hidden", paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}>
             <div style={{ padding: "6px 16px 8px" }}>
-                <h1 className="text-xl font-bold gradient-text">Дневник</h1>
+                <h1 style={{ fontSize: 22, fontWeight: 800, fontFamily: "'Outfit', sans-serif", margin: 0, background: "linear-gradient(135deg, var(--violet-l), var(--cyan))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Дневник</h1>
             </div>
 
             {/* Status tabs (styled like cards page) */}
