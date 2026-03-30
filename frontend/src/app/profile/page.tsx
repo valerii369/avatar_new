@@ -9,6 +9,7 @@ import BottomNav from "@/components/BottomNav";
 import useSWR from "swr";
 import { Skeleton } from "@/components/Skeleton";
 import { EnergyIcon } from "@/components/EnergyIcon";
+import { useTmaSafeArea } from "@/lib/useTmaSafeArea";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -20,6 +21,7 @@ export default function ProfilePage() {
     const router = useRouter();
     const { play } = useAudio();
     const { userId, firstName, setUser, referralCode, energy, evolutionLevel, photoUrl } = useUserStore();
+    const tmaSafeTop = useTmaSafeArea();
     const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
     const [activeTab, setActiveTab] = useState<"main" | "settings" | "referrals">("main");
     const [showShop, setShowShop] = useState(false);
@@ -90,11 +92,11 @@ export default function ProfilePage() {
 
     return (
         <div
-            className="min-h-screen flex flex-col"
-            style={{ background: "var(--bg-deep)", paddingBottom: 96 }}
+            className="flex flex-col"
+            style={{ background: "var(--bg-deep)", height: "100dvh", overflow: "hidden", paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}
         >
             {/* ── Header ── */}
-            <div className="px-4 pt-5 pb-3">
+            <div className="px-4 pt-2 pb-3">
                 <div
                     className="flex items-center gap-3 p-3"
                     style={{
@@ -176,8 +178,8 @@ export default function ProfilePage() {
                 </button>
             </div>
 
-            {/* ── Tab Content ── */}
-            <div className="flex-1">
+            {/* ── Tab Content (scrollable) ── */}
+            <div className="flex-1" style={{ overflowY: "auto", paddingBottom: 90, WebkitOverflowScrolling: "touch" }}>
                 {activeTab === "main" && (
                     <MainProfileView
                         game={game}

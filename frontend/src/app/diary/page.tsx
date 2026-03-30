@@ -6,6 +6,7 @@ import { diaryAPI } from "@/lib/api";
 import { useUserStore } from "@/lib/store";
 import BottomNav from "@/components/BottomNav";
 import { SkeletonCard } from "@/components/Skeleton";
+import { useTmaSafeArea } from "@/lib/useTmaSafeArea";
 
 const SPHERE_NAMES: Record<string, string> = {
     IDENTITY: "Личность", RESOURCES: "Деньги", COMMUNICATION: "Связи",
@@ -16,6 +17,7 @@ const SPHERE_NAMES: Record<string, string> = {
 
 export default function DiaryPage() {
     const { userId } = useUserStore();
+    const tmaSafeTop = useTmaSafeArea();
     const [activeFilter, setActiveFilter] = useState("all");
     const [statusFilter, setStatusFilter] = useState("plan");
 
@@ -50,8 +52,8 @@ export default function DiaryPage() {
     };
 
     return (
-        <div className="min-h-screen pb-24">
-            <div className="px-4 pt-6 pb-3">
+        <div className="flex flex-col" style={{ background: "var(--bg-deep)", height: "100dvh", overflow: "hidden", paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}>
+            <div style={{ padding: "6px 16px 8px" }}>
                 <h1 className="text-xl font-bold gradient-text">Дневник</h1>
             </div>
 
@@ -90,6 +92,9 @@ export default function DiaryPage() {
                     ))}
                 </div>
             </div>
+
+            {/* Scrollable content */}
+            <div style={{ flex: 1, overflowY: "auto", paddingBottom: 90, WebkitOverflowScrolling: "touch" }}>
 
             {/* Sphere filter */}
             <div className="flex gap-2 px-4 overflow-x-auto pb-4" style={{ scrollbarWidth: "none" }}>
@@ -171,6 +176,8 @@ export default function DiaryPage() {
                     ))
                 )}
             </div>
+
+            </div>{/* end scrollable content */}
 
             <BottomNav />
         </div>
