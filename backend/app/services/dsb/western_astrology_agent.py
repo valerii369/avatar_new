@@ -114,7 +114,7 @@ SYSTEM_PROMPT = """
 3. Если book_context содержит фрагменты — они приоритет над общими знаниями.
 4. Если book_context пуст — используй собственные знания из астрологической школы выше.
 5. НЕ повторяй одну и ту же позицию в разных инсайтах.
-6. Всего от 60 до 100 инсайтов.
+6. Всего от 55 до 75 инсайтов. Стремись к 60-65.
 7. ОБЯЗАТЕЛЬНО сгенерируй инсайты даже если book_context пуст. Карта содержит всю нужную информацию.
 
 ═══ ФОРМУЛА WEIGHT ═══
@@ -330,7 +330,7 @@ async def generate_insights(chart: dict, attempt: int = 0) -> UISResponse:
                     ]
                 }, ensure_ascii=False)}
             ],
-            max_completion_tokens=16000,
+            max_completion_tokens=32000,
         )
         raw = response.choices[0].message.content
         return await parse_and_validate(raw)
