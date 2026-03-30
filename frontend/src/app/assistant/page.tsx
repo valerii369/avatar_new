@@ -88,20 +88,17 @@ export default function AssistantPage() {
         if (!userId) return;
         const init = async () => {
             try {
+                setLoading(true);
                 const res = await assistantAPI.init(userId);
                 const sid = res.data.session_id;
                 setSessionId(sid);
                 setIsFirstTouch(res.data.is_first_touch);
-                
-                // If there are no persistent messages, get a greeting from the backend
-                if (messages.length === 0) {
-                    setLoading(true);
-                    const chatRes = await assistantAPI.chat(userId, sid, "");
-                    if (chatRes.data.ai_response) {
-                        const greeting = { role: "assistant", content: chatRes.data.ai_response };
-                        setMessages([greeting]);
-                        setAssistantMessages([greeting]);
-                    }
+
+                // Use greeting from init response directly (no extra chat call)
+                if (messages.length === 0 && res.data.ai_response) {
+                    const greeting = { role: "assistant", content: res.data.ai_response };
+                    setMessages([greeting]);
+                    setAssistantMessages([greeting]);
                 }
             } catch (err) {
                 console.error("Assistant init error:", err);
