@@ -60,7 +60,7 @@ export default function BottomNav() {
             }}
           >
             <Icon
-              size={20}
+              size={22}
               strokeWidth={isActive ? 2.2 : 1.5}
               style={{
                 color: isActive ? "var(--text-primary)" : "var(--text-muted)",
