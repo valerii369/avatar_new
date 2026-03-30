@@ -274,6 +274,21 @@ async def parse_and_validate(raw: str) -> UISResponse:
         data = {"insights": data}
     return UISResponse(**data)
 
+
+async def _parse_batch(raw: str) -> list:
+    """Parse a batch response — validate each insight individually, skip invalid ones."""
+    data = json.loads(raw)
+    if isinstance(data, dict):
+        data = data.get("insights", [])
+    valid = []
+    for item in data:
+        try:
+            from app.models.uis import UniversalInsight
+            valid.append(UniversalInsight(**item))
+        except Exception as e:
+            logger.warning(f"Skipping invalid insight: {e}")
+    return valid
+
 def _slim_chart_for_prompt(chart: dict) -> dict:
     """Reduce chart payload size: keep top-15 aspects, strip raw longitudes."""
     planets_slim = {
@@ -355,9 +370,9 @@ async def generate_insights(chart: dict, attempt: int = 0) -> UISResponse:
         logger.info(f"Batch {i+1}/2: spheres {1+i*6}–{6+i*6}")
         raw = await _call_llm(sys_prompt, user_payload)
         try:
-            batch = await parse_and_validate(raw)
-            all_insights.extend(batch.insights)
-            logger.info(f"Batch {i+1}: {len(batch.insights)} insights")
+            batch = await _parse_batch(raw)
+            all_insights.extend(batch)
+            logger.info(f"Batch {i+1}: {len(batch)} insights")
         except Exception as e:
             logger.error(f"Batch {i+1} parse failed: {e}")
 
