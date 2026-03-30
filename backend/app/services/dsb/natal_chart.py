@@ -517,11 +517,19 @@ async def geocode(place: str) -> tuple[float, float, str]:
 
 # ─── Swiss Ephemeris helpers ──────────────────────────────────────────────────
 
+def _ensure_ephe():
+    """Set ephemeris path before every Swiss Ephemeris call."""
+    swe.set_ephe_path(_ephe_dir)
+
 async def _calc_planet(jd: float, planet_id: int):
     async with limiter:
-        return await anyio.to_thread.run_sync(lambda: swe.calc_ut(jd, planet_id))
+        def _do():
+            _ensure_ephe()
+            return swe.calc_ut(jd, planet_id)
+        return await anyio.to_thread.run_sync(_do)
 
 def _calc_houses_sync(jd: float, lat: float, lon: float):
+    _ensure_ephe()
     try:
         houses, angles = swe.houses(jd, lat, lon, b"P")
         return houses, angles, "placidus"
