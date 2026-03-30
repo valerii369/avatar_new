@@ -96,52 +96,19 @@ export default function ProfilePage() {
             style={{ background: "var(--bg-deep)", height: "100dvh", overflow: "hidden", paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}
         >
             {/* ── Header ── */}
-            <div className="px-4 pt-2 pb-3">
-                <div
-                    className="flex items-center gap-3 p-3"
-                    style={{
-                        background: "rgba(255,255,255,0.05)",
-                        border: "1px solid var(--border)",
-                        borderRadius: 18,
-                    }}
-                >
-                    <div style={{
-                        width: 44, height: 44, borderRadius: "50%",
-                        background: "rgba(255,255,255,0.1)",
-                        border: "1px solid var(--border)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 24, color: "var(--text-muted)", flexShrink: 0,
-                        overflow: "hidden",
-                    }}>
-                        {photoUrl ? (
-                            <img
-                                src={photoUrl}
-                                alt={firstName}
-                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                            />
-                        ) : (
-                            "👤"
-                        )}
-                    </div>
-                    <div className="flex-1 flex justify-between items-center">
-                        <div className="flex flex-col">
-                            <span className="font-semibold text-base" style={{ color: "var(--text-primary)" }}>
-                                {firstName || "Пользователь"}
-                            </span>
-                            <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500, marginTop: -2 }}>
-                                Level <span style={{ color: "var(--text-primary)", fontWeight: 700 }}>{evolutionLevel}</span>/100
-                            </span>
-                        </div>
-                        <span className="font-semibold text-base flex items-center gap-0.5" style={{ color: "#F59E0B" }}>
-                            <EnergyIcon size={20} color="#F59E0B" />
-                            {energy}
-                        </span>
-                    </div>
-                </div>
+            <div style={{ padding: "6px 20px 8px" }}>
+                <h1 style={{
+                    fontSize: 22, fontWeight: 800, fontFamily: "'Outfit', sans-serif",
+                    margin: 0,
+                    background: "linear-gradient(135deg, var(--violet-l), var(--violet))",
+                    WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+                }}>
+                    Профиль
+                </h1>
             </div>
 
             {/* ── Menu (Tabs) ── */}
-            <div className="px-4 mb-5 flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <div className="px-4 mb-3 flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 <button
                     onClick={() => setActiveTab("main")}
                     className="flex-1 py-2.5 px-4 rounded-[16px] flex flex-col items-center justify-center gap-1 min-w-[30%] transition-all"
