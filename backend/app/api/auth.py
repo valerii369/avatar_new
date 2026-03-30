@@ -327,6 +327,18 @@ async def initialize_onboarding_layer(req: ProfileRequest):
         except Exception:
             pass
 
+# ─── /pipeline-errors (diagnostic) ────────────────────────────────────────────
+
+@router.get("/pipeline-errors")
+async def get_pipeline_errors(user_id: str = "", limit: int = 5):
+    """Returns recent DSB pipeline errors from uis_errors table."""
+    supabase = get_supabase()
+    q = supabase.table("uis_errors").select("*").order("created_at", desc=True).limit(limit)
+    if user_id:
+        q = q.eq("user_id", user_id)
+    resp = q.execute()
+    return {"errors": resp.data}
+
 # ─── /calculate ───────────────────────────────────────────────────────────────
 
 @router.post("/calculate")
