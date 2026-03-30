@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { assistantAPI, voiceAPI } from "@/lib/api";
 import { useUserStore } from "@/lib/store";
 import { useTmaSafeArea } from "@/lib/useTmaSafeArea";
+import BottomNav from "@/components/BottomNav";
 
 const MicIcon = ({ className }: { className?: string }) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -196,8 +197,8 @@ export default function AssistantPage() {
 
     return (
         <div
-            className="fixed inset-0 flex flex-col bg-[#060818] overflow-hidden"
-            style={{ zIndex: 10, paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}
+            className="flex flex-col bg-[#060818] overflow-hidden"
+            style={{ height: "100dvh", paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}
         >
 
             {/* Top bar — offset for TMA header */}
@@ -311,8 +312,8 @@ export default function AssistantPage() {
                 </AnimatePresence>
             </div>
 
-            {/* Bottom panel */}
-            <div style={{ flexShrink: 0, padding: "10px 16px 20px", borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", flexDirection: "column", gap: 8, position: "relative", zIndex: 20, background: "rgba(6,8,24,0.8)", backdropFilter: "blur(10px)", opacity: isFinished ? 0.3 : 1, pointerEvents: isFinished ? "none" : "auto" }}>
+            {/* Bottom panel — above BottomNav */}
+            <div style={{ flexShrink: 0, padding: "10px 16px 12px", borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", flexDirection: "column", gap: 8, position: "relative", zIndex: 20, background: "rgba(6,8,24,0.95)", backdropFilter: "blur(10px)", opacity: isFinished ? 0.3 : 1, pointerEvents: isFinished ? "none" : "auto" }}>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", position: "relative" }}>
                     <div style={{ flex: 1, position: "relative" }}>
                         <textarea
@@ -393,10 +394,9 @@ export default function AssistantPage() {
                         {isRecording ? "🔴" : <MicIcon className="w-5 h-5 text-amber-500/60" />}
                     </button>
                 </div>
-                <p style={{ textAlign: "center", fontSize: 10, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>
-                    {loading ? "Думаю..." : "☼ Чат с внутренним миром"}
-                </p>
             </div>
+
+            <BottomNav />
         </div>
     );
 }
