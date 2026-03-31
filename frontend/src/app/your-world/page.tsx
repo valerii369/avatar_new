@@ -226,14 +226,16 @@ function SphereDistribution({ hub }: { hub: any }) {
 // ─── Breakdown Tab ───────────────────────────────────────────────────────────
 function BreakdownTab({
   insights, loading, activeSphere, setActiveSphere, onSelect, userId, onRefresh,
+  generating, setGenerating,
 }: {
   insights: Insight[]; loading: boolean;
   activeSphere: number | null; setActiveSphere: (id: number | null) => void;
   onSelect: (i: Insight) => void;
   userId: string | null;
   onRefresh: () => void;
+  generating: number | null;
+  setGenerating: (id: number | null) => void;
 }) {
-  const [generating, setGenerating] = useState<number | null>(null);
 
   const insightsBySphere = useMemo(() => {
     const map: Record<number, Insight[]> = {};
@@ -510,6 +512,7 @@ export default function YourWorldPage() {
   const { insights, setInsights, activeSphere, setActiveSphere } = useInsightsStore();
   const [activeTab, setActiveTab] = useState<Tab>("portrait");
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
+  const [generatingSphere, setGeneratingSphere] = useState<number | null>(null);
 
   const { data: hub, isValidating: loading } = useSWR(
     userId ? ["master-hub", userId] : null,
@@ -620,6 +623,8 @@ export default function YourWorldPage() {
                 onSelect={setSelectedInsight}
                 userId={userId}
                 onRefresh={() => mutate(["master-hub", userId])}
+                generating={generatingSphere}
+                setGenerating={setGeneratingSphere}
               />
             )}
             {activeTab === "sides" && <SidesTab insights={insights} />}
