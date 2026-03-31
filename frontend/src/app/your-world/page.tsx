@@ -2,9 +2,9 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import useSWR from "swr";
+import useSWR, { mutate } from "swr";
 import { useUserStore, useInsightsStore, type Insight } from "@/lib/store";
-import { masterHubAPI } from "@/lib/api";
+import { masterHubAPI, calcAPI } from "@/lib/api";
 import { SPHERES, SPHERE_BY_ID, INFLUENCE_SORT } from "@/lib/constants";
 import SphereFilter from "@/components/SphereFilter";
 import InsightCard from "@/components/InsightCard";
@@ -225,35 +225,47 @@ function SphereDistribution({ hub }: { hub: any }) {
 
 // ─── Breakdown Tab ───────────────────────────────────────────────────────────
 function BreakdownTab({
-  insights, loading, activeSphere, setActiveSphere, onSelect,
+  insights, loading, activeSphere, setActiveSphere, onSelect, userId, onRefresh,
 }: {
   insights: Insight[]; loading: boolean;
   activeSphere: number | null; setActiveSphere: (id: number | null) => void;
   onSelect: (i: Insight) => void;
+  userId: string | null;
+  onRefresh: () => void;
 }) {
-  const filteredInsights = useMemo(() => {
-    let result = insights;
-    if (activeSphere !== null) result = result.filter(i => i.primary_sphere === activeSphere);
-    return [...result].sort((a, b) => {
-      if (a.primary_sphere !== b.primary_sphere) return a.primary_sphere - b.primary_sphere;
-      return (INFLUENCE_SORT[b.influence_level] || 0) - (INFLUENCE_SORT[a.influence_level] || 0);
-    });
-  }, [insights, activeSphere]);
+  const [generating, setGenerating] = useState<number | null>(null);
 
-  const groupedInsights = useMemo(() => {
-    if (activeSphere !== null) return [{ sphereId: activeSphere, items: filteredInsights }];
-    const groups: { sphereId: number; items: Insight[] }[] = [];
-    let current: { sphereId: number; items: Insight[] } | null = null;
-    const sorted = [...filteredInsights].sort((a, b) => a.primary_sphere - b.primary_sphere);
-    for (const ins of sorted) {
-      if (!current || current.sphereId !== ins.primary_sphere) {
-        current = { sphereId: ins.primary_sphere, items: [] };
-        groups.push(current);
-      }
-      current.items.push(ins);
+  const insightsBySphere = useMemo(() => {
+    const map: Record<number, Insight[]> = {};
+    for (const ins of insights) {
+      if (!map[ins.primary_sphere]) map[ins.primary_sphere] = [];
+      map[ins.primary_sphere].push(ins);
     }
-    return groups;
-  }, [filteredInsights, activeSphere]);
+    // Sort within each sphere
+    for (const key of Object.keys(map)) {
+      map[Number(key)].sort((a, b) => (INFLUENCE_SORT[b.influence_level] || 0) - (INFLUENCE_SORT[a.influence_level] || 0));
+    }
+    return map;
+  }, [insights]);
+
+  const spheresToShow = useMemo(() => {
+    if (activeSphere !== null) return [activeSphere];
+    return SPHERES.map(s => s.id);
+  }, [activeSphere]);
+
+  const handleGenerate = async (sphereId: number) => {
+    if (!userId || generating) return;
+    setGenerating(sphereId);
+    try {
+      await calcAPI.generateSphere(userId, sphereId);
+      onRefresh();
+    } catch (err: any) {
+      const detail = err.response?.data?.detail || "Ошибка генерации";
+      alert(detail);
+    } finally {
+      setGenerating(null);
+    }
+  };
 
   return (
     <>
@@ -264,60 +276,73 @@ function BreakdownTab({
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
         </div>
-      ) : insights.length === 0 ? (
-        <div className="flex flex-col items-center justify-center" style={{ padding: "60px 20px", textAlign: "center" }}>
-          <div style={{
-            width: 56, height: 56, borderRadius: 16,
-            background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.1)",
-            display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16,
-          }}>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--violet)", opacity: 0.4 }} />
-          </div>
-          <p style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", marginBottom: 6 }}>
-            Твой мир формируется
-          </p>
-          <p style={{ fontSize: 12, color: "var(--text-muted)", maxWidth: 260, lineHeight: 1.5 }}>
-            Пройди онбординг для персонального расчёта по 12 сферам
-          </p>
-        </div>
       ) : (
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeSphere ?? "all"}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            style={{ display: "flex", flexDirection: "column", gap: 24 }}
-          >
-            {groupedInsights.map(group => {
-              const sphere = SPHERE_BY_ID[group.sphereId];
-              return (
-                <div key={group.sphereId}>
-                  {activeSphere === null && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          {spheresToShow.map(sphereId => {
+            const sphere = SPHERE_BY_ID[sphereId];
+            const items = insightsBySphere[sphereId] || [];
+            const isEmpty = items.length === 0;
+            const isGenerating = generating === sphereId;
+
+            return (
+              <div key={sphereId}>
+                {/* Sphere header */}
+                <div style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  marginBottom: isEmpty ? 0 : 10, paddingLeft: 2,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{
-                      display: "flex", alignItems: "center", justifyContent: "space-between",
-                      marginBottom: 10, paddingLeft: 2,
-                    }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{
-                          width: 6, height: 6, borderRadius: "50%",
-                          background: sphere?.color || "#8B5CF6",
-                        }} />
-                        <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
-                          {sphere?.name}
-                        </span>
-                        <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>
-                          {sphere?.subtitle}
-                        </span>
-                      </div>
-                      <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 500 }}>
-                        {group.items.length}
-                      </span>
-                    </div>
+                      width: 6, height: 6, borderRadius: "50%",
+                      background: sphere?.color || "#8B5CF6",
+                    }} />
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
+                      {sphere?.name}
+                    </span>
+                    <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>
+                      {sphere?.subtitle}
+                    </span>
+                  </div>
+                  {!isEmpty && (
+                    <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 500 }}>
+                      {items.length}
+                    </span>
                   )}
+                </div>
+
+                {/* Content or unlock button */}
+                {isEmpty ? (
+                  <button
+                    onClick={() => handleGenerate(sphereId)}
+                    disabled={!!generating}
+                    style={{
+                      width: "100%", padding: "16px",
+                      marginTop: 8, borderRadius: 14,
+                      background: isGenerating ? "rgba(139,92,246,0.08)" : "rgba(255,255,255,0.02)",
+                      border: `1px dashed ${isGenerating ? "var(--violet)" : "rgba(255,255,255,0.1)"}`,
+                      cursor: generating ? "wait" : "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                      color: isGenerating ? "var(--violet)" : "var(--text-muted)",
+                      fontSize: 13, fontWeight: 500,
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    {isGenerating ? (
+                      <>
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          style={{ width: 14, height: 14, borderRadius: "50%", border: "2px solid var(--violet)", borderTopColor: "transparent" }}
+                        />
+                        Генерирую...
+                      </>
+                    ) : (
+                      <>Собрать разбор · 10 ⚡</>
+                    )}
+                  </button>
+                ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {group.items.map((insight, idx) => (
+                    {items.map((insight, idx) => (
                       <InsightCard
                         key={insight.id || `${insight.primary_sphere}-${idx}`}
                         insight={insight}
@@ -325,11 +350,11 @@ function BreakdownTab({
                       />
                     ))}
                   </div>
-                </div>
-              );
-            })}
-          </motion.div>
-        </AnimatePresence>
+                )}
+              </div>
+            );
+          })}
+        </div>
       )}
     </>
   );
@@ -592,6 +617,8 @@ export default function YourWorldPage() {
                 insights={insights} loading={loading}
                 activeSphere={activeSphere} setActiveSphere={setActiveSphere}
                 onSelect={setSelectedInsight}
+                userId={userId}
+                onRefresh={() => mutate(["master-hub", userId])}
               />
             )}
             {activeTab === "sides" && <SidesTab insights={insights} />}

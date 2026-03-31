@@ -32,6 +32,8 @@ export const profileAPI = {
 export const calcAPI = {
   geocode: (place: string) => api.post("/api/auth/geocode", { place }),
   calculate: (data: any) => api.post("/api/auth/calculate", data),
+  generateSphere: (userId: string, sphereId: number) =>
+    api.post("/api/auth/generate-sphere", { user_id: userId, sphere_id: sphereId }, { timeout: 120000 }),
 };
 
 export const masterHubAPI = {

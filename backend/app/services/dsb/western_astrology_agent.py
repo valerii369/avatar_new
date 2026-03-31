@@ -382,3 +382,59 @@ async def generate_insights(chart: dict, attempt: int = 0) -> UISResponse:
 
     logger.info(f"Total insights: {len(all_insights)}")
     return UISResponse(insights=all_insights)
+
+
+# ─── Per-Sphere Agent ─────────────────────────────────────────────────────────
+
+SPHERE_NAMES_RU = {
+    1: "Личность (Ядро, маска, тело, стиль)",
+    2: "Ресурсы (Ценности, деньги, самооценка, таланты)",
+    3: "Связи (Коммуникация, мышление, ближний круг)",
+    4: "Корни (Семья, дом, предки, эмоциональный фундамент)",
+    5: "Творчество (Самовыражение, радость, дети, романтика)",
+    6: "Служение (Здоровье, труд, рутина, совершенствование)",
+    7: "Партнёрство (Другой, проекции, брак, контракты)",
+    8: "Психология (Кризисы, трансформация, тень, секс, власть)",
+    9: "Мировоззрение (Философия, вера, поиск смысла, дальние путешествия)",
+    10: "Реализация (Карьера, MC, призвание, статус)",
+    11: "Сообщества (Друзья, группы, будущее, идеалы)",
+    12: "Запредельное (Бессознательное, дух, уединение, сны)",
+}
+
+async def generate_sphere_insights(chart: dict, sphere_id: int) -> list:
+    """Generate insights for a SINGLE sphere. Used by per-sphere unlock."""
+    queries = build_queries(chart)
+    context_chunks = await retrieve_context(queries)
+    slim_chart = _slim_chart_for_prompt(chart)
+
+    sphere_name = SPHERE_NAMES_RU.get(sphere_id, f"Сфера {sphere_id}")
+
+    user_payload = json.dumps({
+        "chart": slim_chart,
+        "book_context": [
+            {"text": c["text"], "source": c["source"]}
+            for c in context_chunks
+        ]
+    }, ensure_ascii=False)
+
+    system = SYSTEM_PROMPT + f"""
+
+═══ ЗАДАНИЕ ═══
+Сгенерируй инсайты ТОЛЬКО для сферы {sphere_id} — {sphere_name}.
+Другие сферы НЕ включай.
+
+Количество: ровно 5–8 инсайтов для этой сферы.
+Каждый инсайт — уникальная смысловая единица.
+primary_sphere для всех инсайтов = {sphere_id}.
+"""
+
+    logger.info(f"generate_sphere_insights: sphere={sphere_id}, model={settings.MODEL_HEAVY}")
+
+    raw = await _call_llm(system, user_payload)
+    insights = await _parse_batch(raw)
+
+    # Filter to only requested sphere (GPT might include others)
+    filtered = [i for i in insights if i.primary_sphere == sphere_id]
+    logger.info(f"Sphere {sphere_id}: {len(filtered)} insights (raw: {len(insights)})")
+
+    return filtered

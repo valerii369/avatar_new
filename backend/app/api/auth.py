@@ -277,9 +277,11 @@ async def reset_user(request: ResetRequest):
 # ─── DSB Pipeline background task ────────────────────────────────────────────
 
 async def initialize_onboarding_layer(req: ProfileRequest):
-    """Full 3-layer DSB Pipeline as background task."""
-    logger.info(f"Starting DSB Pipeline for user: {req.user_id}")
+    """Onboarding: chart + 2 free spheres (Личность + Ресурсы) + portrait."""
+    logger.info(f"Starting onboarding pipeline for user: {req.user_id}")
     supabase = get_supabase()
+
+    FREE_SPHERES = [1, 2]  # Личность + Ресурсы — free on onboarding
 
     try:
         # Save birth data
@@ -296,13 +298,18 @@ async def initialize_onboarding_layer(req: ProfileRequest):
         # Layer 1 — Astro chart
         astro_chart = await calculate_chart(req.birth_date, req.birth_time, req.birth_place)
 
-        # Layer 2 — RAG + GPT-4o insights
-        uis_response = await generate_insights(astro_chart)
+        # Layer 2 — Generate only free spheres (per-sphere agents)
+        from app.services.dsb.western_astrology_agent import generate_sphere_insights
+        all_insights = []
+        for sphere_id in FREE_SPHERES:
+            insights = await generate_sphere_insights(astro_chart, sphere_id)
+            all_insights.extend(insights)
+            logger.info(f"Free sphere {sphere_id}: {len(insights)} insights")
 
         # Layer 3 — Synthesis
-        synthesized_data = synthesize(uis_response.insights)
+        synthesized_data = synthesize(all_insights)
 
-        # Layer 4 — Portrait summary
+        # Layer 4 — Portrait summary (based on available spheres)
         portrait = await generate_portrait_summary(req.user_id, synthesized_data)
 
         # Save everything
@@ -326,6 +333,84 @@ async def initialize_onboarding_layer(req: ProfileRequest):
             }).execute()
         except Exception:
             pass
+
+# ─── /generate-sphere — per-sphere agent ──────────────────────────────────────
+
+class GenerateSphereRequest(BaseModel):
+    user_id: str
+    sphere_id: int
+
+@router.post("/generate-sphere")
+async def generate_sphere(request: GenerateSphereRequest):
+    """Generate insights for a single sphere. Costs 10 energy."""
+    supabase = get_supabase()
+
+    if request.sphere_id < 1 or request.sphere_id > 12:
+        raise HTTPException(status_code=400, detail="sphere_id must be 1-12")
+
+    # Check user exists and has energy
+    user_resp = supabase.table("users").select("id,energy").eq("id", request.user_id).execute()
+    if not user_resp.data:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user = user_resp.data[0]
+    if user["energy"] < 10:
+        raise HTTPException(status_code=402, detail="Not enough energy (need 10)")
+
+    # Check if sphere already has insights
+    existing = supabase.table("user_insights")\
+        .select("id")\
+        .eq("user_id", request.user_id)\
+        .eq("primary_sphere", request.sphere_id)\
+        .execute()
+
+    if existing.data and len(existing.data) > 0:
+        raise HTTPException(status_code=409, detail="Sphere already generated")
+
+    # Get birth data for chart calculation
+    birth_resp = supabase.table("user_birth_data").select("*").eq("user_id", request.user_id).execute()
+    if not birth_resp.data:
+        raise HTTPException(status_code=400, detail="No birth data — complete onboarding first")
+
+    birth = birth_resp.data[0]
+
+    try:
+        # Layer 1: Calculate chart
+        astro_chart = await calculate_chart(birth["birth_date"], birth["birth_time"], birth["birth_place"])
+
+        # Layer 2: Per-sphere agent
+        from app.services.dsb.western_astrology_agent import generate_sphere_insights
+        insights = await generate_sphere_insights(astro_chart, request.sphere_id)
+
+        if not insights:
+            raise HTTPException(status_code=500, detail="No insights generated")
+
+        # Save insights to Supabase
+        for rank, ins in enumerate(insights, start=1):
+            row = ins.model_dump()
+            row["user_id"] = request.user_id
+            row["system"] = "western_astrology"
+            row["rank"] = rank
+            supabase.table("user_insights").insert(row).execute()
+
+        # Deduct energy
+        supabase.table("users").update({"energy": user["energy"] - 10})\
+            .eq("id", request.user_id).execute()
+
+        return {
+            "status": "ok",
+            "sphere_id": request.sphere_id,
+            "insights_count": len(insights),
+            "energy_spent": 10,
+            "energy_remaining": user["energy"] - 10,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"generate_sphere failed for user {request.user_id}, sphere {request.sphere_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)[:100]}")
+
 
 # ─── /pipeline-errors (diagnostic) ────────────────────────────────────────────
 
