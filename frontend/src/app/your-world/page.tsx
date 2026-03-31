@@ -226,7 +226,7 @@ function SphereDistribution({ hub }: { hub: any }) {
 // ─── Breakdown Tab ───────────────────────────────────────────────────────────
 function BreakdownTab({
   insights, loading, activeSphere, setActiveSphere, onSelect, userId, onRefresh,
-  generating, setGenerating,
+  generating, setGenerating, dataReady,
 }: {
   insights: Insight[]; loading: boolean;
   activeSphere: number | null; setActiveSphere: (id: number | null) => void;
@@ -235,6 +235,7 @@ function BreakdownTab({
   onRefresh: () => void;
   generating: number | null;
   setGenerating: (id: number | null) => void;
+  dataReady: boolean;
 }) {
 
   const insightsBySphere = useMemo(() => {
@@ -275,7 +276,7 @@ function BreakdownTab({
       <div style={{ marginBottom: 16 }}>
         <SphereFilter activeSphere={activeSphere} onSelect={setActiveSphere} />
       </div>
-      {loading && insights.length === 0 ? (
+      {!dataReady ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
         </div>
@@ -639,6 +640,7 @@ export default function YourWorldPage() {
                 onRefresh={() => mutate(["master-hub", userId])}
                 generating={generatingSphere}
                 setGenerating={setGeneratingSphere}
+                dataReady={!!hub && hub.status !== "pending"}
               />
             )}
             {activeTab === "sides" && <SidesTab insights={insights} />}
