@@ -362,15 +362,16 @@ async def generate_insights(chart: dict, attempt: int = 0) -> UISResponse:
     logger.info(f"generate_insights: model={settings.MODEL_HEAVY}, "
                 f"context_chunks={len(context_chunks)}, queries={len(queries)}")
 
-    # Split into 2 calls: spheres 1-6 and 7-12 (each ~30 insights fits in 16k)
+    # Split into 3 calls of 4 spheres each (~20 insights per batch, fits in 16k)
     batch_prompts = [
-        SYSTEM_PROMPT + "\n\n═══ ЗАДАНИЕ ═══\nСгенерируй инсайты ТОЛЬКО для сфер 1–6 (Личность, Ресурсы, Связи, Корни, Творчество, Служение). Сферы 7–12 НЕ включай. Итого 28–35 инсайтов.",
-        SYSTEM_PROMPT + "\n\n═══ ЗАДАНИЕ ═══\nСгенерируй инсайты ТОЛЬКО для сфер 7–12 (Партнерство, Психология, Мировоззрение, Реализация, Сообщества, Запредельное). Сферы 1–6 НЕ включай. Итого 28–35 инсайтов.",
+        SYSTEM_PROMPT + "\n\n═══ ЗАДАНИЕ ═══\nСгенерируй инсайты ТОЛЬКО для сфер 1–4:\n1 (Личность) — 5-7 инсайтов\n2 (Ресурсы) — 4-5 инсайтов\n3 (Связи) — 4-5 инсайтов\n4 (Корни) — 4-5 инсайтов\nСферы 5–12 НЕ включай. МИНИМУМ 17 инсайтов в этом батче.",
+        SYSTEM_PROMPT + "\n\n═══ ЗАДАНИЕ ═══\nСгенерируй инсайты ТОЛЬКО для сфер 5–8:\n5 (Творчество) — 4-5 инсайтов\n6 (Служение) — 4-5 инсайтов\n7 (Партнерство) — 5-7 инсайтов\n8 (Психология) — 5-7 инсайтов\nСферы 1–4 и 9–12 НЕ включай. МИНИМУМ 18 инсайтов в этом батче.",
+        SYSTEM_PROMPT + "\n\n═══ ЗАДАНИЕ ═══\nСгенерируй инсайты ТОЛЬКО для сфер 9–12:\n9 (Мировоззрение) — 4-5 инсайтов\n10 (Реализация) — 5-7 инсайтов\n11 (Сообщества) — 4-5 инсайтов\n12 (Запредельное) — 5-7 инсайтов\nСферы 1–8 НЕ включай. МИНИМУМ 18 инсайтов в этом батче.",
     ]
 
     all_insights = []
     for i, sys_prompt in enumerate(batch_prompts):
-        logger.info(f"Batch {i+1}/2: spheres {1+i*6}–{6+i*6}")
+        logger.info(f"Batch {i+1}/3: starting")
         raw = await _call_llm(sys_prompt, user_payload)
         try:
             batch = await _parse_batch(raw)
