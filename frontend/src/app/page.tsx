@@ -186,11 +186,11 @@ export default function HomePage() {
           </div>
         </div>
         <div className="text-center">
-          <p style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 }}>
-            Строим твой Аватар
+          <p style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", marginBottom: 6 }}>
+            Формируем твой профиль
           </p>
-          <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
-            Анализируем натальную карту и создаём портрет...
+          <p style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5, maxWidth: 260 }}>
+            Рассчитываем натальную карту и собираем первые 2 сферы — Личность и Ресурсы
           </p>
         </div>
         <div style={{ display: "flex", gap: 6 }}>

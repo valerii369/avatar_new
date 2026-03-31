@@ -315,34 +315,48 @@ function BreakdownTab({
 
                 {/* Content or unlock button */}
                 {isEmpty ? (
-                  <button
-                    onClick={() => handleGenerate(sphereId)}
-                    disabled={!!generating}
-                    style={{
-                      width: "100%", padding: "16px",
+                  isGenerating ? (
+                    <div style={{
+                      width: "100%", padding: "24px 16px",
                       marginTop: 8, borderRadius: 14,
-                      background: isGenerating ? "rgba(139,92,246,0.08)" : "rgba(255,255,255,0.02)",
-                      border: `1px dashed ${isGenerating ? "var(--violet)" : "rgba(255,255,255,0.1)"}`,
-                      cursor: generating ? "wait" : "pointer",
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                      color: isGenerating ? "var(--violet)" : "var(--text-muted)",
-                      fontSize: 13, fontWeight: 500,
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    {isGenerating ? (
-                      <>
-                        <motion.div
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                          style={{ width: 14, height: 14, borderRadius: "50%", border: "2px solid var(--violet)", borderTopColor: "transparent" }}
-                        />
-                        Генерирую...
-                      </>
-                    ) : (
-                      <>Собрать разбор · 10 ⚡</>
-                    )}
-                  </button>
+                      background: "rgba(139,92,246,0.04)",
+                      border: "1px solid rgba(139,92,246,0.12)",
+                      display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
+                    }}>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
+                        style={{ width: 24, height: 24, borderRadius: "50%", border: "2px solid rgba(139,92,246,0.2)", borderTopColor: "var(--violet)" }}
+                      />
+                      <div style={{ textAlign: "center" }}>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: "var(--violet)", margin: 0, marginBottom: 4 }}>
+                          Анализирую {sphere?.name?.toLowerCase()}
+                        </p>
+                        <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0, lineHeight: 1.4 }}>
+                          Агент изучает натальную карту и формирует инсайты...
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleGenerate(sphereId)}
+                      disabled={!!generating}
+                      style={{
+                        width: "100%", padding: "16px",
+                        marginTop: 8, borderRadius: 14,
+                        background: "rgba(255,255,255,0.02)",
+                        border: "1px dashed rgba(255,255,255,0.1)",
+                        cursor: generating ? "not-allowed" : "pointer",
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                        color: generating ? "rgba(255,255,255,0.15)" : "var(--text-muted)",
+                        fontSize: 13, fontWeight: 500,
+                        transition: "all 0.2s",
+                        opacity: generating ? 0.5 : 1,
+                      }}
+                    >
+                      Собрать разбор · 10 ⚡
+                    </button>
+                  )
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {items.map((insight, idx) => (
