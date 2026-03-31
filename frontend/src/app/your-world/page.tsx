@@ -258,7 +258,8 @@ function BreakdownTab({
     setGenerating(sphereId);
     try {
       await calcAPI.generateSphere(userId, sphereId);
-      onRefresh();
+      // Force SWR to refetch fresh data
+      await onRefresh();
     } catch (err: any) {
       const detail = err.response?.data?.detail || "Ошибка генерации";
       alert(detail);

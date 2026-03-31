@@ -357,15 +357,12 @@ async def generate_sphere(request: GenerateSphereRequest):
     if user["energy"] < 10:
         raise HTTPException(status_code=402, detail="Not enough energy (need 10)")
 
-    # Check if sphere already has insights
-    existing = supabase.table("user_insights")\
-        .select("id")\
+    # Delete existing insights for this sphere (allows re-generation)
+    supabase.table("user_insights")\
+        .delete()\
         .eq("user_id", request.user_id)\
         .eq("primary_sphere", request.sphere_id)\
         .execute()
-
-    if existing.data and len(existing.data) > 0:
-        raise HTTPException(status_code=409, detail="Sphere already generated")
 
     # Get birth data for chart calculation
     birth_resp = supabase.table("user_birth_data").select("*").eq("user_id", request.user_id).execute()
