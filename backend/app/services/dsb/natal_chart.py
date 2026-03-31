@@ -563,7 +563,11 @@ async def calculate_chart(birth_date: str, birth_time: str, place: str) -> dict:
     lat, lon, tz_str = await geocode(place)
 
     local_tz = pytz.timezone(tz_str)
-    dt       = datetime.strptime(f"{birth_date} {birth_time}", "%Y-%m-%d %H:%M")
+    # Normalize birth_time: accept HH:MM or HH:MM:SS
+    bt = birth_time.strip()
+    if len(bt) > 5:
+        bt = bt[:5]  # "00:40:00" → "00:40"
+    dt       = datetime.strptime(f"{birth_date} {bt}", "%Y-%m-%d %H:%M")
     local_dt = local_tz.localize(dt)
     utc_dt   = local_dt.astimezone(pytz.utc)
 
