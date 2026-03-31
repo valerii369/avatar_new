@@ -4,8 +4,84 @@ from app.api.extras import game_router, diary_router, payments_router
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
+import sys
 
-logging.basicConfig(level=logging.INFO)
+class OnboardingTimingFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        msg = record.getMessage()
+        return "[TIMING] onboarding." in msg
+
+class LlmTraceFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        msg = record.getMessage()
+        return "[LLM_TRACE]" in msg
+
+class RagTraceFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        msg = record.getMessage()
+        return "[RAG_TRACE]" in msg
+
+
+def setup_logging() -> None:
+    root = logging.getLogger()
+    if getattr(root, "_avatar_logging_configured", False):
+        return
+
+    root.setLevel(logging.INFO)
+    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setFormatter(formatter)
+    root.addHandler(stream_handler)
+
+    log_dir = Path(__file__).resolve().parents[1] / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    backend_log = RotatingFileHandler(
+        log_dir / "backend.log",
+        maxBytes=5 * 1024 * 1024,
+        backupCount=3,
+        encoding="utf-8",
+    )
+    backend_log.setFormatter(formatter)
+    root.addHandler(backend_log)
+
+    timing_log = RotatingFileHandler(
+        log_dir / "onboarding_timing.log",
+        maxBytes=2 * 1024 * 1024,
+        backupCount=5,
+        encoding="utf-8",
+    )
+    timing_log.setFormatter(formatter)
+    timing_log.addFilter(OnboardingTimingFilter())
+    root.addHandler(timing_log)
+
+    llm_trace_log = RotatingFileHandler(
+        log_dir / "llm_trace.log",
+        maxBytes=20 * 1024 * 1024,
+        backupCount=5,
+        encoding="utf-8",
+    )
+    llm_trace_log.setFormatter(formatter)
+    llm_trace_log.addFilter(LlmTraceFilter())
+    root.addHandler(llm_trace_log)
+
+    rag_trace_log = RotatingFileHandler(
+        log_dir / "rag_trace.log",
+        maxBytes=10 * 1024 * 1024,
+        backupCount=5,
+        encoding="utf-8",
+    )
+    rag_trace_log.setFormatter(formatter)
+    rag_trace_log.addFilter(RagTraceFilter())
+    root.addHandler(rag_trace_log)
+
+    root._avatar_logging_configured = True  # type: ignore[attr-defined]
+
+
+setup_logging()
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager

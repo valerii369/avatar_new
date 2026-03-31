@@ -1,6 +1,7 @@
 import json
 import logging
 import asyncio
+import time
 from typing import List, Dict
 from app.models.uis import UISResponse
 from openai import AsyncOpenAI
@@ -218,6 +219,7 @@ async def embed(text: str) -> list[float]:
     return resp.data[0].embedding
 
 async def retrieve_for_query(query: str, supabaseClient, min_score: float, limit: int) -> list[dict]:
+    t0 = time.perf_counter()
     query_vector = await embed(query)
     try:
         # Calls a Postgres function defined in Supabase to calculate similarity mapping
@@ -230,8 +232,17 @@ async def retrieve_for_query(query: str, supabaseClient, min_score: float, limit
                 'p_category': 'western_astrology'
             }
         ).execute()
-        return response.data if response.data else []
+        hits = response.data if response.data else []
+        logger.info(
+            "[RAG_TRACE] step=match_book_chunks query=%s duration=%.2fs hits=%d threshold=%.2f limit=%d",
+            query, time.perf_counter() - t0, len(hits), min_score, limit
+        )
+        return hits
     except Exception as e:
+        logger.error(
+            "[RAG_TRACE] step=match_book_chunks query=%s duration=%.2fs error=%s",
+            query, time.perf_counter() - t0, str(e)
+        )
         logger.error(f"Supabase RPC failed for query '{query}': {e}")
         return []
 
@@ -271,7 +282,12 @@ async def retrieve_context(queries: list[str]) -> list[dict]:
                 })
 
     scored.sort(key=lambda x: x["score"], reverse=True)
-    return scored[:20]
+    top = scored[:20]
+    logger.info(
+        "[RAG_TRACE] step=retrieve_context query_count=%d unique_hits=%d returned=%d threshold=%.2f top_k_per_query=%d",
+        len(queries), len(scored), len(top), MIN_SCORE, TOP_K_PER_QUERY
+    )
+    return top
 
 async def parse_and_validate(raw: str) -> UISResponse:
     data = json.loads(raw)
@@ -330,9 +346,43 @@ def _slim_chart_for_prompt(chart: dict) -> dict:
     }
 
 
-async def _call_llm(system: str, user_content: str, attempt: int = 0) -> str:
+def _usage_to_dict(usage) -> dict:
+    if not usage:
+        return {}
+    return {
+        "prompt_tokens": getattr(usage, "prompt_tokens", None),
+        "completion_tokens": getattr(usage, "completion_tokens", None),
+        "total_tokens": getattr(usage, "total_tokens", None),
+    }
+
+
+def _log_llm_trace(
+    label: str,
+    model: str,
+    system_prompt: str,
+    user_payload: str,
+    response_text: str,
+    usage: dict,
+    duration_s: float,
+    attempt: int,
+) -> None:
+    logger.info(
+        "[LLM_TRACE] label=%s model=%s attempt=%s duration=%.2fs usage=%s\n"
+        "----- SYSTEM PROMPT BEGIN -----\n%s\n"
+        "----- SYSTEM PROMPT END -----\n"
+        "----- USER PAYLOAD BEGIN -----\n%s\n"
+        "----- USER PAYLOAD END -----\n"
+        "----- LLM RESPONSE BEGIN -----\n%s\n"
+        "----- LLM RESPONSE END -----",
+        label, model, attempt, duration_s, json.dumps(usage, ensure_ascii=False),
+        system_prompt, user_payload, response_text,
+    )
+
+
+async def _call_llm(system: str, user_content: str, attempt: int = 0, trace_label: str = "western_astrology") -> str:
     """Single LLM call with retry."""
     try:
+        t0 = time.perf_counter()
         response = await openai_client.chat.completions.create(
             model=settings.MODEL_HEAVY,
             response_format={"type": "json_object"},
@@ -342,16 +392,32 @@ async def _call_llm(system: str, user_content: str, attempt: int = 0) -> str:
             ],
             max_completion_tokens=16000,
         )
-        return response.choices[0].message.content
+        content = response.choices[0].message.content or ""
+        duration_s = time.perf_counter() - t0
+        _log_llm_trace(
+            label=trace_label,
+            model=settings.MODEL_HEAVY,
+            system_prompt=system,
+            user_payload=user_content,
+            response_text=content,
+            usage=_usage_to_dict(response.usage),
+            duration_s=duration_s,
+            attempt=attempt,
+        )
+        return content
     except Exception as e:
         logger.error(f"LLM call failed attempt {attempt}: {e}")
         if attempt < 2:
-            return await _call_llm(system, user_content, attempt + 1)
+            return await _call_llm(system, user_content, attempt + 1, trace_label=trace_label)
         raise e
 
 
 async def generate_insights(chart: dict, attempt: int = 0) -> UISResponse:
     queries = build_queries(chart)
+    logger.info(
+        "[RAG_TRACE] step=build_queries label=generate_insights count=%d queries=%s",
+        len(queries), json.dumps(queries, ensure_ascii=False)
+    )
     context_chunks = await retrieve_context(queries)
 
     slim_chart = _slim_chart_for_prompt(chart)
@@ -377,7 +443,11 @@ async def generate_insights(chart: dict, attempt: int = 0) -> UISResponse:
     all_insights = []
     for i, sys_prompt in enumerate(batch_prompts):
         logger.info(f"Batch {i+1}/3: starting")
-        raw = await _call_llm(sys_prompt, user_payload)
+        raw = await _call_llm(
+            sys_prompt,
+            user_payload,
+            trace_label=f"western_astrology.batch_{i+1}_of_3",
+        )
         try:
             batch = await _parse_batch(raw)
             all_insights.extend(batch)
@@ -409,6 +479,10 @@ SPHERE_NAMES_RU = {
 async def generate_sphere_insights(chart: dict, sphere_id: int) -> list:
     """Generate insights for a SINGLE sphere. Used by per-sphere unlock."""
     queries = build_queries(chart)
+    logger.info(
+        "[RAG_TRACE] step=build_queries label=generate_sphere_insights sphere=%d count=%d queries=%s",
+        sphere_id, len(queries), json.dumps(queries, ensure_ascii=False)
+    )
     context_chunks = await retrieve_context(queries)
     slim_chart = _slim_chart_for_prompt(chart)
 
@@ -435,7 +509,11 @@ primary_sphere для всех инсайтов = {sphere_id}.
 
     logger.info(f"generate_sphere_insights: sphere={sphere_id}, model={settings.MODEL_HEAVY}")
 
-    raw = await _call_llm(system, user_payload)
+    raw = await _call_llm(
+        system,
+        user_payload,
+        trace_label=f"western_astrology.sphere_{sphere_id}",
+    )
     insights = await _parse_batch(raw)
 
     # Filter to only requested sphere (GPT might include others)

@@ -1,4 +1,7 @@
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
 
 class Settings(BaseSettings):
     SUPABASE_URL: str = "https://localhost"
@@ -13,7 +16,7 @@ class Settings(BaseSettings):
     MODEL_LIGHT: str = "gpt-4o-mini"       # simple: chat, portrait, summaries
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(ENV_FILE),
         env_file_encoding="utf-8",
         extra="ignore"
     )
