@@ -249,7 +249,7 @@ class ResetRequest(BaseModel):
 async def reset_user(request: ResetRequest):
     """
     Hard reset user data by user_id and/or tg_id:
-    - user_birth_data, user_insights, user_portraits, user_memory, uis_errors
+    - user_birth_data, user_insights, user_portraits, user_memory, uis_errors, retriever_traces
     - users flags/stats reset to defaults
     - optional geocode_cache cleanup by user's birth_place values
     """
@@ -290,6 +290,7 @@ async def reset_user(request: ResetRequest):
             supabase.table("user_birth_data").delete().eq("user_id", uid).execute()
             supabase.table("user_memory").delete().eq("user_id", uid).execute()
             supabase.table("uis_errors").delete().eq("user_id", uid).execute()
+            supabase.table("retriever_traces").delete().eq("user_id", uid).execute()
 
         if request.clear_geocode:
             for place in birth_places:
@@ -348,7 +349,7 @@ async def initialize_onboarding_layer(req: ProfileRequest):
         all_insights = []
         for sphere_id in FREE_SPHERES:
             t_sphere = time.perf_counter()
-            insights = await generate_sphere_insights(astro_chart, sphere_id)
+            insights = await generate_sphere_insights(astro_chart, sphere_id, user_id=req.user_id)
             all_insights.extend(insights)
             logger.info(f"Free sphere {sphere_id}: {len(insights)} insights")
             logger.info(f"[TIMING] onboarding.layer2_sphere_{sphere_id}={time.perf_counter() - t_sphere:.2f}s user={req.user_id}")
@@ -439,7 +440,7 @@ async def generate_sphere(request: GenerateSphereRequest):
 
         # Layer 2: Per-sphere agent
         from app.services.dsb.western_astrology_agent import generate_sphere_insights
-        insights = await generate_sphere_insights(astro_chart, request.sphere_id)
+        insights = await generate_sphere_insights(astro_chart, request.sphere_id, user_id=request.user_id)
 
         if not insights:
             raise HTTPException(status_code=500, detail="No insights generated")
@@ -506,7 +507,7 @@ async def calculate_sync(request: ProfileRequest):
         steps.append(f"chart: {len(astro_chart.get('planets',{}))} planets, {len(astro_chart.get('aspects',[]))} aspects")
 
         # Step 3: Generate insights
-        uis_response = await generate_insights(astro_chart)
+        uis_response = await generate_insights(astro_chart, user_id=request.user_id)
         steps.append(f"insights: {len(uis_response.insights)} generated")
 
         # Step 4: Synthesis
