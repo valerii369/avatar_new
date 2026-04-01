@@ -1,12 +1,13 @@
 import json
 import logging
-import asyncio
 import time
+from uuid import uuid4
 from typing import List, Dict
 from app.models.uis import UISResponse
 from openai import AsyncOpenAI
 from app.core.config import settings
 from app.core.db import get_supabase
+from app.services.rag.faiss_retriever import search_faiss_chunks, search_faiss_chunks_batch
 
 logger = logging.getLogger(__name__)
 
@@ -149,6 +150,207 @@ developmental_task, integration_key, triggers) — только на русск�
 12 (Запредельное: бессознательное, дух, уединение, сны)  → 7–9
 """
 
+# def build_queries(chart: dict) -> list[str]:
+#     queries = []
+#     personal = [
+#         "sun", "moon", "mercury", "venus", "mars",
+#         "asc", "mc", "north_node", "south_node",
+#         "chiron", "lilith", "part_of_fortune",
+#     ]
+
+#     planets = chart.get("planets", {})
+#     for planet in personal:
+#         p = planets.get(planet)
+#         if p:
+#             queries.append(f"{planet} in {p['sign']} in {p['house']} house")
+
+#     for planet in ["jupiter", "saturn", "uranus", "neptune", "pluto"]:
+#         p = planets.get(planet)
+#         if p and (abs(p.get("dignity_score", 0)) >= 2 or p.get("house") in [1, 4, 7, 10]):
+#             queries.append(f"{planet} in {p['sign']} in {p['house']} house")
+
+#     aspects = chart.get("aspects", [])
+#     aspects_sorted = sorted(aspects, key=lambda a: a.get("influence_weight", 0), reverse=True)
+#     for asp in aspects_sorted[:15]:
+#         queries.append(f"{asp['planet_a']} {asp['type']} {asp['planet_b']}")
+
+#     for fig in chart.get("aspect_patterns", []):
+#         queries.append(f"aspect pattern {fig}")
+
+#     for st in chart.get("stelliums", []):
+#         queries.append(f"stellium in {st.get('sign') or st.get('house')}")
+
+#     for planet in chart.get("critical_degrees", []):
+#         p = planets.get(planet)
+#         if p:
+#             queries.append(f"critical degree {round(p['degree_in_sign'])} {p['sign']}")
+
+#     # Balance-based queries
+#     balance = chart.get("balance", {})
+#     dominant_el = balance.get("dominant_element")
+#     if dominant_el:
+#         queries.append(f"dominant {dominant_el} element in chart")
+#     dominant_mod = balance.get("dominant_modality")
+#     if dominant_mod:
+#         queries.append(f"dominant {dominant_mod} modality in chart")
+#     hemi = balance.get("hemispheres", {})
+#     if hemi.get("above", 0) > hemi.get("below", 0):
+#         queries.append("above horizon emphasis public life career")
+#     elif hemi.get("below", 0) > hemi.get("above", 0):
+#         queries.append("below horizon emphasis private inner life")
+#     if hemi.get("east", 0) > hemi.get("west", 0):
+#         queries.append("eastern hemisphere self-directed independence")
+#     elif hemi.get("west", 0) > hemi.get("east", 0):
+#         queries.append("western hemisphere relationship-oriented")
+
+#     # Mutual reception queries
+#     for mr in chart.get("mutual_receptions", []):
+#         queries.append(
+#             f"mutual reception {mr['planet_a']} {mr['planet_b']} "
+#             f"{mr['sign_a']} {mr['sign_b']}"
+#         )
+
+#     return queries
+
+
+from collections import OrderedDict
+
+HOUSE_ORDINALS = {
+    1: "first",
+    2: "second",
+    3: "third",
+    4: "fourth",
+    5: "fifth",
+    6: "sixth",
+    7: "seventh",
+    8: "eighth",
+    9: "ninth",
+    10: "tenth",
+    11: "eleventh",
+    12: "twelfth",
+}
+
+POINT_ALIASES = {
+    "sun": ["sun"],
+    "moon": ["moon"],
+    "mercury": ["mercury"],
+    "venus": ["venus"],
+    "mars": ["mars"],
+    "jupiter": ["jupiter"],
+    "saturn": ["saturn"],
+    "uranus": ["uranus"],
+    "neptune": ["neptune"],
+    "pluto": ["pluto"],
+    "asc": ["ascendant", "asc"],
+    "mc": ["midheaven", "mc"],
+    "north_node": ["north node", "north_node"],
+    "south_node": ["south node", "south_node"],
+    "chiron": ["chiron"],
+    "lilith": ["black moon lilith", "lilith"],
+    "part_of_fortune": ["part of fortune", "part_of_fortune"],
+}
+
+ASPECT_ALIASES = {
+    "conjunction": ["conjunction", "conjunct"],
+    "opposition": ["opposition", "opposite"],
+    "trine": ["trine"],
+    "square": ["square"],
+    "sextile": ["sextile"],
+    "quincunx": ["quincunx", "inconjunct"],
+    "semisextile": ["semisextile"],
+    "sesquiquadrate": ["sesquiquadrate"],
+}
+
+HOUSE_KEYWORDS = {
+    1: ["identity", "self-expression", "appearance", "approach to life"],
+    2: ["money", "resources", "possessions", "values", "self-worth"],
+    3: ["communication", "learning", "siblings", "daily environment", "short trips"],
+    4: ["home", "family", "roots", "private life", "foundations"],
+    5: ["creativity", "romance", "children", "pleasure", "self-expression"],
+    6: ["work", "service", "health", "duties", "routine", "efficiency"],
+    7: ["partnership", "relationships", "marriage", "cooperation", "open enemies"],
+    8: ["intimacy", "shared resources", "transformation", "loss", "psychological depth"],
+    9: ["beliefs", "higher education", "philosophy", "travel", "worldview", "religion"],
+    10: ["career", "reputation", "public life", "status", "recognition", "profession", "authority"],
+    11: ["friends", "groups", "ideals", "community", "hopes", "goals"],
+    12: ["subconscious", "solitude", "inner life", "retreat", "hidden patterns"],
+}
+
+ELEMENT_KEYWORDS = {
+    "fire": ["enthusiasm", "initiative", "energy", "confidence"],
+    "earth": ["practical", "grounded", "stable", "material", "realistic"],
+    "air": ["ideas", "communication", "social", "intellectual"],
+    "water": ["emotion", "sensitivity", "intuition", "feeling"],
+}
+
+MODALITY_KEYWORDS = {
+    "cardinal": ["initiative", "action", "leadership", "starting energy"],
+    "fixed": ["stability", "persistence", "endurance", "resistance to change"],
+    "mutable": ["adaptability", "flexibility", "changeability", "learning"],
+}
+
+
+def uniq_keep_order(items: list[str]) -> list[str]:
+    return list(OrderedDict.fromkeys(x.strip() for x in items if x and x.strip()))
+
+
+def house_label(house: int) -> str:
+    return f"the {HOUSE_ORDINALS[house]} house"
+
+
+def point_names(name: str) -> list[str]:
+    return POINT_ALIASES.get(name, [name.replace("_", " ")])
+
+
+def aspect_names(name: str) -> list[str]:
+    return ASPECT_ALIASES.get(name, [name])
+
+
+def placement_queries(planet: str, sign: str, house: int) -> list[str]:
+    names = point_names(planet)
+    primary = names[0]
+    house_kw = " ".join(HOUSE_KEYWORDS.get(house, []))
+    hlabel = house_label(house)
+
+    queries = [
+        f"{primary} in {sign}",
+        f"{primary} in {hlabel}",
+        f"{primary} {sign} {HOUSE_ORDINALS[house]} house",
+        f"{house_kw} {primary} in {hlabel}",
+    ]
+
+    # optional alias variants
+    for alias in names[1:]:
+        queries.extend([
+            f"{alias} in {sign}",
+            f"{alias} in {hlabel}",
+            f"{alias} {sign} {HOUSE_ORDINALS[house]} house",
+        ])
+
+    return uniq_keep_order(queries)
+
+
+def aspect_queries(planet_a: str, aspect_type: str, planet_b: str) -> list[str]:
+    a_names = point_names(planet_a)
+    b_names = point_names(planet_b)
+    asp_names = aspect_names(aspect_type)
+
+    primary_a = a_names[0]
+    primary_b = b_names[0]
+
+    queries = []
+    for asp in asp_names:
+        queries.append(f"{primary_a} {asp} {primary_b}")
+
+    # alias-normalized variants
+    for a in a_names:
+        for b in b_names:
+            for asp in asp_names[:1]:
+                queries.append(f"{a} {asp} {b}")
+
+    return uniq_keep_order(queries)
+
+
 def build_queries(chart: dict) -> list[str]:
     queries = []
     personal = [
@@ -158,119 +360,230 @@ def build_queries(chart: dict) -> list[str]:
     ]
 
     planets = chart.get("planets", {})
+
+    # Strong placements first
     for planet in personal:
         p = planets.get(planet)
         if p:
-            queries.append(f"{planet} in {p['sign']} in {p['house']} house")
+            queries.extend(placement_queries(planet, p["sign"], p["house"]))
 
     for planet in ["jupiter", "saturn", "uranus", "neptune", "pluto"]:
         p = planets.get(planet)
         if p and (abs(p.get("dignity_score", 0)) >= 2 or p.get("house") in [1, 4, 7, 10]):
-            queries.append(f"{planet} in {p['sign']} in {p['house']} house")
+            queries.extend(placement_queries(planet, p["sign"], p["house"]))
 
+    # Aspects
     aspects = chart.get("aspects", [])
     aspects_sorted = sorted(aspects, key=lambda a: a.get("influence_weight", 0), reverse=True)
     for asp in aspects_sorted[:15]:
-        queries.append(f"{asp['planet_a']} {asp['type']} {asp['planet_b']}")
+        queries.extend(aspect_queries(asp["planet_a"], asp["type"], asp["planet_b"]))
 
+    # Patterns
     for fig in chart.get("aspect_patterns", []):
         queries.append(f"aspect pattern {fig}")
 
+    # Stelliums
     for st in chart.get("stelliums", []):
-        queries.append(f"stellium in {st.get('sign') or st.get('house')}")
+        if st.get("sign"):
+            queries.append(f"stellium in {st['sign']}")
+        if st.get("house"):
+            queries.append(f"stellium in the {HOUSE_ORDINALS[st['house']]} house")
 
+    # Critical degrees - weak signal, keep but late
     for planet in chart.get("critical_degrees", []):
         p = planets.get(planet)
         if p:
             queries.append(f"critical degree {round(p['degree_in_sign'])} {p['sign']}")
+            queries.append(f"{point_names(planet)[0]} in {p['sign']}")
 
-    # Balance-based queries
+    # Balance
     balance = chart.get("balance", {})
     dominant_el = balance.get("dominant_element")
     if dominant_el:
-        queries.append(f"dominant {dominant_el} element in chart")
+        el_kw = " ".join(ELEMENT_KEYWORDS.get(dominant_el, []))
+        queries.append(f"{dominant_el} dominant chart")
+        queries.append(f"strong {dominant_el} element astrology")
+        queries.append(f"{el_kw} {dominant_el} element")
+
     dominant_mod = balance.get("dominant_modality")
     if dominant_mod:
-        queries.append(f"dominant {dominant_mod} modality in chart")
+        mod_kw = " ".join(MODALITY_KEYWORDS.get(dominant_mod, []))
+        queries.append(f"{dominant_mod} dominant chart")
+        queries.append(f"strong {dominant_mod} modality astrology")
+        queries.append(f"{mod_kw} {dominant_mod} modality")
+
     hemi = balance.get("hemispheres", {})
     if hemi.get("above", 0) > hemi.get("below", 0):
-        queries.append("above horizon emphasis public life career")
+        queries.append("planets above horizon")
+        queries.append("upper hemisphere emphasis")
+        queries.append("public life outer world social visibility career")
     elif hemi.get("below", 0) > hemi.get("above", 0):
-        queries.append("below horizon emphasis private inner life")
+        queries.append("planets below horizon")
+        queries.append("lower hemisphere emphasis")
+        queries.append("private life inner life personal foundations")
+
     if hemi.get("east", 0) > hemi.get("west", 0):
-        queries.append("eastern hemisphere self-directed independence")
+        queries.append("eastern hemisphere chart")
+        queries.append("self-directed independent chart")
     elif hemi.get("west", 0) > hemi.get("east", 0):
-        queries.append("western hemisphere relationship-oriented")
+        queries.append("western hemisphere chart")
+        queries.append("relationship-oriented responsive to others")
 
-    # Mutual reception queries
+    # Mutual receptions
     for mr in chart.get("mutual_receptions", []):
-        queries.append(
-            f"mutual reception {mr['planet_a']} {mr['planet_b']} "
-            f"{mr['sign_a']} {mr['sign_b']}"
-        )
+        a = point_names(mr["planet_a"])[0]
+        b = point_names(mr["planet_b"])[0]
+        queries.append(f"mutual reception {a} {b}")
+        queries.append(f"{a} {b} mutual reception")
 
-    return queries
+    return uniq_keep_order(queries)
 
-async def embed(text: str) -> list[float]:
-    resp = await openai_client.embeddings.create(
-        input=text,
-        model="text-embedding-3-small"
-    )
-    return resp.data[0].embedding
-
-async def retrieve_for_query(query: str, supabaseClient, min_score: float, limit: int) -> list[dict]:
+async def retrieve_for_query(query: str, min_score: float, limit: int) -> list[dict]:
     t0 = time.perf_counter()
-    query_vector = await embed(query)
     try:
-        # Calls a Postgres function defined in Supabase to calculate similarity mapping
-        response = supabaseClient.rpc(
-            'match_book_chunks', 
-            {
-                'query_embedding': query_vector, 
-                'match_threshold': min_score, 
-                'match_count': limit,
-                'p_category': 'western_astrology'
-            }
-        ).execute()
-        hits = response.data if response.data else []
-        logger.info(
-            "[RAG_TRACE] step=match_book_chunks query=%s duration=%.2fs hits=%d threshold=%.2f limit=%d",
-            query, time.perf_counter() - t0, len(hits), min_score, limit
+        hits = await search_faiss_chunks(
+            query=query,
+            top_k=limit,
+            category="western_astrology",
+            min_score=min_score,
         )
-        return hits
+        mapped = [
+            {
+                "id": str(h.faiss_id),
+                "book_chunk_id": h.book_chunk_id,
+                "content": h.content,
+                "source": h.source,
+                "similarity": h.score,
+            }
+            for h in hits
+        ]
+        logger.info(
+            "[RAG_TRACE] step=faiss_search query=%s duration=%.2fs hits=%d threshold=%.2f limit=%d",
+            query, time.perf_counter() - t0, len(mapped), min_score, limit
+        )
+        return mapped
     except Exception as e:
         logger.error(
-            "[RAG_TRACE] step=match_book_chunks query=%s duration=%.2fs error=%s",
+            "[RAG_TRACE] step=faiss_search query=%s duration=%.2fs error=%s",
             query, time.perf_counter() - t0, str(e)
         )
-        logger.error(f"Supabase RPC failed for query '{query}': {e}")
+        logger.error(f"FAISS retrieval failed for query '{query}': {e}")
         return []
 
-async def retrieve_context(queries: list[str]) -> list[dict]:
-    MIN_SCORE = 0.65
-    TOP_K_PER_QUERY = 4
-    
+def _store_retriever_traces(
+    *,
+    trace_id: str,
+    user_id: str | None,
+    trace_label: str,
+    min_score: float,
+    top_k_per_query: int,
+    query_rows: list[dict],
+) -> None:
+    if not query_rows:
+        return
     try:
         supabase = get_supabase()
-    except Exception:
-        return []
+        supabase.table("retriever_traces").insert(query_rows).execute()
+        logger.info(
+            "[RAG_TRACE] step=store_retriever_traces trace_id=%s rows=%d label=%s user_id=%s",
+            trace_id, len(query_rows), trace_label, user_id or ""
+        )
+    except Exception as e:
+        logger.error(
+            "[RAG_TRACE] step=store_retriever_traces trace_id=%s label=%s error=%s min_score=%.2f top_k_per_query=%d",
+            trace_id, trace_label, str(e), min_score, top_k_per_query
+        )
 
-    # If Supabase is mocked or missing key early return
-    if settings.SUPABASE_KEY == "mock-key":
-         return []
 
-    tasks = [
-        retrieve_for_query(q, supabase, MIN_SCORE, TOP_K_PER_QUERY)
-        for q in queries
-    ]
-    raw_results = await asyncio.gather(*tasks, return_exceptions=True)
+async def retrieve_context(
+    queries: list[str],
+    *,
+    user_id: str | None = None,
+    trace_label: str = "unknown",
+) -> list[dict]:
+    MIN_SCORE = 0.65
+    TOP_K_PER_QUERY = 4
+    trace_id = str(uuid4())
+
+    try:
+        batch_t0 = time.perf_counter()
+        batch_hits = await search_faiss_chunks_batch(
+            queries=queries,
+            top_k=TOP_K_PER_QUERY,
+            category="western_astrology",
+            min_score=MIN_SCORE,
+            embed_batch_size=32,
+        )
+        logger.info(
+            "[RAG_TRACE] step=faiss_search_batch query_count=%d duration=%.2fs threshold=%.2f top_k_per_query=%d embed_batch_size=%d",
+            len(queries), time.perf_counter() - batch_t0, MIN_SCORE, TOP_K_PER_QUERY, 32
+        )
+        raw_results = [
+            [
+                {
+                    "id": str(h.faiss_id),
+                    "book_chunk_id": h.book_chunk_id,
+                    "content": h.content,
+                    "source": h.source,
+                    "similarity": h.score,
+                }
+                for h in hits
+            ]
+            for hits in batch_hits
+        ]
+    except Exception as e:
+        logger.error(
+            "[RAG_TRACE] step=faiss_search_batch query_count=%d error=%s",
+            len(queries), str(e)
+        )
+        raw_results = [e for _ in queries]
 
     seen_ids = set()
     scored = []
+    query_rows: list[dict] = []
     
-    for hits in raw_results:
+    for idx, hits in enumerate(raw_results):
+        query_text = queries[idx] if idx < len(queries) else ""
         if isinstance(hits, Exception):
+            query_rows.append({
+                "trace_id": trace_id,
+                "user_id": user_id,
+                "trace_label": trace_label,
+                "query_index": idx,
+                "query_text": query_text,
+                "min_score": MIN_SCORE,
+                "top_k_per_query": TOP_K_PER_QUERY,
+                "returned_count": 0,
+                "chunk_ids": [],
+                "documents": [],
+                "error": str(hits),
+            })
             continue
+        query_rows.append({
+            "trace_id": trace_id,
+            "user_id": user_id,
+            "trace_label": trace_label,
+            "query_index": idx,
+            "query_text": query_text,
+            "min_score": MIN_SCORE,
+            "top_k_per_query": TOP_K_PER_QUERY,
+            "returned_count": len(hits),
+            "chunk_ids": [
+                h.get("book_chunk_id")
+                for h in hits
+                if h.get("book_chunk_id")
+            ],
+            "documents": [
+                {
+                    "id": h.get("id"),
+                    "book_chunk_id": h.get("book_chunk_id"),
+                    "source": h.get("source"),
+                    "score": h.get("similarity", 0),
+                }
+                for h in hits
+            ],
+            "error": None,
+        })
         for hit in hits:
             hit_id = hit.get('id')
             if hit_id and hit_id not in seen_ids:
@@ -278,14 +591,23 @@ async def retrieve_context(queries: list[str]) -> list[dict]:
                 scored.append({
                     "text": hit.get("content", ""),
                     "source": hit.get("source", ""),
+                    "book_chunk_id": hit.get("book_chunk_id"),
                     "score": hit.get("similarity", 0)
                 })
 
     scored.sort(key=lambda x: x["score"], reverse=True)
     top = scored[:20]
+    _store_retriever_traces(
+        trace_id=trace_id,
+        user_id=user_id,
+        trace_label=trace_label,
+        min_score=MIN_SCORE,
+        top_k_per_query=TOP_K_PER_QUERY,
+        query_rows=query_rows,
+    )
     logger.info(
-        "[RAG_TRACE] step=retrieve_context query_count=%d unique_hits=%d returned=%d threshold=%.2f top_k_per_query=%d",
-        len(queries), len(scored), len(top), MIN_SCORE, TOP_K_PER_QUERY
+        "[RAG_TRACE] step=retrieve_context trace_id=%s label=%s user_id=%s query_count=%d unique_hits=%d returned=%d threshold=%.2f top_k_per_query=%d",
+        trace_id, trace_label, user_id or "", len(queries), len(scored), len(top), MIN_SCORE, TOP_K_PER_QUERY
     )
     return top
 
@@ -412,13 +734,17 @@ async def _call_llm(system: str, user_content: str, attempt: int = 0, trace_labe
         raise e
 
 
-async def generate_insights(chart: dict, attempt: int = 0) -> UISResponse:
+async def generate_insights(chart: dict, attempt: int = 0, user_id: str | None = None) -> UISResponse:
     queries = build_queries(chart)
     logger.info(
         "[RAG_TRACE] step=build_queries label=generate_insights count=%d queries=%s",
         len(queries), json.dumps(queries, ensure_ascii=False)
     )
-    context_chunks = await retrieve_context(queries)
+    context_chunks = await retrieve_context(
+        queries,
+        user_id=user_id,
+        trace_label="generate_insights",
+    )
 
     slim_chart = _slim_chart_for_prompt(chart)
 
@@ -476,14 +802,18 @@ SPHERE_NAMES_RU = {
     12: "Запредельное (Бессознательное, дух, уединение, сны)",
 }
 
-async def generate_sphere_insights(chart: dict, sphere_id: int) -> list:
+async def generate_sphere_insights(chart: dict, sphere_id: int, user_id: str | None = None) -> list:
     """Generate insights for a SINGLE sphere. Used by per-sphere unlock."""
     queries = build_queries(chart)
     logger.info(
         "[RAG_TRACE] step=build_queries label=generate_sphere_insights sphere=%d count=%d queries=%s",
         sphere_id, len(queries), json.dumps(queries, ensure_ascii=False)
     )
-    context_chunks = await retrieve_context(queries)
+    context_chunks = await retrieve_context(
+        queries,
+        user_id=user_id,
+        trace_label=f"generate_sphere_insights.sphere_{sphere_id}",
+    )
     slim_chart = _slim_chart_for_prompt(chart)
 
     sphere_name = SPHERE_NAMES_RU.get(sphere_id, f"Сфера {sphere_id}")
