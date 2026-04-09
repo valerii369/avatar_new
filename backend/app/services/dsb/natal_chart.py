@@ -156,6 +156,15 @@ ASPECT_DEFS = [
 # Fixed points in the natal chart — applying/separating not applicable
 FIXED_POINTS = DERIVED_POINTS | {"lilith"}
 
+def _deg_in_sign(longitude: float) -> float:
+    """
+    Degrees within the sign (0.00–29.99).
+    Guards against floating-point rounding of x.999... → 30.0.
+    """
+    d = round(longitude % 30, 2)
+    return d if d < 30.0 else 29.99
+
+
 def angular_distance(lon_a: float, lon_b: float) -> float:
     """Shortest arc between two ecliptic longitudes (0–180°)."""
     diff = abs(lon_a - lon_b) % 360
@@ -268,16 +277,22 @@ def get_modality(sign: str) -> str:
     return ""
 
 def calc_critical_degrees(planets: dict) -> list[str]:
+    """
+    Returns planet/point names at astrologically critical degrees.
+    Includes ASC and MC — a 29° ASC (anaretic) is highly significant.
+    Excludes PoF and south_node (pure derived/mirror points).
+    """
+    SKIP = {"part_of_fortune", "south_node"}
     critical = []
     for name, data in planets.items():
-        if name in DERIVED_POINTS:
+        if name in SKIP:
             continue
         deg  = data["degree_in_sign"]
         mod  = get_modality(data["sign"])
         thresholds = CRITICAL_DEGREES.get(mod, [])
         if any(abs(deg - t) <= 1.0 for t in thresholds):
             critical.append(name)
-        elif deg >= 28.5:
+        elif deg >= 28.5:  # anaretic degree
             critical.append(name)
     return critical
 
@@ -812,7 +827,7 @@ async def calculate_chart(birth_date: str, birth_time: str, place: str) -> dict:
         chart_planets[planet_name] = {
             "longitude":      round(longitude, 4),
             "sign":           sign,
-            "degree_in_sign": round(longitude % 30, 2),
+            "degree_in_sign": _deg_in_sign(longitude),
             "house":          _longitude_to_house(longitude, houses_tuple),
             "retrograde":     retrograde,
             "stationary":     stationary,
@@ -826,7 +841,7 @@ async def calculate_chart(birth_date: str, birth_time: str, place: str) -> dict:
     chart_planets["south_node"] = {
         "longitude":      round(sn_lon, 4),
         "sign":           sn_sign,
-        "degree_in_sign": round(sn_lon % 30, 2),
+        "degree_in_sign": _deg_in_sign(sn_lon),
         "house":          _longitude_to_house(sn_lon, houses_tuple),
         "retrograde":     False,
         "stationary":     False,
@@ -840,7 +855,7 @@ async def calculate_chart(birth_date: str, birth_time: str, place: str) -> dict:
         chart_planets[angle_name] = {
             "longitude":      round(angle_lon, 4),
             "sign":           sign,
-            "degree_in_sign": round(angle_lon % 30, 2),
+            "degree_in_sign": _deg_in_sign(angle_lon),
             "house":          angle_house,
             "retrograde":     False,
             "stationary":     False,
@@ -859,7 +874,7 @@ async def calculate_chart(birth_date: str, birth_time: str, place: str) -> dict:
     chart_planets["part_of_fortune"] = {
         "longitude":      round(pof_lon, 4),
         "sign":           pof_sign,
-        "degree_in_sign": round(pof_lon % 30, 2),
+        "degree_in_sign": _deg_in_sign(pof_lon),
         "house":          _longitude_to_house(pof_lon, houses_tuple),
         "retrograde":     False,
         "stationary":     False,
