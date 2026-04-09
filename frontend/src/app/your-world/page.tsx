@@ -520,6 +520,68 @@ function SidesTab({ insights }: { insights: Insight[] }) {
   );
 }
 
+// ─── Pipeline Loading Screen ─────────────────────────────────────────────────
+function PipelineStep({ label, index }: { label: string; index: number }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -8 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.4, duration: 0.4 }}
+      style={{
+        display: "flex", alignItems: "center", gap: 10,
+        padding: "9px 14px", borderRadius: 10,
+        background: "rgba(139,92,246,0.04)",
+        border: "1px solid rgba(139,92,246,0.10)",
+      }}
+    >
+      <motion.div
+        animate={{ opacity: [0.3, 1, 0.3] }}
+        transition={{ duration: 1.8, repeat: Infinity, delay: index * 0.45 }}
+        style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--violet)", flexShrink: 0 }}
+      />
+      <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>{label}</span>
+    </motion.div>
+  );
+}
+
+function PipelineLoading() {
+  const steps = [
+    "Расчёт натальной карты",
+    "Анализ 12 сфер жизни",
+    "Формирование инсайтов",
+    "Сборка архетипного портрета",
+  ];
+  return (
+    <div style={{
+      display: "flex", flexDirection: "column", alignItems: "center",
+      justifyContent: "center", padding: "60px 20px", textAlign: "center",
+    }}>
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+        style={{
+          width: 52, height: 52, borderRadius: "50%",
+          border: "2px solid rgba(139,92,246,0.12)",
+          borderTopColor: "var(--violet)",
+          marginBottom: 24,
+        }}
+      />
+      <p style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 6 }}>
+        Строится твой мир
+      </p>
+      <p style={{
+        fontSize: 12, color: "var(--text-muted)", maxWidth: 260,
+        lineHeight: 1.6, marginBottom: 24,
+      }}>
+        12 агентов параллельно анализируют натальную карту — обычно 1–2 минуты
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%", maxWidth: 300 }}>
+        {steps.map((s, i) => <PipelineStep key={i} label={s} index={i} />)}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ───────────────────────────────────────────────────────────────
 export default function YourWorldPage() {
   const tmaSafeTop = useTmaSafeArea();
@@ -585,11 +647,19 @@ export default function YourWorldPage() {
         }}>
           Твой мир
         </h1>
-        {totalCount > 0 && (
+        {hub?.status === "pending" ? (
+          <motion.span
+            animate={{ opacity: [0.3, 0.8, 0.3] }}
+            transition={{ duration: 1.6, repeat: Infinity }}
+            style={{ fontSize: 11, color: "var(--violet)", fontWeight: 500 }}
+          >
+            вычисляется...
+          </motion.span>
+        ) : totalCount > 0 ? (
           <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>
             {totalCount} · {sphereCount} сфер
           </span>
-        )}
+        ) : null}
       </div>
 
       {/* Tab switcher */}
@@ -626,30 +696,34 @@ export default function YourWorldPage() {
 
       {/* Content — scrollable */}
       <div style={{ flex: 1, padding: "0 20px", overflowY: "auto", paddingBottom: 90, WebkitOverflowScrolling: "touch" }}>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-          >
-            {activeTab === "portrait" && <PortraitTab hub={hub} />}
-            {activeTab === "breakdown" && (
-              <BreakdownTab
-                insights={insights} loading={loading}
-                activeSphere={activeSphere} setActiveSphere={setActiveSphere}
-                onSelect={setSelectedInsight}
-                userId={userId}
-                onRefresh={() => mutate(["master-hub", userId])}
-                generating={generatingSphere}
-                setGenerating={setGeneratingSphere}
-                dataReady={!!hub && hub.status !== "pending"}
-              />
-            )}
-            {activeTab === "sides" && <SidesTab insights={insights} />}
-          </motion.div>
-        </AnimatePresence>
+        {hub?.status === "pending" ? (
+          <PipelineLoading />
+        ) : (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              {activeTab === "portrait" && <PortraitTab hub={hub} />}
+              {activeTab === "breakdown" && (
+                <BreakdownTab
+                  insights={insights} loading={loading}
+                  activeSphere={activeSphere} setActiveSphere={setActiveSphere}
+                  onSelect={setSelectedInsight}
+                  userId={userId}
+                  onRefresh={() => mutate(["master-hub", userId])}
+                  generating={generatingSphere}
+                  setGenerating={setGeneratingSphere}
+                  dataReady={!!hub && hub.status !== "pending"}
+                />
+              )}
+              {activeTab === "sides" && <SidesTab insights={insights} />}
+            </motion.div>
+          </AnimatePresence>
+        )}
       </div>
 
       <AnimatePresence>
