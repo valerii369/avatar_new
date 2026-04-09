@@ -556,7 +556,11 @@ export default function YourWorldPage() {
       setInsights(allInsights);
       return data;
     },
-    { revalidateOnFocus: false }
+    {
+      revalidateOnFocus: false,
+      // Poll every 4 s while pipeline is still running, stop once data arrives
+      refreshInterval: (data: any) => data?.status === "pending" ? 4000 : 0,
+    }
   );
 
   const totalCount = insights.length;
