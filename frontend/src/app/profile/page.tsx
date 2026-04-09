@@ -20,7 +20,7 @@ import { useTmaSafeArea } from "@/lib/useTmaSafeArea";
 export default function ProfilePage() {
     const router = useRouter();
     const { play } = useAudio();
-    const { userId, firstName, setUser, referralCode, energy, evolutionLevel, photoUrl } = useUserStore();
+    const { userId, tgId, firstName, setUser, referralCode, energy, evolutionLevel, photoUrl } = useUserStore();
     const tmaSafeTop = useTmaSafeArea();
     const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
     const [activeTab, setActiveTab] = useState<"main" | "settings" | "referrals">("main");
@@ -157,7 +157,7 @@ export default function ProfilePage() {
                     />
                 )}
                 {activeTab === "settings" && (
-                    <SettingsView userId={userId!} />
+                    <SettingsView userId={userId!} tgId={tgId} />
                 )}
                 {activeTab === "referrals" && (
                     <ReferralView userId={userId!} referralCode={referralCode} />
@@ -249,9 +249,11 @@ function MainProfileView({ game, loadingGame, profile, setShowShop, setShowSubsc
     );
 }
 
-function SettingsView({ userId }: { userId: string }) {
+function SettingsView({ userId, tgId }: { userId: string; tgId: number | null }) {
     const [lang, setLang] = useState("RU");
+    const [resetting, setResetting] = useState(false);
     const { musicEnabled, sfxEnabled, toggleMusic, toggleSfx, play } = useAudio();
+    const { reset: resetStore } = useUserStore();
 
     const toggleLang = () => {
         play('click');
@@ -344,27 +346,47 @@ function SettingsView({ userId }: { userId: string }) {
                 
                 <button
                     onClick={async () => {
-                        if (confirm("Вы уверены? Это полностью сбросит ваш прогресс, удалит все карточки и сессии.")) {
-                            try {
-                                const tg = (window as any).Telegram?.WebApp;
-                                const tid = tg?.initDataUnsafe?.user?.id || userId; 
-                                if (!tid) return;
-                                await profileAPI.reset(tid);
-                                localStorage.removeItem("avatar_token");
-                                window.location.href = "/onboarding";
-                            } catch (e) {
-                                console.error("Reset error", e);
-                                alert("Ошибка при сбросе профиля");
+                        if (!confirm("Вы уверены? Это полностью сбросит ваш прогресс, удалит все карточки и сессии.")) {
+                            return;
+                        }
+                        try {
+                            setResetting(true);
+                            const tg = (window as any).Telegram?.WebApp;
+                            const resolvedTgId =
+                                tgId ??
+                                tg?.initDataUnsafe?.user?.id ??
+                                999999999;
+
+                            if (!resolvedTgId) {
+                                throw new Error("Telegram ID not found");
                             }
+
+                            await profileAPI.resetOnboardingData({
+                                userId,
+                                tgId: Number(resolvedTgId),
+                                clearGeocode: true,
+                            });
+                            resetStore();
+                            localStorage.removeItem("avatar_token");
+                            window.location.href = "/";
+                        } catch (e) {
+                            console.error("Reset error", e);
+                            const msg = (e as any)?.response?.data?.detail || "Ошибка при сбросе профиля";
+                            alert(msg);
+                        } finally {
+                            setResetting(false);
                         }
                     }}
+                    disabled={resetting}
                     className="w-full flex items-center justify-between p-3 bg-rose-500/10 rounded-2xl border border-rose-500/20 active:scale-[0.98] transition-all text-left group"
                 >
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-xl">⚠️</div>
                         <div>
-                            <p className="text-sm font-semibold text-rose-400">Начать заново</p>
-                            <p className="text-[10px] text-rose-500/40">Полный сброс параметров</p>
+                            <p className="text-sm font-semibold text-rose-400">
+                                {resetting ? "Перезапуск..." : "Перезапуск онбординга"}
+                            </p>
+                            <p className="text-[10px] text-rose-500/40">Сброс по Telegram ID и новый старт</p>
                         </div>
                     </div>
                 </button>

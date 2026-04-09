@@ -5,8 +5,19 @@ import logging
 from app.core.config import settings
 import json
 import openai
+import time
 
 logger = logging.getLogger(__name__)
+
+
+def _usage_to_dict(usage) -> dict:
+    if not usage:
+        return {}
+    return {
+        "prompt_tokens": getattr(usage, "prompt_tokens", None),
+        "completion_tokens": getattr(usage, "completion_tokens", None),
+        "total_tokens": getattr(usage, "total_tokens", None),
+    }
 
 def synthesize(insights: list[UniversalInsight], system_name: str = "western_astrology") -> dict:
     level_order = {"high": 0, "medium": 1, "low": 2}
@@ -70,15 +81,31 @@ async def generate_portrait_summary(user_id: str, synthesized_data: dict) -> dic
 
     client = openai.AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
     try:
+        t0 = time.perf_counter()
+        system_prompt = "Ты — мастер психологической и эволюционной астрологии. Отвечай ТОЛЬКО на русском языке."
         response = await client.chat.completions.create(
             model=settings.MODEL_LIGHT,
             messages=[
-                {"role": "system", "content": "Ты — мастер психологической и эволюционной астрологии. Отвечай ТОЛЬКО на русском языке."},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
             ],
             response_format={"type": "json_object"}
         )
-        summary = json.loads(response.choices[0].message.content)
+        raw_content = response.choices[0].message.content or "{}"
+        duration_s = time.perf_counter() - t0
+        logger.info(
+            "[LLM_TRACE] label=portrait_summary model=%s duration=%.2fs usage=%s\n"
+            "----- SYSTEM PROMPT BEGIN -----\n%s\n"
+            "----- SYSTEM PROMPT END -----\n"
+            "----- USER PAYLOAD BEGIN -----\n%s\n"
+            "----- USER PAYLOAD END -----\n"
+            "----- LLM RESPONSE BEGIN -----\n%s\n"
+            "----- LLM RESPONSE END -----",
+            settings.MODEL_LIGHT, duration_s,
+            json.dumps(_usage_to_dict(response.usage), ensure_ascii=False),
+            system_prompt, prompt, raw_content,
+        )
+        summary = json.loads(raw_content)
         return summary
     except Exception as e:
         logger.error(f"Failed to generate portrait summary: {e}")

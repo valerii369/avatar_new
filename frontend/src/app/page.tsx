@@ -8,6 +8,7 @@ import { authAPI, profileAPI, masterHubAPI } from "@/lib/api";
 import { EnergyIcon } from "@/components/EnergyIcon";
 import BottomNav from "@/components/BottomNav";
 import { useTmaSafeArea } from "@/lib/useTmaSafeArea";
+import { setupTelegramViewport } from "@/lib/tma";
 
 function formatScore(n: number): string {
   return n.toLocaleString("ru-RU").replace(/,/g, " ");
@@ -31,18 +32,7 @@ export default function HomePage() {
       try {
         const tg = (window as any).Telegram?.WebApp;
         if (tg) {
-          tg.ready();
-          tg.expand();
-          // Full screen for TMA v8+
-          if (typeof tg.requestFullscreen === "function") {
-            try { tg.requestFullscreen(); } catch {}
-          }
-          // Disable vertical swipe to close (keeps app open on swipe down)
-          try {
-            if (typeof tg.disableVerticalSwipes === "function") {
-              tg.disableVerticalSwipes();
-            }
-          } catch {}
+          setupTelegramViewport(tg);
         }
 
         const isDev = process.env.NODE_ENV === "development";

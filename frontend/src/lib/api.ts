@@ -26,6 +26,12 @@ export const authAPI = {
 export const profileAPI = {
   get: (userId: string) => api.get(`/api/auth/profile?user_id=${userId}`),
   reset: (userId: string | number) => api.post(`/api/auth/reset`, { user_id: userId }),
+  resetOnboardingData: (params: { userId?: string; tgId?: number; clearGeocode?: boolean }) =>
+    api.post(`/api/auth/reset`, {
+      user_id: params.userId,
+      tg_id: params.tgId,
+      clear_geocode: params.clearGeocode ?? false,
+    }),
   getReferrals: (userId: string) => api.get(`/api/auth/referrals?user_id=${userId}`),
 };
 

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { calcAPI, api, voiceAPI } from "@/lib/api";
 import { useUserStore } from "@/lib/store";
+import { setupTelegramViewport } from "@/lib/tma";
 import SacredGeometryLogo from "@/components/SacredGeometryLogo";
 
 const MicIcon = ({ className }: { className?: string }) => (
@@ -370,14 +371,7 @@ export default function OnboardingPage() {
         // TMA fullscreen
         const tg = (window as any).Telegram?.WebApp;
         if (tg) {
-            tg.ready();
-            tg.expand();
-            if (typeof tg.requestFullscreen === "function") {
-                try { tg.requestFullscreen(); } catch {}
-            }
-            if (typeof tg.disableVerticalSwipes === "function") {
-                tg.disableVerticalSwipes();
-            }
+            setupTelegramViewport(tg);
         }
 
         const checkDebug = async () => {

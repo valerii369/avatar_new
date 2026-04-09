@@ -8,6 +8,7 @@ from app.core.db import get_supabase
 from app.core.config import settings
 import logging
 import httpx
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -242,35 +243,75 @@ async def get_profile(user_id: str):
 class ResetRequest(BaseModel):
     user_id: Optional[str] = None
     tg_id: Optional[int] = None
+    clear_geocode: Optional[bool] = False
 
 @router.post("/reset")
 async def reset_user(request: ResetRequest):
-    """Reset user data: delete insights, portraits, birth data, memory. Reset onboarding flag."""
+    """
+    Hard reset user data by user_id and/or tg_id:
+    - user_birth_data, user_insights, user_portraits, user_memory, uis_errors, retriever_traces
+    - users flags/stats reset to defaults
+    - optional geocode_cache cleanup by user's birth_place values
+    """
     supabase = get_supabase()
 
-    # Resolve user_id
-    user_id = request.user_id
-    if not user_id and request.tg_id:
-        res = supabase.table("users").select("id").eq("tg_id", request.tg_id).execute()
-        if res.data:
-            user_id = res.data[0]["id"]
+    # Resolve user row (prefer exact id, fallback tg_id)
+    user_row = None
+    if request.user_id:
+        by_id = supabase.table("users").select("id,tg_id").eq("id", request.user_id).execute()
+        if by_id.data:
+            user_row = by_id.data[0]
 
-    if not user_id:
-        raise HTTPException(status_code=400, detail="user_id or tg_id required")
+    if not user_row and request.tg_id is not None:
+        by_tg = supabase.table("users").select("id,tg_id").eq("tg_id", str(request.tg_id)).execute()
+        if by_tg.data:
+            user_row = by_tg.data[0]
+
+    if not user_row:
+        raise HTTPException(status_code=404, detail="User not found for provided user_id/tg_id")
+
+    resolved_user_id = str(user_row["id"])
+    resolved_tg_id = str(user_row["tg_id"])
+    # Some legacy rows may store tg_id in user_id field, so clear both variants.
+    user_variants = list({resolved_user_id, resolved_tg_id})
 
     try:
-        supabase.table("user_insights").delete().eq("user_id", user_id).execute()
-        supabase.table("user_portraits").delete().eq("user_id", user_id).execute()
-        supabase.table("user_birth_data").delete().eq("user_id", user_id).execute()
-        supabase.table("user_memory").delete().eq("user_id", user_id).execute()
+        birth_places: set[str] = set()
+        for uid in user_variants:
+            birth_rows = supabase.table("user_birth_data").select("birth_place").eq("user_id", uid).execute()
+            for row in (birth_rows.data or []):
+                place = (row.get("birth_place") or "").strip()
+                if place:
+                    birth_places.add(place)
+
+        for uid in user_variants:
+            supabase.table("user_insights").delete().eq("user_id", uid).execute()
+            supabase.table("user_portraits").delete().eq("user_id", uid).execute()
+            supabase.table("user_birth_data").delete().eq("user_id", uid).execute()
+            supabase.table("user_memory").delete().eq("user_id", uid).execute()
+            supabase.table("uis_errors").delete().eq("user_id", uid).execute()
+            supabase.table("retriever_traces").delete().eq("user_id", uid).execute()
+
+        if request.clear_geocode:
+            for place in birth_places:
+                supabase.table("geocode_cache").delete().eq("city_name", place).execute()
+
         supabase.table("users").update({
             "onboarding_done": False,
             **_default_user_fields(),
-        }).eq("id", user_id).execute()
+        }).eq("id", resolved_user_id).execute()
 
-        return {"status": "ok", "message": f"User {user_id} reset"}
+        return {
+            "status": "ok",
+            "message": "User reset completed",
+            "resolved_user_id": resolved_user_id,
+            "resolved_tg_id": resolved_tg_id,
+            "cleared_user_ids": user_variants,
+            "geocode_cleared": bool(request.clear_geocode),
+            "cleared_places": sorted(list(birth_places)) if request.clear_geocode else [],
+        }
     except Exception as e:
-        logger.error(f"Reset failed for {user_id}: {e}")
+        logger.error(f"Reset failed for user_id={resolved_user_id}, tg_id={resolved_tg_id}: {e}")
         raise HTTPException(status_code=500, detail="Reset failed")
 
 
@@ -280,11 +321,13 @@ async def initialize_onboarding_layer(req: ProfileRequest):
     """Onboarding: chart + 2 free spheres (Личность + Ресурсы) + portrait."""
     logger.info(f"Starting onboarding pipeline for user: {req.user_id}")
     supabase = get_supabase()
+    t_total = time.perf_counter()
 
     FREE_SPHERES = [1, 2]  # Личность + Ресурсы — free on onboarding
 
     try:
         # Save birth data
+        t_birth = time.perf_counter()
         birth_row = {
             "user_id":     req.user_id,
             "birth_date":  req.birth_date,
@@ -294,35 +337,55 @@ async def initialize_onboarding_layer(req: ProfileRequest):
         }
         supabase.table("user_birth_data").delete().eq("user_id", req.user_id).execute()
         supabase.table("user_birth_data").insert(birth_row).execute()
+        logger.info(f"[TIMING] onboarding.birth_data_save={time.perf_counter() - t_birth:.2f}s user={req.user_id}")
 
         # Layer 1 — Astro chart
+        t_chart = time.perf_counter()
         astro_chart = await calculate_chart(req.birth_date, req.birth_time, req.birth_place)
+        logger.info(f"[TIMING] onboarding.layer1_chart={time.perf_counter() - t_chart:.2f}s user={req.user_id}")
 
         # Layer 2 — Generate only free spheres (per-sphere agents)
         from app.services.dsb.western_astrology_agent import generate_sphere_insights
         all_insights = []
         for sphere_id in FREE_SPHERES:
-            insights = await generate_sphere_insights(astro_chart, sphere_id)
+            t_sphere = time.perf_counter()
+            insights = await generate_sphere_insights(astro_chart, sphere_id, user_id=req.user_id)
             all_insights.extend(insights)
             logger.info(f"Free sphere {sphere_id}: {len(insights)} insights")
+            logger.info(f"[TIMING] onboarding.layer2_sphere_{sphere_id}={time.perf_counter() - t_sphere:.2f}s user={req.user_id}")
 
         # Layer 3 — Synthesis
+        t_synth = time.perf_counter()
         synthesized_data = synthesize(all_insights)
+        logger.info(f"[TIMING] onboarding.layer3_synthesis={time.perf_counter() - t_synth:.2f}s user={req.user_id}")
 
         # Layer 4 — Portrait summary (based on available spheres)
+        t_portrait = time.perf_counter()
         portrait = await generate_portrait_summary(req.user_id, synthesized_data)
+        logger.info(f"[TIMING] onboarding.layer4_portrait={time.perf_counter() - t_portrait:.2f}s user={req.user_id}")
 
         # Save everything
+        t_save = time.perf_counter()
         await save_to_supabase(req.user_id, synthesized_data, portrait)
+        logger.info(f"[TIMING] onboarding.layer5_save={time.perf_counter() - t_save:.2f}s user={req.user_id}")
 
         # Mark onboarding done
+        t_done = time.perf_counter()
         supabase.table("users").update({"onboarding_done": True})\
             .eq("id", req.user_id).execute()
+        logger.info(f"[TIMING] onboarding.mark_done={time.perf_counter() - t_done:.2f}s user={req.user_id}")
 
         logger.info(f"DSB Pipeline completed for user: {req.user_id}")
+        logger.info(f"[TIMING] onboarding.total={time.perf_counter() - t_total:.2f}s user={req.user_id}")
 
     except Exception as e:
         logger.error(f"DSB Pipeline failed for user {req.user_id}: {e}")
+        # Roll back onboarding flag so frontend can return user to onboarding.
+        try:
+            supabase.table("users").update({"onboarding_done": False})\
+                .eq("id", req.user_id).execute()
+        except Exception as rollback_err:
+            logger.error(f"Failed to rollback onboarding_done for {req.user_id}: {rollback_err}")
         # Log to uis_errors
         try:
             supabase.table("uis_errors").insert({
@@ -377,7 +440,7 @@ async def generate_sphere(request: GenerateSphereRequest):
 
         # Layer 2: Per-sphere agent
         from app.services.dsb.western_astrology_agent import generate_sphere_insights
-        insights = await generate_sphere_insights(astro_chart, request.sphere_id)
+        insights = await generate_sphere_insights(astro_chart, request.sphere_id, user_id=request.user_id)
 
         if not insights:
             raise HTTPException(status_code=500, detail="No insights generated")
@@ -444,7 +507,7 @@ async def calculate_sync(request: ProfileRequest):
         steps.append(f"chart: {len(astro_chart.get('planets',{}))} planets, {len(astro_chart.get('aspects',[]))} aspects")
 
         # Step 3: Generate insights
-        uis_response = await generate_insights(astro_chart)
+        uis_response = await generate_insights(astro_chart, user_id=request.user_id)
         steps.append(f"insights: {len(uis_response.insights)} generated")
 
         # Step 4: Synthesis
@@ -473,25 +536,24 @@ async def calculate_profile(request: ProfileRequest, background_tasks: Backgroun
     """Triggers the DSB Pipeline as a background task."""
     supabase = get_supabase()
 
-    # Mark onboarding as started immediately so the frontend
-    # doesn't get redirected back to onboarding while pipeline runs.
-    # user_id can be a UUID (id) or a tg_id — try both.
-    try:
-        import uuid as _uuid
-        _uuid.UUID(str(request.user_id))
-        # It's a valid UUID — update by id
-        supabase.table("users").update({"onboarding_done": True})\
-            .eq("id", request.user_id).execute()
-    except (ValueError, AttributeError):
-        # Not a UUID — must be tg_id
-        try:
-            supabase.table("users").update({"onboarding_done": True})\
-                .eq("tg_id", request.user_id).execute()
-        except Exception as e:
-            logger.warning(f"Could not set onboarding_done for user {request.user_id}: {e}")
-
     try:
         background_tasks.add_task(initialize_onboarding_layer, request)
+        # Mark onboarding as started immediately so the frontend
+        # doesn't get redirected back to onboarding while pipeline runs.
+        # user_id can be a UUID (id) or a tg_id — try both.
+        try:
+            import uuid as _uuid
+            _uuid.UUID(str(request.user_id))
+            # It's a valid UUID — update by id
+            supabase.table("users").update({"onboarding_done": True})\
+                .eq("id", request.user_id).execute()
+        except (ValueError, AttributeError):
+            # Not a UUID — must be tg_id
+            try:
+                supabase.table("users").update({"onboarding_done": True})\
+                    .eq("tg_id", request.user_id).execute()
+            except Exception as e:
+                logger.warning(f"Could not set onboarding_done for user {request.user_id}: {e}")
         return {"status": "processing", "message": "DSB Pipeline initialized"}
     except Exception as e:
         logger.error(str(e))
