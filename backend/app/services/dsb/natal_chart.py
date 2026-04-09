@@ -464,7 +464,8 @@ def calc_position_weight(planet_name: str, data: dict, aspects: list) -> float:
         w += 0.15  # chart angles are always significant
     if data.get("house") in ANGULAR_HOUSES:
         w += 0.15
-    # Exact aspect involvement
+    if data.get("on_angle"):
+        w += 0.12  # planet physically conjunct an angle — intensified
     if any(
         planet_name in {asp["planet_a"], asp["planet_b"]} and asp["orb"] < 1.0
         for asp in aspects
@@ -477,7 +478,151 @@ def calc_position_weight(planet_name: str, data: dict, aspects: list) -> float:
         w -= 0.05
     if data.get("stationary"):
         w += 0.08  # stationary planets are intensified
+    if data.get("unaspected"):
+        w += 0.10  # unaspected planet = wild card, high intensity
     return round(min(1.0, max(0.0, w)), 2)
+
+# ─── Unaspected Planets ───────────────────────────────────────────────────────
+
+MAJOR_ASPECT_TYPES = {"conjunction", "opposition", "trine", "square", "sextile"}
+
+def calc_unaspected_planets(planets: dict, aspects: list) -> list[str]:
+    """
+    Planets with ZERO major aspects — wild cards, intense but unintegrated energy.
+    Major aspects: conjunction, opposition, trine, square, sextile.
+    """
+    aspected: set[str] = set()
+    for asp in aspects:
+        if asp["type"] in MAJOR_ASPECT_TYPES:
+            aspected.add(asp["planet_a"])
+            aspected.add(asp["planet_b"])
+    skip = DERIVED_POINTS | {"asc", "mc"}
+    return [
+        name for name in planets
+        if not planets[name].get("is_angle")
+        and name not in skip
+        and name not in aspected
+    ]
+
+
+# ─── Chart Ruler ──────────────────────────────────────────────────────────────
+
+def calc_chart_ruler(planets: dict) -> str:
+    """Planet ruling the ASC sign = most important planet of the entire chart."""
+    asc_sign = planets.get("asc", {}).get("sign", "")
+    return SIGN_RULERSHIPS.get(asc_sign, "")
+
+
+# ─── Planets on Angles ────────────────────────────────────────────────────────
+
+ANGLE_ORB = 5.0
+
+def calc_planets_on_angles(planets: dict, asc_lon: float, mc_lon: float) -> list[dict]:
+    """
+    Planets within ANGLE_ORB degrees of ASC/DSC/MC/IC.
+    These are the most powerfully expressed planets in the chart.
+    """
+    dsc_lon = (asc_lon + 180) % 360
+    ic_lon  = (mc_lon  + 180) % 360
+    angle_points = {"asc": asc_lon, "dsc": dsc_lon, "mc": mc_lon, "ic": ic_lon}
+
+    result = []
+    for name, data in planets.items():
+        if data.get("is_angle") or name in DERIVED_POINTS:
+            continue
+        lon = data["longitude"]
+        for angle_name, angle_lon in angle_points.items():
+            orb = angular_distance(lon, angle_lon)
+            if orb <= ANGLE_ORB:
+                result.append({
+                    "planet": name,
+                    "angle":  angle_name,
+                    "orb":    round(orb, 2),
+                    "exact":  orb < 1.0,
+                })
+    return result
+
+
+# ─── Chart Shape (Jones Patterns) ─────────────────────────────────────────────
+
+def calc_chart_shape(planets: dict) -> str:
+    """
+    Marc Edmund Jones planetary distribution pattern.
+    Bundle, Bowl, Locomotive, Bucket, Seesaw, Splay, Splash.
+    """
+    core = [n for n in PLANETS if n in planets and n not in {"north_node"}]
+    lons = sorted([planets[n]["longitude"] for n in core])
+    n = len(lons)
+    if n < 7:
+        return "unknown"
+
+    gaps = [(lons[(i + 1) % n] - lons[i]) % 360 for i in range(n)]
+    max_gap      = max(gaps)
+    max_gap_idx  = gaps.index(max_gap)
+    occupied     = 360 - max_gap
+    large_gaps   = sum(1 for g in gaps if g >= 60)
+
+    if occupied <= 120:
+        return "Bundle"
+
+    if max_gap >= 120:
+        # Check for Bucket: one lone planet on far side
+        gap_start = lons[max_gap_idx]
+        gap_mid   = (gap_start + max_gap / 2) % 360
+        isolated  = [l for l in lons if angular_distance(l, gap_mid) < max_gap / 4]
+        if len(isolated) == 1:
+            return "Bucket"
+        if occupied <= 180:
+            return "Bowl"
+        return "Locomotive"
+
+    if occupied <= 180:
+        return "Bowl"
+    if large_gaps == 2:
+        return "Seesaw"
+    if large_gaps == 3:
+        return "Splay"
+    return "Splash"
+
+
+# ─── Dispositor Chain ─────────────────────────────────────────────────────────
+
+def calc_dispositor(planets: dict) -> dict:
+    """
+    Dispositor relationships: each planet is disposed by the ruler of its sign.
+    A self-disposing planet (in its own sign) is a potential chart anchor.
+    """
+    skip = DERIVED_POINTS | {"asc", "mc"}
+    direct: dict[str, str] = {}
+    for name, data in planets.items():
+        if data.get("is_angle") or name in skip:
+            continue
+        sign  = data.get("sign", "")
+        ruler = SIGN_RULERSHIPS.get(sign, "")
+        direct[name] = ruler if (ruler and ruler in planets and ruler != name) else name
+
+    # Walk to final dispositor
+    final: dict[str, str] = {}
+    for name in direct:
+        visited: set[str] = set()
+        cur = name
+        while cur not in visited:
+            visited.add(cur)
+            nxt = direct.get(cur, cur)
+            if nxt == cur:
+                final[name] = cur
+                break
+            cur = nxt
+        else:
+            final[name] = cur
+
+    counts: dict[str, int] = {}
+    for fd in final.values():
+        counts[fd] = counts.get(fd, 0) + 1
+    chart_final = max(counts, key=counts.get) if counts else ""
+
+    return {"direct": direct, "final": final, "chart_final_dispositor": chart_final}
+
 
 # ─── Geocode ──────────────────────────────────────────────────────────────────
 
@@ -662,6 +807,20 @@ async def calculate_chart(birth_date: str, birth_time: str, place: str) -> dict:
     balance         = calc_chart_balance(chart_planets)
     mutual_recs     = calc_mutual_receptions(chart_planets)
 
+    # ── Advanced derived ──────────────────────────────────────────────────────
+    unaspected     = calc_unaspected_planets(chart_planets, aspects)
+    chart_ruler    = calc_chart_ruler(chart_planets)
+    on_angles      = calc_planets_on_angles(chart_planets, asc_lon, mc_lon)
+    chart_shape    = calc_chart_shape(chart_planets)
+    dispositor     = calc_dispositor(chart_planets)
+
+    # Mark on_angle and unaspected flags directly on planet data
+    # (needed for position_weight)
+    on_angle_names = {entry["planet"] for entry in on_angles}
+    for name, data in chart_planets.items():
+        data["on_angle"]   = name in on_angle_names
+        data["unaspected"] = name in unaspected
+
     # ── Pre-compute position_weight for every point ───────────────────────────
     for name, data in chart_planets.items():
         data["position_weight"] = calc_position_weight(name, data, aspects)
@@ -674,13 +833,18 @@ async def calculate_chart(birth_date: str, birth_time: str, place: str) -> dict:
             "timezone":      tz_str,
             "calculated_at": datetime.utcnow().isoformat(),
         },
-        "planets":           chart_planets,
-        "houses":            {str(i + 1): {"cusp": round(houses_tuple[i], 4)} for i in range(12)},
-        "angles":            {"asc": round(asc_lon, 4), "mc": round(mc_lon, 4)},
-        "aspects":           aspects,
-        "aspect_patterns":   aspect_patterns,
-        "stelliums":         stelliums,
-        "critical_degrees":  critical_degs,
-        "balance":           balance,
-        "mutual_receptions": mutual_recs,
+        "planets":            chart_planets,
+        "houses":             {str(i + 1): {"cusp": round(houses_tuple[i], 4)} for i in range(12)},
+        "angles":             {"asc": round(asc_lon, 4), "mc": round(mc_lon, 4)},
+        "aspects":            aspects,
+        "aspect_patterns":    aspect_patterns,
+        "stelliums":          stelliums,
+        "critical_degrees":   critical_degs,
+        "balance":            balance,
+        "mutual_receptions":  mutual_recs,
+        "unaspected_planets": unaspected,
+        "chart_ruler":        chart_ruler,
+        "planets_on_angles":  on_angles,
+        "chart_shape":        chart_shape,
+        "dispositor":         dispositor,
     }
