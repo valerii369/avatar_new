@@ -115,6 +115,11 @@ def extract_sphere_context(chart: dict, sphere_num: int) -> dict:
     - ruler_receptions: mutual receptions involving the ruler
     - balance: chart-level element/modality/hemisphere summary
     - meta: day/night, timezone
+    - chart_ruler: planet ruling the ASC sign (chart-level significance)
+    - chart_shape: Jones pattern name
+    - dispositor: {direct, final, chart_final_dispositor}
+    - unaspected_planets: list of planet names with zero major aspects
+    - planets_on_angles: list of {planet, angle, orb, exact} dicts
     """
     planets = chart.get("planets", {})
     houses  = chart.get("houses", {})
@@ -143,6 +148,13 @@ def extract_sphere_context(chart: dict, sphere_num: int) -> dict:
 
     min_ins, max_ins = SPHERE_TARGETS[sphere_num]
 
+    # Chart-level context (relevant for every sphere)
+    unaspected   = chart.get("unaspected_planets", [])
+    on_angles    = chart.get("planets_on_angles", [])
+    chart_shape  = chart.get("chart_shape", "")
+    dispositor   = chart.get("dispositor", {})
+    chart_ruler  = chart.get("chart_ruler", "")
+
     return {
         "sphere":               sphere_num,
         "sphere_name":          SPHERE_NAMES[sphere_num],
@@ -156,6 +168,12 @@ def extract_sphere_context(chart: dict, sphere_num: int) -> dict:
         "ruler_receptions":     ruler_receptions,
         "balance":              balance,
         "meta":                 chart.get("meta", {}),
+        # Chart-level structural context
+        "chart_ruler":          chart_ruler,
+        "chart_shape":          chart_shape,
+        "dispositor":           dispositor,
+        "unaspected_planets":   unaspected,
+        "planets_on_angles":    on_angles,
         "_target_min":          min_ins,
         "_target_max":          max_ins,
     }

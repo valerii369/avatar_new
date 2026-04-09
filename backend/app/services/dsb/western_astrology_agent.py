@@ -249,12 +249,37 @@ async def generate_sphere_insights(
 
 # ─── Orchestrator ─────────────────────────────────────────────────────────────
 
+async def _fallback_sphere_insights(sphere_id: int) -> list[UniversalInsight]:
+    """
+    Minimal fallback insight for a sphere that completely failed all retries.
+    Ensures UISResponse coverage validator never crashes.
+    """
+    sphere_name = SPHERE_NAMES[sphere_id]
+    return [UniversalInsight(
+        primary_sphere   = sphere_id,
+        influence_level  = "low",
+        weight           = 0.10,
+        position         = f"Сфера {sphere_id} — {sphere_name}",
+        core_theme       = f"Анализ временно недоступен",
+        description      = "Данные по этой сфере будут рассчитаны позже.",
+        light_aspect     = "—",
+        shadow_aspect    = "—",
+        insight          = "Технический сбой при расчёте этой сферы. Попробуйте перегенерировать.",
+        gift             = "—",
+        developmental_task = "Повторная генерация",
+        integration_key  = "Запустите пересчёт карты",
+        triggers         = ["Технический сбой"],
+        source           = None,
+    )]
+
+
 async def generate_insights(chart: dict) -> UISResponse:
     """
     Orchestrator: launches all 12 sphere workers simultaneously.
     Used for full-chart generation (initial build or full rebuild).
 
     Returns merged UISResponse with insights from all spheres.
+    Guarantees all 12 spheres are present (fallback insight on hard failure).
     """
     logger.info("Orchestrator: launching 12 sphere agents in parallel")
 
@@ -268,6 +293,11 @@ async def generate_insights(chart: dict) -> UISResponse:
     for sphere_id, result in enumerate(results, start=1):
         if isinstance(result, Exception):
             logger.error(f"Sphere {sphere_id} raised: {result}")
+            all_insights.extend(await _fallback_sphere_insights(sphere_id))
+            continue
+        if not result:
+            logger.warning(f"Sphere {sphere_id}: empty result after retries — using fallback")
+            all_insights.extend(await _fallback_sphere_insights(sphere_id))
             continue
         all_insights.extend(result)
 
