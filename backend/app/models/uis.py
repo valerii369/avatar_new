@@ -51,7 +51,13 @@ class UniversalInsight(BaseModel):
         return [t.strip() for t in v if t.strip()]
 
 
+class SphereResponse(BaseModel):
+    """Single-sphere response from a worker agent. No coverage validation."""
+    insights: list[UniversalInsight] = Field(..., min_length=1, max_length=15)
+
+
 class UISResponse(BaseModel):
+    """Full chart response. Requires all 12 spheres."""
     insights: list[UniversalInsight] = Field(..., min_length=12, max_length=120)
 
     @field_validator("insights")
