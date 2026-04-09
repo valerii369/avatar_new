@@ -624,6 +624,47 @@ def calc_dispositor(planets: dict) -> dict:
     return {"direct": direct, "final": final, "chart_final_dispositor": chart_final}
 
 
+# ─── Intercepted Signs ────────────────────────────────────────────────────────
+
+def calc_intercepted_signs(houses_tuple: tuple) -> dict:
+    """
+    Detect signs not on any house cusp (intercepted) — Placidus only meaningful.
+    Returns:
+      intercepted:          signs fully contained within a house (no cusp)
+      duplicated:           signs appearing on two cusps (paired with intercepted)
+      intercepted_in_house: {sign → house_number}
+    """
+    cusp_signs = [ZODIAC_SIGNS[int(h // 30)] for h in houses_tuple]
+    from collections import Counter
+    counts = Counter(cusp_signs)
+
+    intercepted = sorted(set(ZODIAC_SIGNS) - set(cusp_signs))
+    duplicated  = [s for s, c in counts.items() if c >= 2]
+
+    # Map each intercepted sign to the house whose cusp range contains it
+    intercepted_in_house: dict[str, int] = {}
+    for sign in intercepted:
+        sign_mid = ZODIAC_SIGNS.index(sign) * 30 + 15.0
+        lon = sign_mid % 360
+        for i in range(12):
+            c1 = houses_tuple[i] % 360
+            c2 = houses_tuple[(i + 1) % 12] % 360
+            if c1 < c2:
+                if c1 <= lon < c2:
+                    intercepted_in_house[sign] = i + 1
+                    break
+            else:
+                if lon >= c1 or lon < c2:
+                    intercepted_in_house[sign] = i + 1
+                    break
+
+    return {
+        "intercepted":          intercepted,
+        "duplicated":           duplicated,
+        "intercepted_in_house": intercepted_in_house,
+    }
+
+
 # ─── Geocode ──────────────────────────────────────────────────────────────────
 
 async def geocode(place: str) -> tuple[float, float, str]:
@@ -666,12 +707,25 @@ def _ensure_ephe():
     """Set ephemeris path before every Swiss Ephemeris call."""
     swe.set_ephe_path(_ephe_dir)
 
+OOB_THRESHOLD = 23.4375  # max solar declination (Earth axial tilt ~23°26'15")
+
 async def _calc_planet(jd: float, planet_id: int):
     async with limiter:
         def _do():
             _ensure_ephe()
             return swe.calc_ut(jd, planet_id)
         return await anyio.to_thread.run_sync(_do)
+
+
+async def _calc_planet_decl(jd: float, planet_id: int) -> float:
+    """Return planet's declination (equatorial latitude) in degrees."""
+    async with limiter:
+        def _do():
+            _ensure_ephe()
+            flags = swe.FLG_SWIEPH | swe.FLG_EQUATORIAL
+            return swe.calc_ut(jd, planet_id, flags)
+        result = await anyio.to_thread.run_sync(_do)
+        return result[0][1]  # index 1 = declination
 
 def _calc_houses_sync(jd: float, lat: float, lon: float):
     _ensure_ephe()
@@ -813,6 +867,22 @@ async def calculate_chart(birth_date: str, birth_time: str, place: str) -> dict:
     on_angles      = calc_planets_on_angles(chart_planets, asc_lon, mc_lon)
     chart_shape    = calc_chart_shape(chart_planets)
     dispositor     = calc_dispositor(chart_planets)
+    intercepted    = calc_intercepted_signs(houses_tuple)
+
+    # ── Out-of-bounds declinations ────────────────────────────────────────────
+    out_of_bounds: list[dict] = []
+    for planet_name, planet_id in PLANETS.items():
+        try:
+            decl = await _calc_planet_decl(jd, planet_id)
+            chart_planets[planet_name]["declination"] = round(decl, 4)
+            if abs(decl) > OOB_THRESHOLD:
+                chart_planets[planet_name]["out_of_bounds"] = True
+                out_of_bounds.append({
+                    "planet":      planet_name,
+                    "declination": round(decl, 4),
+                })
+        except Exception as e:
+            logger.warning(f"OOB calc failed for {planet_name}: {e}")
 
     # Mark on_angle and unaspected flags directly on planet data
     # (needed for position_weight)
@@ -847,4 +917,6 @@ async def calculate_chart(birth_date: str, birth_time: str, place: str) -> dict:
         "planets_on_angles":  on_angles,
         "chart_shape":        chart_shape,
         "dispositor":         dispositor,
+        "out_of_bounds":      out_of_bounds,
+        "intercepted_signs":  intercepted,
     }

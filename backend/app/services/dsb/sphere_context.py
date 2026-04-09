@@ -149,11 +149,21 @@ def extract_sphere_context(chart: dict, sphere_num: int) -> dict:
     min_ins, max_ins = SPHERE_TARGETS[sphere_num]
 
     # Chart-level context (relevant for every sphere)
-    unaspected   = chart.get("unaspected_planets", [])
-    on_angles    = chart.get("planets_on_angles", [])
-    chart_shape  = chart.get("chart_shape", "")
-    dispositor   = chart.get("dispositor", {})
-    chart_ruler  = chart.get("chart_ruler", "")
+    unaspected        = chart.get("unaspected_planets", [])
+    on_angles         = chart.get("planets_on_angles", [])
+    chart_shape       = chart.get("chart_shape", "")
+    dispositor        = chart.get("dispositor", {})
+    chart_ruler       = chart.get("chart_ruler", "")
+    out_of_bounds     = chart.get("out_of_bounds", [])
+    intercepted_raw   = chart.get("intercepted_signs", {})
+
+    # Sphere-specific: intercepted sign within THIS house (if any)
+    inh_map  = intercepted_raw.get("intercepted_in_house", {})
+    intercepted_here = [s for s, h in inh_map.items() if h == sphere_num]
+
+    # OOB planets relevant to this sphere (resident or ruler)
+    sphere_planet_names = resident_names | ({ruler_name} if ruler_name else set())
+    oob_here = [e for e in out_of_bounds if e["planet"] in sphere_planet_names]
 
     return {
         "sphere":               sphere_num,
@@ -174,6 +184,9 @@ def extract_sphere_context(chart: dict, sphere_num: int) -> dict:
         "dispositor":           dispositor,
         "unaspected_planets":   unaspected,
         "planets_on_angles":    on_angles,
+        # OOB & intercepted (sphere-scoped)
+        "out_of_bounds_here":   oob_here,           # OOB planets in this sphere
+        "intercepted_sign":     intercepted_here,   # sign intercepted in this house
         "_target_min":          min_ins,
         "_target_max":          max_ins,
     }
