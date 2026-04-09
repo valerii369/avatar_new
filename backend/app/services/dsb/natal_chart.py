@@ -549,11 +549,18 @@ def calc_chart_shape(planets: dict) -> str:
     """
     Marc Edmund Jones planetary distribution pattern.
     Bundle, Bowl, Locomotive, Bucket, Seesaw, Splay, Splash.
+
+    Uses only the 10 classical planets (Sun–Pluto) as per Jones tradition.
+    Chiron, Lilith, nodes are excluded — they distort gap analysis.
     """
-    core = [n for n in PLANETS if n in planets and n not in {"north_node"}]
+    JONES_PLANETS = {
+        "sun", "moon", "mercury", "venus", "mars",
+        "jupiter", "saturn", "uranus", "neptune", "pluto",
+    }
+    core = [n for n in JONES_PLANETS if n in planets]
     lons = sorted([planets[n]["longitude"] for n in core])
     n = len(lons)
-    if n < 7:
+    if n < 8:
         return "unknown"
 
     gaps = [(lons[(i + 1) % n] - lons[i]) % 360 for i in range(n)]
@@ -729,13 +736,21 @@ async def _calc_planet_decl(jd: float, planet_id: int) -> float:
 
 def _calc_houses_sync(jd: float, lat: float, lon: float):
     _ensure_ephe()
+    # Placidus (standard for most latitudes)
     try:
         houses, angles = swe.houses(jd, lat, lon, b"P")
         return houses, angles, "placidus"
-    except Exception:
-        logger.warning("Placidus failed — falling back to Whole Sign")
-        houses, angles = swe.houses(jd, lat, lon, b"W")
-        return houses, angles, "whole_sign"
+    except Exception as e:
+        logger.warning(f"Placidus failed ({e}) — trying Koch")
+    # Koch (more stable at high latitudes, same house tradition as Placidus)
+    try:
+        houses, angles = swe.houses(jd, lat, lon, b"K")
+        return houses, angles, "koch"
+    except Exception as e:
+        logger.warning(f"Koch failed ({e}) — falling back to Whole Sign")
+    # Whole Sign (last resort — always works, but very different results)
+    houses, angles = swe.houses(jd, lat, lon, b"W")
+    return houses, angles, "whole_sign"
 
 async def _calc_houses(jd: float, lat: float, lon: float):
     async with limiter:
@@ -870,8 +885,13 @@ async def calculate_chart(birth_date: str, birth_time: str, place: str) -> dict:
     intercepted    = calc_intercepted_signs(houses_tuple)
 
     # ── Out-of-bounds declinations ────────────────────────────────────────────
+    # OOB = declination exceeds max solar declination (Earth obliquity ~23°26').
+    # Meaningful for real bodies only — skip derived/virtual points.
+    OOB_SKIP = {"north_node", "lilith"}  # virtual points, declination meaningless
     out_of_bounds: list[dict] = []
     for planet_name, planet_id in PLANETS.items():
+        if planet_name in OOB_SKIP:
+            continue
         try:
             decl = await _calc_planet_decl(jd, planet_id)
             chart_planets[planet_name]["declination"] = round(decl, 4)
