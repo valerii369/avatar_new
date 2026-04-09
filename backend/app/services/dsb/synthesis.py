@@ -125,12 +125,12 @@ async def save_to_supabase(user_id: str, result: dict, portrait: dict = None):
     
     for system, spheres in result.items():
         for sphere_id, insights in spheres.items():
-            for rank, ins in enumerate(insights):
+            for rank, ins in enumerate(insights, start=1):   # 1-based rank
                 rows.append({
                     "user_id":            user_id,
                     "system":             system,
                     "primary_sphere":     sphere_id,
-                    "rank":               rank,          # позиция внутри сферы
+                    "rank":               rank,
                     **ins.model_dump()
                 })
                 

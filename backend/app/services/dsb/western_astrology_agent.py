@@ -187,12 +187,15 @@ async def generate_sphere_insights(
     chart: dict,
     sphere_id: int,
     attempt: int = 0,
+    user_id: str = "",      # for logging / tracing; does not affect logic
 ) -> list[UniversalInsight]:
     """
     Worker agent for one sphere.
     Extracts isolated context → targeted RAG → specialist LLM call.
     Returns list of UniversalInsight for sphere_id.
     """
+    tag = f"user={user_id} sphere={sphere_id}" if user_id else f"sphere={sphere_id}"
+
     ctx = extract_sphere_context(chart, sphere_id)
     rag = await _retrieve_sphere_rag(ctx)
 
@@ -236,14 +239,14 @@ async def generate_sphere_insights(
         for ins in insights:
             ins.primary_sphere = sphere_id
 
-        logger.info(f"Sphere {sphere_id}: {len(insights)} insights")
+        logger.info(f"[{tag}] generated {len(insights)} insights")
         return insights
 
     except Exception as e:
-        logger.error(f"Sphere {sphere_id} failed (attempt {attempt}): {e}")
+        logger.error(f"[{tag}] attempt={attempt} failed: {e}")
         if attempt < 2:
             await asyncio.sleep(1)
-            return await generate_sphere_insights(chart, sphere_id, attempt + 1)
+            return await generate_sphere_insights(chart, sphere_id, attempt + 1, user_id)
         return []
 
 
@@ -273,7 +276,7 @@ async def _fallback_sphere_insights(sphere_id: int) -> list[UniversalInsight]:
     )]
 
 
-async def generate_insights(chart: dict) -> UISResponse:
+async def generate_insights(chart: dict, user_id: str = "") -> UISResponse:
     """
     Orchestrator: launches all 12 sphere workers simultaneously.
     Used for full-chart generation (initial build or full rebuild).
@@ -281,10 +284,10 @@ async def generate_insights(chart: dict) -> UISResponse:
     Returns merged UISResponse with insights from all spheres.
     Guarantees all 12 spheres are present (fallback insight on hard failure).
     """
-    logger.info("Orchestrator: launching 12 sphere agents in parallel")
+    logger.info(f"Orchestrator: launching 12 sphere agents in parallel (user={user_id or 'unknown'})")
 
     tasks = [
-        generate_sphere_insights(chart, sphere_id)
+        generate_sphere_insights(chart, sphere_id, user_id=user_id)
         for sphere_id in range(1, 13)
     ]
     results: list = await asyncio.gather(*tasks, return_exceptions=True)
