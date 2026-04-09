@@ -19,6 +19,7 @@ from app.services.dsb.sphere_context import (
     prepare_all_sphere_contexts,
     SPHERE_NAMES,
 )
+from app.data.astro_knowledge import get_sphere_knowledge
 
 logger = logging.getLogger(__name__)
 openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
@@ -38,12 +39,16 @@ SPECIALIST_PROMPT_TEMPLATE = """\
 Создать от {min_ins} до {max_ins} атомарных психологических инсайтов
 строго для {sphere_num}-й сферы на основе предоставленных астрологических данных и книжного контекста.
 
+═══ ИСТОЧНИКИ (в порядке приоритета) ═══
+1. sphere_data — ЕДИНСТВЕННЫЙ источник астрологических позиций. Запрещено придумывать.
+2. knowledge_base — справочник значений планет, знаков, аспектов, достоинств. Используй для глубины трактовок.
+3. book_context — книжные цитаты и трактовки. Используй как подтверждение и обогащение.
+
 ═══ ЖЁСТКИЕ ОГРАНИЧЕНИЯ ═══
-1. Анализируй ТОЛЬКО данные из поля "sphere_data". Запрещено придумывать позиции планет.
+1. Анализируй ТОЛЬКО позиции из sphere_data. Не придумывай планеты и аспекты.
 2. Каждый инсайт — одна конкретная смысловая единица.
 3. Не повторяй одну и ту же астрологическую позицию в разных инсайтах.
-4. Опирайся на book_context как приоритетный источник трактовок.
-5. Все тексты — строго на русском языке.
+4. Все тексты — строго на русском языке.
 
 ═══ ФОРМАТ ВЫВОДА ═══
 Возвращай ТОЛЬКО валидный JSON:
@@ -201,9 +206,13 @@ async def generate_sphere_insights(
     # Strip internal metadata keys before sending to LLM
     sphere_data = {k: v for k, v in ctx.items() if not k.startswith("_")}
 
+    # Inject hardcoded KB facts for this sphere
+    knowledge_base = get_sphere_knowledge(ctx)
+
     user_payload = json.dumps({
-        "sphere_data":  sphere_data,
-        "book_context": [{"text": c["text"], "source": c["source"]} for c in rag],
+        "sphere_data":    sphere_data,
+        "knowledge_base": knowledge_base,
+        "book_context":   [{"text": c["text"], "source": c["source"]} for c in rag],
     }, ensure_ascii=False)
 
     try:
