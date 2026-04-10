@@ -6,6 +6,56 @@ import useSWR from "swr";
 import { useUserStore, useInsightsStore, type Insight } from "@/lib/store";
 import { masterHubAPI } from "@/lib/api";
 import { SPHERES, SPHERE_BY_ID, INFLUENCE_SORT } from "@/lib/constants";
+
+// ─── Pipeline Loading ─────────────────────────────────────────────────────────
+function PipelineLoading() {
+  const steps = [
+    "Строим натальную карту",
+    "Анализируем 12 сфер",
+    "Формируем инсайты",
+    "Собираем портрет",
+  ];
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 24px", textAlign: "center" }}>
+      <div style={{ position: "relative", width: 72, height: 72, marginBottom: 24 }}>
+        <div style={{
+          position: "absolute", inset: 0, borderRadius: "50%",
+          border: "2px solid rgba(139,92,246,0.2)",
+          borderTop: "2px solid #8B5CF6",
+          animation: "spin 1s linear infinite",
+        }} />
+        <div style={{
+          position: "absolute", inset: 0,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 28,
+        }}>✨</div>
+      </div>
+      <p style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", margin: 0, marginBottom: 8 }}>
+        Астрологический разбор вычисляется
+      </p>
+      <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0, marginBottom: 24, maxWidth: 260, lineHeight: 1.5 }}>
+        Анализируем натальную карту и составляем персональный портрет
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", maxWidth: 280 }}>
+        {steps.map((step, i) => (
+          <div key={i} style={{
+            display: "flex", alignItems: "center", gap: 10,
+            padding: "8px 14px", borderRadius: 12,
+            background: "rgba(139,92,246,0.06)",
+            border: "1px solid rgba(139,92,246,0.1)",
+          }}>
+            <motion.div
+              style={{ width: 6, height: 6, borderRadius: "50%", background: "#8B5CF6", flexShrink: 0 }}
+              animate={{ opacity: [0.3, 1, 0.3] }}
+              transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.35 }}
+            />
+            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 400 }}>{step}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 import SphereFilter from "@/components/SphereFilter";
 import InsightCard from "@/components/InsightCard";
 import InsightDetailModal from "@/components/InsightDetailModal";
@@ -31,7 +81,6 @@ function PortraitTab({ hub }: { hub: any }) {
   }
 
   const p = hub.portrait_summary;
-  const polarities = hub.deep_profile_data?.polarities;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingBottom: 16 }}>
@@ -78,38 +127,7 @@ function PortraitTab({ hub }: { hub: any }) {
         </div>
       </div>
 
-      {/* Strengths / Shadows */}
-      {polarities && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <PolarityBlock title="Сильные стороны" items={polarities.core_strengths || []} color="#10B981" icon="✦" />
-          <PolarityBlock title="Теневые аспекты" items={polarities.shadow_aspects || []} color="#EF4444" icon="◈" />
-        </div>
-      )}
-
       <SphereDistribution hub={hub} />
-    </div>
-  );
-}
-
-function PolarityBlock({ title, items, color, icon }: { title: string; items: string[]; color: string; icon: string }) {
-  return (
-    <div style={{
-      padding: 14, borderRadius: 18,
-      background: "rgba(255,255,255,0.03)", border: `1px solid ${color}15`,
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 5, color, marginBottom: 10 }}>
-        <span style={{ fontSize: 10 }}>{icon}</span>
-        <span style={{ fontSize: 9, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em" }}>{title}</span>
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-        {items.length > 0 ? items.map((item: string, i: number) => (
-          <div key={i} style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", lineHeight: 1.3, fontWeight: 300, display: "flex", gap: 6 }}>
-            <span style={{ opacity: 0.3, flexShrink: 0 }}>•</span> {item}
-          </div>
-        )) : (
-          <span style={{ fontSize: 10, fontStyle: "italic", color: "rgba(255,255,255,0.2)" }}>Исследуется...</span>
-        )}
-      </div>
     </div>
   );
 }
@@ -375,7 +393,7 @@ function SidesTab({ insights }: { insights: Insight[] }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function YourWorldPage() {
   const { userId } = useUserStore();
-  const { insights, setInsights, activeSphere, setActiveSphere } = useInsightsStore();
+  const { activeSphere, setActiveSphere } = useInsightsStore();
   const [activeTab, setActiveTab] = useState<Tab>("portrait");
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
 
@@ -383,32 +401,37 @@ export default function YourWorldPage() {
     userId ? ["master-hub", userId] : null,
     async () => {
       const res = await masterHubAPI.get(userId!);
-      const data = res.data;
-      if (data.status === "pending") return data;
+      return res.data;
+    },
+    {
+      revalidateOnFocus: false,
+      refreshInterval: (data: any) => data?.status === "pending" ? 4000 : 0,
+    }
+  );
 
-      const allInsights: Insight[] = [];
-      const systems = data.insights || {};
-      Object.keys(systems).forEach(sys => {
-        const spheres = systems[sys];
-        Object.keys(spheres).forEach(sphereId => {
-          spheres[sphereId].forEach((item: any, rank: number) => {
-            allInsights.push({
-              ...item,
-              id: item.id || `${sys}-${sphereId}-${rank}`,
-              system: sys,
-              primary_sphere: parseInt(sphereId),
-              rank: item.rank ?? rank,
-            });
+  // Derive insights directly from hub — avoids Zustand persistence issues and SWR key collisions
+  const insights = useMemo<Insight[]>(() => {
+    if (!hub || hub.status === "pending") return [];
+    const result: Insight[] = [];
+    const systems = hub.insights || {};
+    Object.keys(systems).forEach(sys => {
+      const spheres = systems[sys];
+      Object.keys(spheres).forEach(sphereId => {
+        spheres[sphereId].forEach((item: any, rank: number) => {
+          result.push({
+            ...item,
+            id: item.id || `${sys}-${sphereId}-${rank}`,
+            system: sys,
+            primary_sphere: parseInt(sphereId),
+            rank: item.rank ?? rank,
           });
         });
       });
+    });
+    return result;
+  }, [hub]);
 
-      setInsights(allInsights);
-      return data;
-    },
-    { revalidateOnFocus: false }
-  );
-
+  const isPending = hub?.status === "pending";
   const totalCount = insights.length;
   const sphereCount = new Set(insights.map(i => i.primary_sphere)).size;
 
@@ -429,7 +452,12 @@ export default function YourWorldPage() {
           WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
         }}>Твой мир</h1>
         <p style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 400, margin: 0 }}>
-          {totalCount > 0 ? `${totalCount} инсайтов по ${sphereCount} сферам` : "Полный расчёт по 12 сферам жизни"}
+          {isPending
+            ? <motion.span animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }}>вычисляется...</motion.span>
+            : totalCount > 0
+              ? `${totalCount} инсайтов по ${sphereCount} сферам`
+              : "Полный расчёт по 12 сферам жизни"
+          }
         </p>
       </div>
 
@@ -456,23 +484,27 @@ export default function YourWorldPage() {
 
       {/* Content */}
       <div className="flex-1 px-4 pt-1">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-          >
-            {activeTab === "portrait"  && <PortraitTab hub={hub} />}
-            {activeTab === "breakdown" && (
-              <BreakdownTab
-                insights={insights} loading={loading}
-                activeSphere={activeSphere} setActiveSphere={setActiveSphere}
-                onSelect={setSelectedInsight}
-              />
-            )}
-            {activeTab === "sides" && <SidesTab insights={insights} />}
-          </motion.div>
-        </AnimatePresence>
+        {isPending ? (
+          <PipelineLoading />
+        ) : (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+            >
+              {activeTab === "portrait"  && <PortraitTab hub={hub} />}
+              {activeTab === "breakdown" && (
+                <BreakdownTab
+                  insights={insights} loading={loading}
+                  activeSphere={activeSphere} setActiveSphere={setActiveSphere}
+                  onSelect={setSelectedInsight}
+                />
+              )}
+              {activeTab === "sides" && <SidesTab insights={insights} />}
+            </motion.div>
+          </AnimatePresence>
+        )}
       </div>
 
       <AnimatePresence>

@@ -146,24 +146,6 @@ export default function InsightCard({ insight, onClick }: InsightCardProps) {
         </div>
       </div>
 
-      {/* Triggers */}
-      {insight.triggers?.length > 0 && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-          {insight.triggers.slice(0, 3).map((t, i) => (
-            <span key={i} style={{
-              padding: "3px 8px",
-              borderRadius: 20,
-              fontSize: 9,
-              fontWeight: 500,
-              color: "rgba(255,255,255,0.4)",
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.06)",
-            }}>
-              {t}
-            </span>
-          ))}
-        </div>
-      )}
     </motion.div>
   );
 }

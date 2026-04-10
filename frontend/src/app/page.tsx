@@ -99,9 +99,9 @@ export default function HomePage() {
   // 2b. Building state — onboarding done in store but portrait not yet in DB
   const isBuilding = status === "ready" && useUserStore.getState().onboardingDone && profile && !profile.onboarding_done;
 
-  // 3. Master Hub
+  // 3. Master Hub (different key to avoid SWR cache collision with your-world page)
   const { data: hub } = useSWR(
-    userId && status === "ready" ? ["master-hub", userId] : null,
+    userId && status === "ready" ? ["master-hub-home", userId] : null,
     () => masterHubAPI.get(userId!).then(res => res.data).catch(() => null),
     { revalidateOnFocus: false }
   );
@@ -369,21 +369,6 @@ export default function HomePage() {
                   </div>
                 )}
 
-                {/* Strengths/Shadows */}
-                {hub.deep_profile_data?.polarities && (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    <PolarityBlock
-                      title="Сильные стороны"
-                      items={hub.deep_profile_data.polarities.core_strengths || []}
-                      color="#10B981"
-                    />
-                    <PolarityBlock
-                      title="Теневые аспекты"
-                      items={hub.deep_profile_data.polarities.shadow_aspects || []}
-                      color="#EF4444"
-                    />
-                  </div>
-                )}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center p-10 text-center" style={{ opacity: 0.5 }}>
@@ -428,34 +413,3 @@ function InfoTag({ label, value, color }: { label: string; value: string; color:
   );
 }
 
-function PolarityBlock({ title, items, color }: { title: string; items: string[]; color: string }) {
-  return (
-    <div style={{
-      padding: 16, borderRadius: 20,
-      background: "rgba(255,255,255,0.03)",
-      border: "1px solid rgba(255,255,255,0.05)",
-    }}>
-      <div style={{
-        display: "flex", alignItems: "center", gap: 6,
-        color, marginBottom: 10,
-      }}>
-        <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase" }}>{title}</span>
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        {items.length > 0 ? items.map((item, i) => (
-          <div key={i} style={{
-            fontSize: 11, color: "rgba(255,255,255,0.7)",
-            lineHeight: 1.3, fontWeight: 300,
-            display: "flex", gap: 6,
-          }}>
-            <span style={{ opacity: 0.3 }}>•</span> {item}
-          </div>
-        )) : (
-          <span style={{ fontSize: 10, fontStyle: "italic", color: "rgba(255,255,255,0.2)" }}>
-            Исследуется...
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
