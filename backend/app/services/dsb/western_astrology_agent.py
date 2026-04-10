@@ -20,6 +20,7 @@ from app.services.dsb.sphere_context import (
     SPHERE_NAMES,
 )
 from app.data.astro_knowledge import get_sphere_knowledge
+from app.data.aspect_pairs import enrich_aspects_with_meanings
 
 logger = logging.getLogger(__name__)
 openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
@@ -129,9 +130,16 @@ SPECIALIST_PROMPT_TEMPLATE = """\
      Планеты-враги (Марс+Сатурн) — постоянное внутреннее напряжение, «выжатый тормоз».
 
 При анализе аспектов из sphere_data обязательно учитывай:
-1. orb: чем меньше orb (< 1.0°) — тем острее и интенсивнее проявление.
-2. applying: true = аспект нарастает (активная фаза), false = разделяется (прорабатывается).
+1. orb: чем меньше orb (< 1.0°) — тем острее и интенсивнее проявление. Аспект с orb 0.5° «впечатан» в характер навсегда — пиши о нём как об определяющей черте, а не фоне.
+2. applying: true = аспект нарастает (активная фаза, ещё впереди), false = разделяется (прорабатывается, уроки уже идут).
 3. Коалиционные отношения двух планет в аспекте — союзники или враги? Это меняет качество.
+4. pair_meaning в аспектах — атомарный тезис пары. Используй его как ядро интерпретации, не копируй дословно — разворачивай через призму сферы.
+
+═══ ДИСПОЗИТОР ═══
+Каждая планета в sphere_data может иметь поле "dispositor" — планету, которая управляет её знаком.
+Логика: Марс в Рыбах → хозяин Рыб = Нептун. Если Нептун силён (dignity_score ≥ 2) — Марс действует вдохновенно.
+Если Нептун слаб (dignity_score ≤ -2) или ретроградный — энергия Марса рассеивается, теряет направление.
+Обязательно включай состояние диспозитора в анализ там, где оно существенно меняет качество планеты.
 
 ═══ FORMULA WEIGHT ═══
 Используй поле position_weight из sphere_data как базовое значение инсайта.
@@ -269,6 +277,11 @@ async def generate_sphere_insights(
 
     # Strip internal metadata keys before sending to LLM
     sphere_data = {k: v for k, v in ctx.items() if not k.startswith("_")}
+
+    # ── Aspect synthesizer: enrich with pair meanings, sort by orb ────────────
+    for asp_key in ("aspects_to_ruler", "aspects_to_co_ruler", "resident_aspects"):
+        if sphere_data.get(asp_key):
+            sphere_data[asp_key] = enrich_aspects_with_meanings(sphere_data[asp_key])
 
     # Inject hardcoded KB facts for this sphere
     knowledge_base = get_sphere_knowledge(ctx)

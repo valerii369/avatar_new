@@ -63,11 +63,11 @@ def _cusp_sign(houses: dict, sphere_num: int) -> str:
     return ZODIAC_SIGNS[int(cusp_lon // 30)]
 
 
-def _planet_summary(name: str, planets: dict) -> dict | None:
+def _planet_summary(name: str, planets: dict, include_dispositor: bool = False) -> dict | None:
     p = planets.get(name)
     if not p:
         return None
-    return {
+    result: dict = {
         "name":            name,
         "sign":            p["sign"],
         "house":           p.get("house"),
@@ -77,6 +77,20 @@ def _planet_summary(name: str, planets: dict) -> dict | None:
         "dignity_score":   p.get("dignity_score", 0),
         "position_weight": p.get("position_weight", 0.5),
     }
+    if include_dispositor:
+        disp_name = SIGN_RULERSHIPS.get(p["sign"])
+        if disp_name and disp_name != name:
+            d = planets.get(disp_name)
+            if d:
+                result["dispositor"] = {
+                    "name":          disp_name,
+                    "sign":          d.get("sign"),
+                    "house":         d.get("house"),
+                    "dignity_score": d.get("dignity_score", 0),
+                    "retrograde":    d.get("retrograde", False),
+                    "position_weight": d.get("position_weight", 0.5),
+                }
+    return result
 
 
 def _planets_in_house(planets: dict, house_num: int) -> list[dict]:
@@ -131,10 +145,12 @@ def extract_sphere_context(chart: dict, sphere_num: int) -> dict:
     ruler_name = SIGN_RULERSHIPS.get(cusp_sign, "")
     co_name    = CO_RULERSHIPS.get(cusp_sign)
 
-    ruler    = _planet_summary(ruler_name, planets) if ruler_name else None
-    co_ruler = _planet_summary(co_name, planets) if co_name else None
+    # include_dispositor=True: агент видит «хозяина хозяина» — критично для оценки качества планеты
+    ruler    = _planet_summary(ruler_name, planets, include_dispositor=True) if ruler_name else None
+    co_ruler = _planet_summary(co_name,    planets, include_dispositor=True) if co_name    else None
 
-    residents       = _planets_in_house(planets, sphere_num)
+    residents       = [_planet_summary(r["name"], planets, include_dispositor=True)
+                       for r in _planets_in_house(planets, sphere_num)]
     resident_names  = {r["name"] for r in residents}
 
     aspects_to_ruler    = _aspects_involving(aspects, {ruler_name})[:12] if ruler_name else []
