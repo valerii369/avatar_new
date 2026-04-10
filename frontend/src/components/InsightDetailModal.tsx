@@ -3,15 +3,46 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Sparkles, AlertCircle, Zap, Target, Key, Lightbulb, Star } from "lucide-react";
 import { SPHERE_BY_ID, INFLUENCE_CONFIG, SYSTEM_SHORT } from "@/lib/constants";
-import type { Insight } from "@/lib/store";
+import type { Insight, NatalPosition } from "@/lib/store";
 import { useTmaSafeArea } from "@/lib/useTmaSafeArea";
+
+// Map planet keys → russian/latin keywords to match against insight.position text
+const PLANET_KEYWORDS: Record<string, string[]> = {
+  sun:            ["солнце", "sun"],
+  moon:           ["луна", "луны", "moon"],
+  mercury:        ["меркурий", "mercury"],
+  venus:          ["венера", "venus"],
+  mars:           ["марс", "mars"],
+  jupiter:        ["юпитер", "jupiter"],
+  saturn:         ["сатурн", "saturn"],
+  uranus:         ["уран", "uranus"],
+  neptune:        ["нептун", "neptune"],
+  pluto:          ["плутон", "pluto"],
+  north_node:     ["северный узел", "north node", "с. узел"],
+  south_node:     ["южный узел", "south node", "ю. узел"],
+  chiron:         ["хирон", "chiron"],
+  lilith:         ["лилит", "lilith"],
+  asc:            ["асц", "асцендент", "asc", "восходящий"],
+  mc:             ["мс", "мидхевен", "mc", "medium coeli"],
+  part_of_fortune:["парс", "part of fortune", "фортун"],
+};
+
+function matchNatalPositions(positionText: string, natalPositions: NatalPosition[]): NatalPosition[] {
+  if (!positionText || !natalPositions?.length) return [];
+  const lower = positionText.toLowerCase();
+  return natalPositions.filter(p => {
+    const keywords = PLANET_KEYWORDS[p.key] || [p.label.toLowerCase()];
+    return keywords.some(kw => lower.includes(kw));
+  });
+}
 
 interface InsightDetailModalProps {
   insight: Insight | null;
   onClose: () => void;
+  natalPositions?: NatalPosition[];
 }
 
-export default function InsightDetailModal({ insight, onClose }: InsightDetailModalProps) {
+export default function InsightDetailModal({ insight, onClose, natalPositions = [] }: InsightDetailModalProps) {
   const tmaSafeTop = useTmaSafeArea();
 
   if (!insight) return null;
@@ -256,6 +287,46 @@ export default function InsightDetailModal({ insight, onClose }: InsightDetailMo
               Источник: {insight.source}
             </div>
           )}
+
+          {/* Natal positions for this insight */}
+          {(() => {
+            const matched = matchNatalPositions(insight.position, natalPositions);
+            if (!matched.length) return null;
+            return (
+              <div style={{
+                paddingTop: 12,
+                borderTop: insight.source ? "none" : "1px solid var(--border)",
+              }}>
+                <div style={{
+                  fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.2)",
+                  textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8,
+                }}>
+                  Точные позиции
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {matched.map(p => (
+                    <div key={p.key} style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "6px 10px", borderRadius: 8,
+                      background: "rgba(255,255,255,0.02)",
+                      border: "1px solid rgba(255,255,255,0.05)",
+                    }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.35)" }}>
+                        {p.label}
+                      </span>
+                      <span style={{
+                        fontSize: 12, fontWeight: 500, color: "rgba(255,255,255,0.55)",
+                        fontVariantNumeric: "tabular-nums",
+                        letterSpacing: "0.02em",
+                      }}>
+                        {p.position_str}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Bottom CTA */}

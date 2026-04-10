@@ -1,6 +1,12 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+export interface NatalPosition {
+  key: string;
+  label: string;
+  position_str: string;
+}
+
 export interface Insight {
   id?: string;
   system: string;
