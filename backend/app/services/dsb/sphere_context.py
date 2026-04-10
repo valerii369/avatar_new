@@ -39,6 +39,11 @@ SPHERE_TARGETS: dict[int, tuple[int, int]] = {
     12: (8, 11),   # Тень и растворение — ключевая сфера
 }
 
+# Virtual points — act as modifiers, don't rule houses
+VIRTUAL_POINTS = {"lilith", "selena", "chiron"}
+# Personal planets — virtual points only aspected to these (narrow orb)
+PERSONAL_PLANETS = {"sun", "moon", "mercury", "venus", "mars"}
+
 SIGN_RULERSHIPS: dict[str, str] = {
     "Aries":       "mars",
     "Taurus":      "venus",
@@ -116,6 +121,53 @@ def _planets_in_house(planets: dict, house_num: int) -> list[dict]:
     return result
 
 
+def _virtual_point_context(planets: dict, aspects: list[dict], sphere_num: int,
+                            sphere_planet_names: set[str]) -> dict:
+    """
+    Build virtual points context for a sphere:
+    - Which of Lilith / Selena / Chiron are in this house
+    - Their major aspects to personal planets of this sphere (orb ≤ 3°)
+    """
+    result: dict = {}
+
+    for vp in ("lilith", "selena", "chiron"):
+        data = planets.get(vp)
+        if not data:
+            continue
+
+        # Is this virtual point IN the sphere's house?
+        in_house = data.get("house") == sphere_num
+
+        # Narrow-orb aspects to sphere's personal planets (≤ 3°)
+        vp_aspects = [
+            a for a in aspects
+            if (a["planet_a"] == vp or a["planet_b"] == vp)
+            and a.get("orb", 99) <= 3.0
+            and (
+                (a["planet_a"] in PERSONAL_PLANETS and a["planet_a"] in sphere_planet_names)
+                or (a["planet_b"] in PERSONAL_PLANETS and a["planet_b"] in sphere_planet_names)
+                # Also include if the vp aspects any personal planet (even outside sphere)
+                or a["planet_a"] in PERSONAL_PLANETS
+                or a["planet_b"] in PERSONAL_PLANETS
+            )
+        ]
+
+        if not in_house and not vp_aspects:
+            continue  # No influence on this sphere — skip
+
+        entry: dict = {
+            "name":          vp,
+            "sign":          data.get("sign"),
+            "house":         data.get("house"),
+            "degree_in_sign": data.get("degree_in_sign"),
+            "in_this_house": in_house,
+            "aspects_to_personal": vp_aspects[:5],
+        }
+        result[vp] = entry
+
+    return result
+
+
 def _aspects_involving(aspects: list[dict], planet_names: set[str]) -> list[dict]:
     """Aspects where either participant is in planet_names."""
     return [
@@ -168,6 +220,10 @@ def extract_sphere_context(chart: dict, sphere_num: int) -> dict:
     # Per-planet cap of 10, total scales with number of residents
     _per_resident_cap = 10
     resident_aspects    = _aspects_involving(aspects, resident_names)[:max(15, len(residents) * _per_resident_cap)]
+
+    # ── Virtual points context (Lilith, Selena, Chiron) ──────────────────────
+    all_sphere_names = resident_names | ({ruler_name} if ruler_name else set())
+    virtual_points = _virtual_point_context(planets, aspects, sphere_num, all_sphere_names)
 
     # ── Layer 2: Aspect synthesis per planet ──────────────────────────────────
     ruler_synthesis = None
@@ -240,6 +296,7 @@ def extract_sphere_context(chart: dict, sphere_num: int) -> dict:
         "ruler_synthesis":      ruler_synthesis,
         "co_ruler_synthesis":   co_ruler_synthesis,
         "resident_syntheses":   resident_syntheses,
+        "virtual_points":       virtual_points,   # Lilith/Selena/Chiron in this sphere
         "_target_min":          min_ins,
         "_target_max":          max_ins,
     }

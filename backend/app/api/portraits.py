@@ -24,6 +24,7 @@ PLANET_LABELS: dict[str, str] = {
     "south_node":     "Ю. Узел",
     "chiron":         "Хирон",
     "lilith":         "Лилит",
+    "selena":         "Селена",
     "asc":            "АСЦ",
     "mc":             "МС",
     "part_of_fortune":"Парс",
@@ -73,7 +74,7 @@ def _build_natal_positions(planets: dict) -> list[dict]:
     order = [
         "sun", "moon", "mercury", "venus", "mars",
         "jupiter", "saturn", "uranus", "neptune", "pluto",
-        "north_node", "south_node", "chiron", "lilith",
+        "north_node", "south_node", "chiron", "lilith", "selena",
         "asc", "mc",
     ]
     result = []
