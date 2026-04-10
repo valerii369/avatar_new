@@ -156,6 +156,26 @@ ASPECT_DEFS = [
 # Fixed points in the natal chart — applying/separating not applicable
 FIXED_POINTS = DERIVED_POINTS | {"lilith", "selena"}
 
+# ── Selena (White Moon) — Slavic/Avestian 7-year cycle ────────────────────────
+# Reference epoch: Jan 1, 1988, 0h UT → Selena at 19°01'03" Aries
+# Period: 2556.75 days (7 tropical years).  Rate = 360 / 2556.75 ≈ 0.14085°/day
+# Source: Avestian astrology school (Побережная Г.М.)
+_SELENA_EPOCH_JD  = 2447161.5    # Julian Day for 1988-01-01 0h UT
+_SELENA_EPOCH_LON = 19.0 + 1/60 + 3/3600   # 19°01'03" = 19.01750° (Aries = 0°)
+_SELENA_PERIOD    = 2556.75      # days per full revolution
+_SELENA_RATE      = 360.0 / _SELENA_PERIOD  # 0.14085°/day
+
+
+def _calc_selena(jd: float) -> float:
+    """
+    Calculate Selena (White Moon) ecliptic longitude for a given Julian Day.
+    Uses the uniform 7-year cycle of the Slavic/Avestian school:
+      lon = epoch_lon + (jd - epoch_jd) × rate  (mod 360)
+    Selena is independent of Lilith — may occupy the same house or any other.
+    """
+    days = jd - _SELENA_EPOCH_JD
+    return (_SELENA_EPOCH_LON + days * _SELENA_RATE) % 360
+
 def _deg_in_sign(longitude: float) -> float:
     """
     Degrees within the sign (0.00–29.99).
@@ -849,10 +869,10 @@ async def calculate_chart(birth_date: str, birth_time: str, place: str) -> dict:
         "dignity_score":  0,
     }
 
-    # ── Selena / White Moon (Lilith + 180°) ────────────────────────────────────
-    # Selena is the mean lunar perigee — diametrically opposite to Lilith (mean apogee).
-    # No separate ephemeris required: it's always exactly 180° from MEAN_APOG.
-    selena_lon  = (chart_planets["lilith"]["longitude"] + 180) % 360
+    # ── Selena / White Moon — 7-year uniform cycle (Slavic/Avestian school) ──────
+    # Calculated independently from Lilith using epoch formula.
+    # Selena can occupy any house, including the same house as Lilith.
+    selena_lon  = _calc_selena(jd)
     selena_sign = ZODIAC_SIGNS[int(selena_lon // 30)]
     chart_planets["selena"] = {
         "longitude":      round(selena_lon, 4),
