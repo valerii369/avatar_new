@@ -31,6 +31,8 @@ async def get_portrait(user_id: str):
             sys = row["system"]
             sphere = row["primary_sphere"]
             insight = {
+                "id": row["id"],
+                "rank": row["rank"],
                 "primary_sphere": row["primary_sphere"],
                 "influence_level": row["influence_level"],
                 "weight": row["weight"],
