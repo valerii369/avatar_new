@@ -35,11 +35,11 @@ async def get_recommendation(user_id: str, period: PeriodType):
         .eq("user_id", user_id)
         .eq("period", period)
         .eq("date_from", str(date_from))
-        .maybe_single()
+        .limit(1)
         .execute()
     )
     if cached.data:
-        return {"cached": True, "data": cached.data["result"]}
+        return {"cached": True, "data": cached.data[0]["result"]}
 
     # ── 2. Birth data ─────────────────────────────────────────────────────────
     birth_resp = (
@@ -71,10 +71,10 @@ async def get_recommendation(user_id: str, period: PeriodType):
         sb.table("user_portraits")
         .select("core_archetype,energy_type,current_dynamic,narrative_role,core_identity")
         .eq("user_id", user_id)
-        .maybe_single()
+        .limit(1)
         .execute()
     )
-    portrait_summary: dict = portrait_resp.data or {}
+    portrait_summary: dict = portrait_resp.data[0] if portrait_resp.data else {}
 
     # chain_narrative from sphere_context is expensive; use portrait summary as proxy
     chain_narrative = portrait_summary.get("core_identity", "")
@@ -83,10 +83,10 @@ async def get_recommendation(user_id: str, period: PeriodType):
         sb.table("users")
         .select("first_name")
         .eq("id", user_id)
-        .maybe_single()
+        .limit(1)
         .execute()
     )
-    user_name = (user_resp.data or {}).get("first_name", "")
+    user_name = user_resp.data[0].get("first_name", "") if user_resp.data else ""
 
     # ── 6. LLM synthesis ──────────────────────────────────────────────────────
     result = await synthesize_recommendation(
