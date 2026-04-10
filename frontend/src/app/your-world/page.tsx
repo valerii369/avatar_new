@@ -12,8 +12,9 @@ import InsightDetailModal from "@/components/InsightDetailModal";
 import { SkeletonCard } from "@/components/Skeleton";
 import BottomNav from "@/components/BottomNav";
 import { useTmaSafeArea } from "@/lib/useTmaSafeArea";
+import RecommendationsTab from "@/components/RecommendationsTab";
 
-type Tab = "portrait" | "breakdown" | "sides";
+type Tab = "portrait" | "recommendations" | "breakdown" | "sides";
 
 // ─── Portrait Tab ────────────────────────────────────────────────────────────
 function PortraitTab({ hub }: { hub: any }) {
@@ -639,9 +640,10 @@ export default function YourWorldPage() {
   const sphereCount = new Set(insights.map(i => i.primary_sphere)).size;
 
   const TABS: { id: Tab; label: string }[] = [
-    { id: "portrait",  label: "Портрет" },
-    { id: "breakdown", label: "Разбор" },
-    { id: "sides",     label: "Стороны" },
+    { id: "portrait",        label: "Портрет" },
+    { id: "recommendations", label: "Прогноз" },
+    { id: "breakdown",       label: "Разбор" },
+    { id: "sides",           label: "Стороны" },
   ];
 
   return (
@@ -675,7 +677,7 @@ export default function YourWorldPage() {
       {/* Tab switcher */}
       <div className="px-4 mb-3">
         <div
-          className="grid grid-cols-3 gap-1 p-1"
+          className="grid grid-cols-4 gap-1 p-1"
           style={{
             background: "rgba(255,255,255,0.04)",
             border: "1px solid var(--border)",
@@ -731,6 +733,9 @@ export default function YourWorldPage() {
                 />
               )}
               {activeTab === "sides" && <SidesTab insights={insights} />}
+              {activeTab === "recommendations" && userId && (
+                <RecommendationsTab userId={userId} />
+              )}
             </motion.div>
           </AnimatePresence>
         )}
