@@ -73,7 +73,7 @@ ANGULAR_HOUSES   = {1, 4, 7, 10}
 DERIVED_POINTS = {"asc", "mc", "part_of_fortune", "south_node"}
 # Points where retrograde/stationary doesn't apply
 NO_STATION_POINTS = {"asc", "mc", "part_of_fortune", "south_node", "north_node",
-                     "sun", "moon", "lilith"}
+                     "sun", "moon", "lilith", "selena"}
 
 # ─── Rulerships ───────────────────────────────────────────────────────────────
 
@@ -154,7 +154,7 @@ ASPECT_DEFS = [
 ]
 
 # Fixed points in the natal chart — applying/separating not applicable
-FIXED_POINTS = DERIVED_POINTS | {"lilith"}
+FIXED_POINTS = DERIVED_POINTS | {"lilith", "selena"}
 
 def _deg_in_sign(longitude: float) -> float:
     """
@@ -447,7 +447,7 @@ def calc_chart_balance(planets: dict) -> dict:
 
 # ─── Mutual Reception ─────────────────────────────────────────────────────────
 
-_SKIP_RECEPTION = DERIVED_POINTS | {"north_node", "south_node", "lilith", "chiron"}
+_SKIP_RECEPTION = DERIVED_POINTS | {"north_node", "south_node", "lilith", "selena", "chiron"}
 
 def calc_mutual_receptions(planets: dict) -> list[dict]:
     """Detect mutual receptions: planet A in sign ruled by B, and B in sign ruled by A."""
@@ -849,6 +849,27 @@ async def calculate_chart(birth_date: str, birth_time: str, place: str) -> dict:
         "dignity_score":  0,
     }
 
+    # ── Selena / White Moon (Lilith + 180°) ────────────────────────────────────
+    # Selena is the mean lunar perigee — diametrically opposite to Lilith (mean apogee).
+    # No separate ephemeris required: it's always exactly 180° from MEAN_APOG.
+    selena_lon  = (chart_planets["lilith"]["longitude"] + 180) % 360
+    selena_sign = ZODIAC_SIGNS[int(selena_lon // 30)]
+    chart_planets["selena"] = {
+        "longitude":      round(selena_lon, 4),
+        "sign":           selena_sign,
+        "degree_in_sign": _deg_in_sign(selena_lon),
+        "house":          _longitude_to_house(selena_lon, houses_tuple),
+        "retrograde":     False,
+        "stationary":     False,
+        "speed":          0.0,
+        "dignity_score":  0,
+        "is_virtual":     True,
+    }
+
+    # Mark Lilith and Chiron as virtual points for downstream filtering
+    chart_planets["lilith"]["is_virtual"] = True
+    chart_planets["chiron"]["is_virtual"] = True
+
     # ── ASC and MC ────────────────────────────────────────────────────────────
     for angle_name, angle_lon, angle_house in (("asc", asc_lon, 1), ("mc", mc_lon, 10)):
         sign = ZODIAC_SIGNS[int(angle_lon // 30)]
@@ -902,7 +923,7 @@ async def calculate_chart(birth_date: str, birth_time: str, place: str) -> dict:
     # ── Out-of-bounds declinations ────────────────────────────────────────────
     # OOB = declination exceeds max solar declination (Earth obliquity ~23°26').
     # Meaningful for real bodies only — skip derived/virtual points.
-    OOB_SKIP = {"north_node", "lilith"}  # virtual points, declination meaningless
+    OOB_SKIP = {"north_node", "lilith", "selena"}  # virtual points, declination meaningless
     out_of_bounds: list[dict] = []
     for planet_name, planet_id in PLANETS.items():
         if planet_name in OOB_SKIP:

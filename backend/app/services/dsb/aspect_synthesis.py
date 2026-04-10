@@ -67,7 +67,8 @@ _PLANET_RU: dict[str, str] = {
     "venus": "Венера", "mars": "Марс", "jupiter": "Юпитер",
     "saturn": "Сатурн", "uranus": "Уран", "neptune": "Нептун",
     "pluto": "Плутон", "north_node": "С.Узел", "south_node": "Ю.Узел",
-    "chiron": "Хирон", "lilith": "Лилит", "asc": "АСЦ", "mc": "МС",
+    "chiron": "Хирон", "lilith": "Лилит", "selena": "Селена",
+    "asc": "АСЦ", "mc": "МС",
 }
 
 _ASPECT_RU: dict[str, str] = {
