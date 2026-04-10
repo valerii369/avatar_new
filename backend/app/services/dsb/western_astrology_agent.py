@@ -220,15 +220,17 @@ async def generate_sphere_insights(
 
     try:
         response = await openai_client.chat.completions.create(
-            model="o4-mini",
+            model=settings.MODEL_HEAVY,
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user",   "content": user_payload},
             ],
-            max_completion_tokens=4000,
+            max_tokens=4000,
         )
-        raw  = response.choices[0].message.content
+        raw  = response.choices[0].message.content or ""
+        if not raw.strip():
+            raise ValueError(f"Empty response from LLM (finish_reason={response.choices[0].finish_reason})")
         data = json.loads(raw)
         if isinstance(data, list):
             data = {"insights": data}
