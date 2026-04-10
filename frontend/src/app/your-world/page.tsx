@@ -63,7 +63,13 @@ function PortraitTab({ hub }: { hub: any }) {
         }}>
           Идентификация Аватара
         </div>
-        <p style={{ fontSize: 14, fontWeight: 500, color: "var(--text-primary)", lineHeight: 1.6, margin: 0 }}>
+        <p style={{
+          fontSize: 13, fontWeight: 400, color: "var(--text-primary)", lineHeight: 1.3, margin: 0,
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
+        }}>
           {p.core_identity}
         </p>
       </div>
