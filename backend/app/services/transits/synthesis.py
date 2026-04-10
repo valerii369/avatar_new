@@ -102,7 +102,7 @@ async def synthesize_recommendation(
             ],
             response_format={"type": "json_object"},
             temperature=0.75,
-            max_tokens=2000,
+            max_completion_tokens=2000,
         )
         result = json.loads(resp.choices[0].message.content)
     except Exception as e:

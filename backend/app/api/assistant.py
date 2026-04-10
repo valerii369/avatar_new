@@ -130,7 +130,7 @@ async def chat(req: ChatRequest):
                     {"role": "user", "content": "Привет!"},
                 ],
                 temperature=0.85,
-                max_tokens=300,
+                max_completion_tokens=300,
             )
             greeting = resp.choices[0].message.content or "Привет! Что хочешь разобрать сегодня?"
         except Exception:
@@ -151,7 +151,7 @@ async def chat(req: ChatRequest):
             model=settings.MODEL_LIGHT,
             messages=messages,
             temperature=0.75,
-            max_tokens=800,
+            max_completion_tokens=800,
         )
         reply = resp.choices[0].message.content or "..."
     except Exception as e:
@@ -188,7 +188,7 @@ async def finish_session(req: FinishRequest):
                 {"role": "user", "content": conversation},
             ],
             temperature=0.6,
-            max_tokens=200,
+            max_completion_tokens=200,
         )
         summary = resp.choices[0].message.content or ""
     except Exception as e:
