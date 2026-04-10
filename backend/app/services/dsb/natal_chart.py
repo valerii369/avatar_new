@@ -440,12 +440,12 @@ def calc_chart_balance(planets: dict) -> dict:
             if sign in signs:
                 modalities[mod] += 1
 
-        # Above horizon (houses 7–12) = northern hemisphere
-        (north if house >= 7 else south).__class__  # trick to avoid if/else
+        # Houses 7–12 = above the horizon = southern hemisphere of chart (extroverted).
+        # Houses 1–6  = below the horizon = northern hemisphere of chart (introverted).
         if house >= 7:
-            north += 1
+            south += 1  # above horizon → southern hemisphere
         else:
-            south += 1
+            north += 1  # below horizon → northern hemisphere
 
         # Eastern hemisphere (houses 10–12, 1–3)
         if house in {10, 11, 12, 1, 2, 3}:
@@ -462,7 +462,7 @@ def calc_chart_balance(planets: dict) -> dict:
         "hemispheres":       {"north": north, "south": south, "east": east, "west": west},
         "dominant_element":  dom_elem,
         "dominant_modality": dom_mod,
-        "chart_emphasis":    "above_horizon" if north > south else "below_horizon",
+        "chart_emphasis":    "above_horizon" if south > north else "below_horizon",
     }
 
 # ─── Mutual Reception ─────────────────────────────────────────────────────────
