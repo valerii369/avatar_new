@@ -46,6 +46,15 @@ export const masterHubAPI = {
   get: (userId: string) => api.get(`/api/portraits/${userId}`),
 };
 
+export const recommendationsAPI = {
+  list:     (userId: string, period: string) =>
+    api.get(`/api/recommendations/${userId}/${period}`),
+  generate: (userId: string, period: string) =>
+    api.post(`/api/recommendations/${userId}/${period}`, {}, { timeout: 60000 }),
+  invalidate: (userId: string, period: string) =>
+    api.delete(`/api/recommendations/${userId}/${period}`),
+};
+
 export const assistantAPI = {
   init: (userId: string) => api.get(`/api/assistant/init/${userId}`),
   chat: (userId: string, sessionId: number, message: string) =>
