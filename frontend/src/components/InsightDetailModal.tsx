@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Sparkles, AlertCircle, Zap, Target, Key, Lightbulb, Star } from "lucide-react";
+import { X, Sparkles, AlertCircle, Zap, Target, Key, Lightbulb, Star, Eye, Activity, Anchor } from "lucide-react";
 import { SPHERE_BY_ID, INFLUENCE_CONFIG, SYSTEM_SHORT } from "@/lib/constants";
 import type { Insight, NatalPosition, NatalAspect } from "@/lib/store";
 import { useTmaSafeArea } from "@/lib/useTmaSafeArea";
@@ -197,6 +197,69 @@ export default function InsightDetailModal({ insight, onClose, natalPositions = 
               </div>
               <p style={{ fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 1.65, margin: 0 }}>
                 {insight.gift}
+              </p>
+            </div>
+          )}
+
+          {/* Слепая зона — amber/orange left border */}
+          {insight.blind_spot && (
+            <div style={{
+              paddingLeft: 16,
+              borderLeft: "2px solid rgba(245,158,11,0.35)",
+            }}>
+              <div style={{
+                display: "flex", alignItems: "center", gap: 6, marginBottom: 8,
+                color: "#F59E0B",
+              }}>
+                <Eye size={12} />
+                <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                  Слепая зона
+                </span>
+              </div>
+              <p style={{ fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 1.65, margin: 0 }}>
+                {insight.blind_spot}
+              </p>
+            </div>
+          )}
+
+          {/* Ритм энергии — cyan left border */}
+          {insight.energy_rhythm && (
+            <div style={{
+              paddingLeft: 16,
+              borderLeft: "2px solid rgba(6,182,212,0.35)",
+            }}>
+              <div style={{
+                display: "flex", alignItems: "center", gap: 6, marginBottom: 8,
+                color: "#06B6D4",
+              }}>
+                <Activity size={12} />
+                <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                  Ритм энергии
+                </span>
+              </div>
+              <p style={{ fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 1.65, margin: 0 }}>
+                {insight.energy_rhythm}
+              </p>
+            </div>
+          )}
+
+          {/* Точка опоры — green left border */}
+          {insight.crisis_anchor && (
+            <div style={{
+              paddingLeft: 16,
+              borderLeft: "2px solid rgba(16,185,129,0.4)",
+            }}>
+              <div style={{
+                display: "flex", alignItems: "center", gap: 6, marginBottom: 8,
+                color: "#10B981",
+              }}>
+                <Anchor size={12} />
+                <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                  Точка опоры
+                </span>
+              </div>
+              <p style={{ fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 1.65, margin: 0 }}>
+                {insight.crisis_anchor}
               </p>
             </div>
           )}

@@ -7,6 +7,18 @@ import json
 import openai
 import time
 
+# Columns that are guaranteed to exist in the Supabase user_insights table.
+# New optional columns (blind_spot, energy_rhythm, crisis_anchor) may not exist
+# in older deployments; we fall back to base fields if Supabase raises an APIError
+# mentioning "column".
+_BASE_FIELDS: set[str] = {
+    "user_id", "system", "primary_sphere", "rank",
+    "influence_level", "weight", "position", "core_theme",
+    "description", "light_aspect", "shadow_aspect",
+    "insight", "gift", "developmental_task", "integration_key",
+    "triggers", "source",
+}
+
 logger = logging.getLogger(__name__)
 
 
@@ -141,8 +153,20 @@ async def save_to_supabase(user_id: str, result: dict, portrait: dict = None):
         for sys in systems:
              supabase.table("user_insights").delete().eq("user_id", user_id).eq("system", sys).execute()
 
-        # Insert new rows
-        supabase.table("user_insights").insert(rows).execute()
+        # Insert new rows — try full row first; fall back to base fields if
+        # Supabase raises an APIError about an unknown column (schema not yet migrated).
+        try:
+            supabase.table("user_insights").insert(rows).execute()
+        except Exception as api_err:
+            err_str = str(api_err)
+            if "column" in err_str.lower():
+                logger.warning(
+                    "Supabase insert failed with column error (%s); retrying with base fields only.", err_str
+                )
+                base_rows = [{k: v for k, v in row.items() if k in _BASE_FIELDS} for row in rows]
+                supabase.table("user_insights").insert(base_rows).execute()
+            else:
+                raise
 
         # Handle Portrait Summary
         if portrait:

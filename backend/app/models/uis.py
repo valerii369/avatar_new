@@ -26,6 +26,11 @@ class UniversalInsight(BaseModel):
     integration_key: str = Field(..., min_length=5, max_length=400)
     triggers: list[str] = Field(..., min_length=1, max_length=8)
 
+    # --- Ultimate Synthesis Engine extras ---
+    blind_spot:    str | None = Field(None, max_length=800)
+    energy_rhythm: str | None = Field(None, max_length=500)
+    crisis_anchor: str | None = Field(None, max_length=500)
+
     # --- Источник из книги ---
     source: str | None = None
 

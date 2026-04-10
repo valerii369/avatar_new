@@ -180,6 +180,9 @@ async def get_portrait(user_id: str):
                 "integration_key":    row["integration_key"],
                 "triggers":           row["triggers"],
                 "source":             row.get("source"),
+                "blind_spot":         row.get("blind_spot", ""),
+                "energy_rhythm":      row.get("energy_rhythm", ""),
+                "crisis_anchor":      row.get("crisis_anchor", ""),
             }
             spheres[sys][str(sphere)].append(insight)
 
