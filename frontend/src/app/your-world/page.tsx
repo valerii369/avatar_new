@@ -57,15 +57,22 @@ function PortraitTab({ hub }: { hub: any }) {
         background: "linear-gradient(145deg, rgba(139,92,246,0.06), rgba(59,130,246,0.03))",
         border: "1px solid rgba(139,92,246,0.12)",
       }}>
+        <p style={{
+          fontSize: 13, fontWeight: 400, color: "var(--text-primary)", lineHeight: 1.3, margin: 0,
+          marginBottom: 10,
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
+        }}>
+          {p.core_identity}
+        </p>
         <div style={{
           fontSize: 10, fontWeight: 700, color: "rgba(139,92,246,0.5)",
-          textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 10,
+          textTransform: "uppercase", letterSpacing: "0.12em",
         }}>
           Идентификация Аватара
         </div>
-        <p style={{ fontSize: 14, fontWeight: 500, color: "var(--text-primary)", lineHeight: 1.6, margin: 0 }}>
-          {p.core_identity}
-        </p>
       </div>
 
       {/* Attributes — truncated, tap to expand */}
