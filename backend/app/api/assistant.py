@@ -65,30 +65,10 @@ async def init_session(user_id: str, background_tasks: BackgroundTasks):
     if not already_indexed:
         background_tasks.add_task(_index_in_background, user_id)
 
-    # Greeting — use portrait context if available (fast, no RAG needed yet)
-    portrait_context = await _get_portrait_brief(user_id)
-
-    try:
-        resp = await openai_client.chat.completions.create(
-            model="gpt-4.1-mini",
-            messages=[
-                {"role": "system", "content": _build_system(portrait_context)},
-                {"role": "user", "content": "Привет!"},
-            ],
-            temperature=0.85,
-            max_tokens=300,
-        )
-        greeting = resp.choices[0].message.content or "Привет! Что сегодня хочешь разобрать?"
-    except Exception as e:
-        logger.error(f"Greeting generation failed: {e}")
-        greeting = "Привет. Я здесь. Что хочешь разобрать сегодня?"
-
-    _sessions[session_id]["messages"].append({"role": "assistant", "content": greeting})
-
+    # Return instantly — greeting will be fetched via /chat with empty message
     return {
         "session_id": session_id,
         "is_first_touch": not already_indexed,
-        "ai_response": greeting,
     }
 
 
@@ -135,10 +115,28 @@ async def chat(req: ChatRequest):
         session = {"user_id": req.user_id, "messages": [], "created_at": time.time()}
         _sessions[req.session_id] = session
 
-    # Empty message → return last greeting
+    # Empty message → generate greeting (or return cached one)
     if not req.message.strip():
         last = next((m for m in reversed(session["messages"]) if m["role"] == "assistant"), None)
-        return {"ai_response": last["content"] if last else "Готов слушать."}
+        if last:
+            return {"ai_response": last["content"]}
+        # Generate greeting
+        portrait_context = await _get_portrait_brief(req.user_id)
+        try:
+            resp = await openai_client.chat.completions.create(
+                model=settings.MODEL_LIGHT,
+                messages=[
+                    {"role": "system", "content": _build_system(portrait_context)},
+                    {"role": "user", "content": "Привет!"},
+                ],
+                temperature=0.85,
+                max_tokens=300,
+            )
+            greeting = resp.choices[0].message.content or "Привет! Что хочешь разобрать сегодня?"
+        except Exception:
+            greeting = "Привет. Я здесь. Что хочешь разобрать сегодня?"
+        session["messages"].append({"role": "assistant", "content": greeting})
+        return {"ai_response": greeting}
 
     session["messages"].append({"role": "user", "content": req.message})
 
@@ -150,7 +148,7 @@ async def chat(req: ChatRequest):
 
     try:
         resp = await openai_client.chat.completions.create(
-            model="gpt-4.1-mini",
+            model=settings.MODEL_LIGHT,
             messages=messages,
             temperature=0.75,
             max_tokens=800,
@@ -184,7 +182,7 @@ async def finish_session(req: FinishRequest):
 
     try:
         resp = await openai_client.chat.completions.create(
-            model="gpt-4.1-mini",
+            model=settings.MODEL_LIGHT,
             messages=[
                 {"role": "system", "content": "Составь краткое резюме разговора для личного дневника. 1-2 предложения, суть главного инсайта или открытия. По-русски."},
                 {"role": "user", "content": conversation},

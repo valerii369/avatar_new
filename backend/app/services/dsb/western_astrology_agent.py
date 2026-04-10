@@ -1,237 +1,310 @@
+"""
+western_astrology_agent.py — Layer 2: Orchestrator + 12 Sphere Worker Agents
+
+Architecture: Orchestrator-Workers pattern
+- Each sphere gets an isolated micro-context (via sphere_context.py)
+- 12 specialist LLM agents run in parallel (asyncio.gather)
+- Each agent receives ONLY its sphere's data + targeted RAG chunks
+- No hallucinations: LLM cannot reference planets from other spheres
+"""
 import json
 import logging
 import asyncio
-from typing import List, Dict
-from app.models.uis import UISResponse
+from app.models.uis import UISResponse, SphereResponse, UniversalInsight
 from openai import AsyncOpenAI
 from app.core.config import settings
 from app.core.db import get_supabase
+from app.services.dsb.sphere_context import (
+    extract_sphere_context,
+    prepare_all_sphere_contexts,
+    SPHERE_NAMES,
+)
+from app.data.astro_knowledge import get_sphere_knowledge
 
 logger = logging.getLogger(__name__)
-
 openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
-SYSTEM_PROMPT = """
-Ты астрологический интерпретатор AVATAR. Твоя задача — создать от 60 до 100
-атомарных психологических инсайтов на основе натальной карты и книжных фрагментов.
+# ─── RAG settings ─────────────────────────────────────────────────────────────
+
+MIN_SCORE       = 0.65
+TOP_K_PER_QUERY = 3     # per query; 2-3 queries per sphere → ~6-9 unique chunks
+MAX_CHUNKS      = 8     # hard cap per sphere after dedup
+
+# ─── System prompt template ───────────────────────────────────────────────────
+
+SPECIALIST_PROMPT_TEMPLATE = """\
+Ты — астрологический аналитик {sphere_num}-й сферы «{sphere_name}».
+
+═══ ТВОЯ ЗАДАЧА ═══
+Создать от {min_ins} до {max_ins} атомарных психологических инсайтов
+строго для {sphere_num}-й сферы на основе предоставленных астрологических данных и книжного контекста.
+
+═══ ИСТОЧНИКИ (в порядке приоритета) ═══
+1. sphere_data — ЕДИНСТВЕННЫЙ источник астрологических позиций. Запрещено придумывать.
+2. knowledge_base — справочник значений планет, знаков, аспектов, достоинств. Используй для глубины трактовок.
+3. book_context — книжные цитаты и трактовки. Используй как подтверждение и обогащение.
+
+═══ ЖЁСТКИЕ ОГРАНИЧЕНИЯ ═══
+1. Анализируй ТОЛЬКО позиции из sphere_data. Не придумывай планеты и аспекты.
+2. Каждый инсайт — одна конкретная смысловая единица.
+3. Не повторяй одну и ту же астрологическую позицию в разных инсайтах.
+4. Все тексты — строго на русском языке.
 
 ═══ ФОРМАТ ВЫВОДА ═══
-Возвращай ТОЛЬКО валидный JSON объект вида:
-{"insights": [ ... ]}
+Возвращай ТОЛЬКО валидный JSON:
+{{"insights": [ ... ]}}
 Никакого текста до или после JSON. Никаких markdown-блоков.
 
 ═══ СТРУКТУРА КАЖДОГО ИНСАЙТА ═══
-{
-  "primary_sphere": <число от 1 до 12>,
+{{
+  "primary_sphere": {sphere_num},
   "influence_level": <"high" | "medium" | "low">,
-  "weight": <число от 0.0 до 1.0>,
-  "position": "<точная астрологическая позиция>",
-  "core_theme": "<заголовок карточки, одна фраза>",
-  "energy_description": "<нейтральное описание энергии>",
-  "light_aspect": "<дар и потенциал>",
-  "shadow_aspect": "<ловушка и риск>",
-  "developmental_task": "<что нужно проработать>",
-  "integration_key": "<конкретное действие>",
-  "triggers": ["<ситуация 1>", "<ситуация 2>", ...],
+  "weight": <число 0.0–1.0>,
+  "position": "<точная астрологическая позиция из sphere_data, макс 140 символов>",
+  "core_theme": "<заголовок карточки, одна фраза, макс 100 символов>",
+  "description": "<нейтральное описание энергии этой позиции, 1-2 предложения>",
+  "light_aspect": "<дар и потенциал, макс 400 символов>",
+  "shadow_aspect": "<ловушка и риск, макс 400 символов>",
+  "insight": "<глубокий психологический инсайт для пользователя, 2-3 предложения>",
+  "gift": "<ключевой дар этой позиции, одно предложение>",
+  "developmental_task": "<что нужно проработать, макс 180 символов>",
+  "integration_key": "<конкретное практическое действие, макс 180 символов>",
+  "triggers": ["<реальная жизненная ситуация 1>", "<реальная ситуация 2>"],
   "source": "<автор — книга или null>"
-}
+}}
 
-═══ ПРАВИЛА ═══
-1. Каждый инсайт — одна конкретная смысловая единица, не абзац обо всём.
-2. Все 12 сфер обязательны. Минимум 3 инсайта на каждую сферу.
-3. Опирайся на book_context — он приоритет над общими знаниями.
-4. НЕ повторяй одну и ту же астрологическую позицию в разных инсайтах.
-5. energy_description — нейтрально, без "хорошо/плохо".
-6. light_aspect и shadow_aspect — конкретно, не абстрактно.
-7. triggers — реальные жизненные ситуации, 2–6 штук.
-
-═══ ФОРМУЛА WEIGHT ═══
-Начальное значение = 0.5
-+ 0.20 если personal planet (Солнце, Луна, Меркурий, Венера, Марс)
-+ 0.15 если угловой дом (1, 4, 7, 10)
-+ 0.10 если аспект точный (orb < 1.0°)
-+ 0.10 если dignity_score >= 4 (обитель или экзальтация)
-+ 0.10 если dignity_score <= -4 (изгнание или падение)
-- 0.05 если планета ретроградна
-Итог: нормализовать к диапазону 0.0–1.0, округлить до 2 знаков.
+═══ FORMULA WEIGHT ═══
+Используй поле position_weight из sphere_data как базовое значение инсайта.
+Для аспектов: среднее position_weight двух планет + 0.10 если orb < 1.0°.
+Нормализуй к 0.0–1.0, округли до 2 знаков.
 
 ═══ INFLUENCE_LEVEL ═══
 "high"   → weight >= 0.75
 "medium" → weight 0.45–0.74
 "low"    → weight < 0.45
-
-═══ РАСПРЕДЕЛЕНИЕ ПО СФЕРАМ ═══
-Целевое число инсайтов:
-1 (Личность)    → 8–10
-2 (Ресурсы)     → 4–6
-3 (Мышление)    → 5–7
-4 (Семья)       → 5–7
-5 (Творчество)  → 4–6
-6 (Здоровье)    → 4–5
-7 (Отношения)   → 7–9
-8 (Трансформ.)  → 6–8
-9 (Смысл)       → 4–6
-10 (Карьера)    → 6–8
-11 (Социум)     → 4–6
-12 (Тень)       → 7–9
 """
 
-def build_queries(chart: dict) -> list[str]:
-    queries = []
-    personal = ["sun", "moon", "mercury", "venus", "mars", "asc", "mc", "north_node", "chiron", "lilith"]
-    
-    planets = chart.get("planets", {})
-    for planet in personal:
-        p = planets.get(planet)
-        if p:
-            queries.append(f"{planet} in {p['sign']} in {p['house']} house")
+# ─── Embedding ────────────────────────────────────────────────────────────────
 
-    for planet in ["jupiter", "saturn", "uranus", "neptune", "pluto"]:
-        p = planets.get(planet)
-        if p and (abs(p.get("dignity_score", 0)) >= 2 or p.get("house") in [1, 4, 7, 10]):
-            queries.append(f"{planet} in {p['sign']} in {p['house']} house")
-
-    aspects = chart.get("aspects", [])
-    aspects_sorted = sorted(aspects, key=lambda a: a.get("influence_weight", 0), reverse=True)
-    for asp in aspects_sorted[:15]:
-        queries.append(f"{asp['planet_a']} {asp['type']} {asp['planet_b']}")
-
-    for fig in chart.get("aspect_patterns", []):
-        queries.append(f"aspect pattern {fig}")
-
-    for st in chart.get("stelliums", []):
-        queries.append(f"stellium in {st.get('sign') or st.get('house')}")
-
-    for planet in chart.get("critical_degrees", []):
-        p = planets.get(planet)
-        if p:
-            queries.append(f"critical degree {round(p['degree_in_sign'])} {p['sign']}")
-
-    return queries
-
-async def embed(text: str) -> list[float]:
+async def _embed(text: str) -> list[float]:
     resp = await openai_client.embeddings.create(
         input=text,
-        model="text-embedding-3-small"
+        model="text-embedding-3-small",
     )
     return resp.data[0].embedding
 
-async def retrieve_for_query(query: str, supabaseClient, min_score: float, limit: int) -> list[dict]:
-    query_vector = await embed(query)
+
+# ─── Per-sphere RAG ───────────────────────────────────────────────────────────
+
+def _build_sphere_queries(ctx: dict) -> list[str]:
+    """Build targeted RAG queries from a sphere's isolated micro-context."""
+    queries: list[str] = []
+    sphere_num  = ctx["sphere"]
+    sphere_name = ctx["sphere_name"]
+    cusp_sign   = ctx.get("cusp_sign", "")
+
+    # House-level
+    queries.append(f"house {sphere_num} {sphere_name} {cusp_sign}")
+
+    # Ruler
+    ruler = ctx.get("ruler")
+    if ruler:
+        queries.append(f"{ruler['name']} in {ruler['sign']} house {ruler['house']}")
+        if ruler.get("dignity_score", 0) >= 4:
+            queries.append(f"{ruler['name']} domicile exaltation {ruler['sign']}")
+        elif ruler.get("dignity_score", 0) <= -4:
+            queries.append(f"{ruler['name']} detriment fall {ruler['sign']}")
+        if ruler.get("retrograde"):
+            queries.append(f"{ruler['name']} retrograde psychology")
+
+    # Co-ruler
+    co = ctx.get("co_ruler")
+    if co:
+        queries.append(f"{co['name']} {co['sign']} house {co['house']} co-ruler")
+
+    # Planets in house
+    for p in ctx.get("planets_in_house", [])[:3]:
+        queries.append(f"{p['name']} in house {sphere_num} {p['sign']}")
+
+    # Top aspects to ruler
+    for asp in ctx.get("aspects_to_ruler", [])[:2]:
+        queries.append(f"{asp['planet_a']} {asp['type']} {asp['planet_b']}")
+
+    return queries[:8]
+
+
+async def _retrieve_one(query: str, supabase) -> list[dict]:
     try:
-        # Calls a Postgres function defined in Supabase to calculate similarity mapping
-        response = supabaseClient.rpc(
-            'match_book_chunks', 
-            {
-                'query_embedding': query_vector, 
-                'match_threshold': min_score, 
-                'match_count': limit,
-                'p_category': 'western_astrology'
-            }
-        ).execute()
-        return response.data if response.data else []
+        vec  = await _embed(query)
+        resp = supabase.rpc("match_book_chunks", {
+            "query_embedding":  vec,
+            "match_threshold":  MIN_SCORE,
+            "match_count":      TOP_K_PER_QUERY,
+            "p_category":       "western_astrology",
+        }).execute()
+        return resp.data or []
     except Exception as e:
-        logger.error(f"Supabase RPC failed for query '{query}': {e}")
+        logger.warning(f"RAG query failed '{query}': {e}")
         return []
 
-async def retrieve_context(queries: list[str]) -> list[dict]:
-    MIN_SCORE = 0.72
-    TOP_K_PER_QUERY = 4
-    
+
+async def _retrieve_sphere_rag(ctx: dict) -> list[dict]:
+    """Retrieve deduplicated RAG chunks targeted for one sphere."""
+    if settings.SUPABASE_KEY == "mock-key":
+        return []
     try:
         supabase = get_supabase()
     except Exception:
         return []
 
-    # If Supabase is mocked or missing key early return
-    if settings.SUPABASE_KEY == "mock-key":
-         return []
+    queries = _build_sphere_queries(ctx)
+    raw     = await asyncio.gather(
+        *[_retrieve_one(q, supabase) for q in queries],
+        return_exceptions=True,
+    )
 
-    tasks = [
-        retrieve_for_query(q, supabase, MIN_SCORE, TOP_K_PER_QUERY)
-        for q in queries
-    ]
-    raw_results = await asyncio.gather(*tasks, return_exceptions=True)
-
-    seen_ids = set()
-    scored = []
-    
-    for hits in raw_results:
+    seen, scored = set(), []
+    for hits in raw:
         if isinstance(hits, Exception):
             continue
         for hit in hits:
-            hit_id = hit.get('id')
-            if hit_id and hit_id not in seen_ids:
-                seen_ids.add(hit_id)
+            hid = hit.get("id")
+            if hid and hid not in seen:
+                seen.add(hid)
                 scored.append({
-                    "text": hit.get("content", ""),
+                    "text":   hit.get("content", ""),
                     "source": hit.get("source", ""),
-                    "score": hit.get("similarity", 0)
+                    "score":  hit.get("similarity", 0.0),
                 })
 
     scored.sort(key=lambda x: x["score"], reverse=True)
-    return scored[:10]
-
-async def parse_and_validate(raw: str) -> UISResponse:
-    data = json.loads(raw)
-    if isinstance(data, list):
-        data = {"insights": data}
-    return UISResponse(**data)
-
-def _slim_chart_for_prompt(chart: dict) -> dict:
-    """Reduce chart payload size: keep top-15 aspects, strip raw longitudes."""
-    planets_slim = {
-        name: {
-            "sign":           p["sign"],
-            "house":          p["house"],
-            "degree_in_sign": p["degree_in_sign"],
-            "retrograde":     p["retrograde"],
-            "dignity_score":  p["dignity_score"],
-        }
-        for name, p in chart.get("planets", {}).items()
-    }
-    aspects_top = sorted(
-        chart.get("aspects", []),
-        key=lambda a: a.get("influence_weight", 0),
-        reverse=True
-    )[:15]
-    return {
-        "planets":         planets_slim,
-        "houses":          chart.get("houses", {}),
-        "angles":          chart.get("angles", {}),
-        "aspects":         aspects_top,
-        "aspect_patterns": chart.get("aspect_patterns", []),
-        "stelliums":       chart.get("stelliums", []),
-        "critical_degrees": chart.get("critical_degrees", []),
-    }
+    return scored[:MAX_CHUNKS]
 
 
-async def generate_insights(chart: dict, attempt: int = 0) -> UISResponse:
-    queries = build_queries(chart)
-    context_chunks = await retrieve_context(queries)
+# ─── Single-sphere worker ─────────────────────────────────────────────────────
 
-    slim_chart = _slim_chart_for_prompt(chart)
+async def generate_sphere_insights(
+    chart: dict,
+    sphere_id: int,
+    attempt: int = 0,
+    user_id: str = "",      # for logging / tracing; does not affect logic
+) -> list[UniversalInsight]:
+    """
+    Worker agent for one sphere.
+    Extracts isolated context → targeted RAG → specialist LLM call.
+    Returns list of UniversalInsight for sphere_id.
+    """
+    tag = f"user={user_id} sphere={sphere_id}" if user_id else f"sphere={sphere_id}"
+
+    ctx = extract_sphere_context(chart, sphere_id)
+    rag = await _retrieve_sphere_rag(ctx)
+
+    system_prompt = SPECIALIST_PROMPT_TEMPLATE.format(
+        sphere_num  = sphere_id,
+        sphere_name = SPHERE_NAMES[sphere_id],
+        min_ins     = ctx["_target_min"],
+        max_ins     = ctx["_target_max"],
+    )
+
+    # Strip internal metadata keys before sending to LLM
+    sphere_data = {k: v for k, v in ctx.items() if not k.startswith("_")}
+
+    # Inject hardcoded KB facts for this sphere
+    knowledge_base = get_sphere_knowledge(ctx)
+
+    user_payload = json.dumps({
+        "sphere_data":    sphere_data,
+        "knowledge_base": knowledge_base,
+        "book_context":   [{"text": c["text"], "source": c["source"]} for c in rag],
+    }, ensure_ascii=False)
 
     try:
         response = await openai_client.chat.completions.create(
-            model="o4-mini",
+            model=settings.MODEL_HEAVY,
             response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": json.dumps({
-                    "chart": slim_chart,
-                    "book_context": [
-                        {"text": c["text"], "source": c["source"]}
-                        for c in context_chunks
-                    ]
-                }, ensure_ascii=False)}
+                {"role": "system", "content": system_prompt},
+                {"role": "user",   "content": user_payload},
             ],
-            max_completion_tokens=16000,
+            max_tokens=4000,
         )
-        raw = response.choices[0].message.content
-        return await parse_and_validate(raw)
+        raw  = response.choices[0].message.content or ""
+        if not raw.strip():
+            raise ValueError(f"Empty response from LLM (finish_reason={response.choices[0].finish_reason})")
+        data = json.loads(raw)
+        if isinstance(data, list):
+            data = {"insights": data}
+
+        insights = SphereResponse(**data).insights
+
+        # Enforce correct sphere_id on every insight
+        for ins in insights:
+            ins.primary_sphere = sphere_id
+
+        logger.info(f"[{tag}] generated {len(insights)} insights")
+        return insights
+
     except Exception as e:
-        logger.error(f"UIS Generation failed on attempt {attempt}: {e}")
+        logger.error(f"[{tag}] attempt={attempt} failed: {e}")
         if attempt < 2:
-            return await generate_insights(chart, attempt=attempt + 1)
-        raise e
+            await asyncio.sleep(1)
+            return await generate_sphere_insights(chart, sphere_id, attempt + 1, user_id)
+        return []
+
+
+# ─── Orchestrator ─────────────────────────────────────────────────────────────
+
+async def _fallback_sphere_insights(sphere_id: int) -> list[UniversalInsight]:
+    """
+    Minimal fallback insight for a sphere that completely failed all retries.
+    Ensures UISResponse coverage validator never crashes.
+    """
+    sphere_name = SPHERE_NAMES[sphere_id]
+    return [UniversalInsight(
+        primary_sphere   = sphere_id,
+        influence_level  = "low",
+        weight           = 0.10,
+        position         = f"Сфера {sphere_id} — {sphere_name}",
+        core_theme       = f"Анализ временно недоступен",
+        description      = "Данные по этой сфере будут рассчитаны позже.",
+        light_aspect     = "—",
+        shadow_aspect    = "—",
+        insight          = "Технический сбой при расчёте этой сферы. Попробуйте перегенерировать.",
+        gift             = "—",
+        developmental_task = "Повторная генерация",
+        integration_key  = "Запустите пересчёт карты",
+        triggers         = ["Технический сбой"],
+        source           = None,
+    )]
+
+
+async def generate_insights(chart: dict, user_id: str = "") -> UISResponse:
+    """
+    Orchestrator: launches all 12 sphere workers simultaneously.
+    Used for full-chart generation (initial build or full rebuild).
+
+    Returns merged UISResponse with insights from all spheres.
+    Guarantees all 12 spheres are present (fallback insight on hard failure).
+    """
+    logger.info(f"Orchestrator: launching 12 sphere agents in parallel (user={user_id or 'unknown'})")
+
+    tasks = [
+        generate_sphere_insights(chart, sphere_id, user_id=user_id)
+        for sphere_id in range(1, 13)
+    ]
+    results: list = await asyncio.gather(*tasks, return_exceptions=True)
+
+    all_insights: list[UniversalInsight] = []
+    for sphere_id, result in enumerate(results, start=1):
+        if isinstance(result, Exception):
+            logger.error(f"Sphere {sphere_id} raised: {result}")
+            all_insights.extend(await _fallback_sphere_insights(sphere_id))
+            continue
+        if not result:
+            logger.warning(f"Sphere {sphere_id}: empty result after retries — using fallback")
+            all_insights.extend(await _fallback_sphere_insights(sphere_id))
+            continue
+        all_insights.extend(result)
+
+    logger.info(f"Orchestrator: total assembled = {len(all_insights)} insights")
+    return UISResponse(insights=all_insights)

@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { assistantAPI, voiceAPI } from "@/lib/api";
 import { useUserStore } from "@/lib/store";
+import { useTmaSafeArea } from "@/lib/useTmaSafeArea";
+import BottomNav from "@/components/BottomNav";
 
 const MicIcon = ({ className }: { className?: string }) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -67,6 +69,7 @@ const useVoiceRecorder = (userId: string | null, setInput: React.Dispatch<React.
 
 export default function AssistantPage() {
     const router = useRouter();
+    const tmaSafeTop = useTmaSafeArea();
     const { userId, assistantMessages, setAssistantMessages } = useUserStore();
     const [messages, setMessages] = useState<{ role: string, content: string }[]>(assistantMessages);
     const [input, setInput] = useState("");
@@ -86,12 +89,13 @@ export default function AssistantPage() {
         if (!userId) return;
         const init = async () => {
             try {
+                // Init is instant (no OpenAI call)
                 const res = await assistantAPI.init(userId);
                 const sid = res.data.session_id;
                 setSessionId(sid);
                 setIsFirstTouch(res.data.is_first_touch);
-                
-                // If there are no persistent messages, get a greeting from the backend
+
+                // Greeting via chat with empty message (separate request, can take time)
                 if (messages.length === 0) {
                     setLoading(true);
                     const chatRes = await assistantAPI.chat(userId, sid, "");
@@ -196,16 +200,16 @@ export default function AssistantPage() {
         })), []);
 
     return (
-        <div 
-            className="fixed inset-0 flex flex-col bg-[#060818] overflow-hidden" 
-            style={{ zIndex: 10 }}
+        <div
+            className="fixed inset-0 flex flex-col bg-[#060818] overflow-hidden"
+            style={{ zIndex: 10, paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}
         >
 
-            {/* Top bar */}
-            <div style={{ padding: "12px 16px 8px", borderBottom: "1px solid rgba(255,255,255,0.05)", flexShrink: 0, position: "relative", zIndex: 20 }}>
+            {/* Top bar — offset for TMA header */}
+            <div style={{ padding: "14px 16px 8px", borderBottom: "1px solid rgba(255,255,255,0.05)", flexShrink: 0, position: "relative", zIndex: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <button
-                        onClick={() => router.push("/")}
+                        onClick={() => router.back()}
                         style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}
                     >
                         ← Назад
@@ -313,7 +317,7 @@ export default function AssistantPage() {
             </div>
 
             {/* Bottom panel */}
-            <div style={{ flexShrink: 0, padding: "10px 16px 20px", borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", flexDirection: "column", gap: 8, position: "relative", zIndex: 20, background: "rgba(6,8,24,0.8)", backdropFilter: "blur(10px)", opacity: isFinished ? 0.3 : 1, pointerEvents: isFinished ? "none" : "auto" }}>
+            <div style={{ flexShrink: 0, padding: "10px 16px 20px", borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", flexDirection: "column", gap: 8, position: "relative", zIndex: 20, background: "rgba(6,8,24,0.95)", backdropFilter: "blur(10px)", opacity: isFinished ? 0.3 : 1, pointerEvents: isFinished ? "none" : "auto" }}>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", position: "relative" }}>
                     <div style={{ flex: 1, position: "relative" }}>
                         <textarea
@@ -394,9 +398,6 @@ export default function AssistantPage() {
                         {isRecording ? "🔴" : <MicIcon className="w-5 h-5 text-amber-500/60" />}
                     </button>
                 </div>
-                <p style={{ textAlign: "center", fontSize: 10, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>
-                    {loading ? "Думаю..." : "☼ Чат с внутренним миром"}
-                </p>
             </div>
         </div>
     );

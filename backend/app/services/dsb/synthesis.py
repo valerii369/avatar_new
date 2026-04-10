@@ -5,8 +5,19 @@ import logging
 from app.core.config import settings
 import json
 import openai
+import time
 
 logger = logging.getLogger(__name__)
+
+
+def _usage_to_dict(usage) -> dict:
+    if not usage:
+        return {}
+    return {
+        "prompt_tokens": getattr(usage, "prompt_tokens", None),
+        "completion_tokens": getattr(usage, "completion_tokens", None),
+        "total_tokens": getattr(usage, "total_tokens", None),
+    }
 
 def synthesize(insights: list[UniversalInsight], system_name: str = "western_astrology") -> dict:
     level_order = {"high": 0, "medium": 1, "low": 2}
@@ -40,42 +51,61 @@ async def generate_portrait_summary(user_id: str, synthesized_data: dict) -> dic
                 top_insights.append({
                     "sphere": item.primary_sphere,
                     "theme": item.core_theme,
-                    "energy": item.energy_description
+                    "description": item.description,
+                    "insight": item.insight,
+                    "gift": item.gift
                 })
 
     prompt = f"""
-    You are the AVATAR Synthesis Engine. 
-    Based on the following astrological insights, generate a cohesive character portrait.
-    Provide the response in STRICT JSON format.
+    Ты — движок синтеза AVATAR.
+    На основе астрологических инсайтов составь целостный психологический портрет.
+    ВЕСЬ ТЕКСТ СТРОГО НА РУССКОМ ЯЗЫКЕ.
+    Ответ в формате JSON.
 
-    Insights:
+    Инсайты:
     {json.dumps(top_insights, ensure_ascii=False)}
 
-    JSON Structure:
+    Структура JSON:
     {{
-        "core_identity": "A 1-sentence powerful description of the soul's essence",
-        "core_archetype": "A creative title (e.g. The Cosmic Architect)",
-        "narrative_role": "Their role in the social/universal play",
-        "energy_type": "Description of their dominant vibration",
-        "current_dynamic": "What they are currently integrating or facing",
+        "core_identity": "Одно предложение — суть души человека (на русском)",
+        "core_archetype": "Творческое название архетипа (например: Космический Архитектор)",
+        "narrative_role": "Роль в социальном и духовном контексте (на русском)",
+        "energy_type": "Описание доминирующей вибрации / типа энергии (на русском)",
+        "current_dynamic": "Что человек сейчас интегрирует или с чем сталкивается (на русском)",
         "polarities": {{
-            "core_strengths": ["list of 3 key strengths"],
-            "shadow_aspects": ["list of 3 key shadow traits"]
+            "core_strengths": ["3 ключевые сильные стороны на русском"],
+            "shadow_aspects": ["3 ключевые теневые черты на русском"]
         }}
     }}
     """
 
     client = openai.AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
     try:
+        t0 = time.perf_counter()
+        system_prompt = "Ты — мастер психологической и эволюционной астрологии. Отвечай ТОЛЬКО на русском языке."
         response = await client.chat.completions.create(
-            model="gpt-4.1-mini",
+            model=settings.MODEL_LIGHT,
             messages=[
-                {"role": "system", "content": "You are a master of psychological and evolutionary astrology."},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
             ],
             response_format={"type": "json_object"}
         )
-        summary = json.loads(response.choices[0].message.content)
+        raw_content = response.choices[0].message.content or "{}"
+        duration_s = time.perf_counter() - t0
+        logger.info(
+            "[LLM_TRACE] label=portrait_summary model=%s duration=%.2fs usage=%s\n"
+            "----- SYSTEM PROMPT BEGIN -----\n%s\n"
+            "----- SYSTEM PROMPT END -----\n"
+            "----- USER PAYLOAD BEGIN -----\n%s\n"
+            "----- USER PAYLOAD END -----\n"
+            "----- LLM RESPONSE BEGIN -----\n%s\n"
+            "----- LLM RESPONSE END -----",
+            settings.MODEL_LIGHT, duration_s,
+            json.dumps(_usage_to_dict(response.usage), ensure_ascii=False),
+            system_prompt, prompt, raw_content,
+        )
+        summary = json.loads(raw_content)
         return summary
     except Exception as e:
         logger.error(f"Failed to generate portrait summary: {e}")
@@ -95,12 +125,12 @@ async def save_to_supabase(user_id: str, result: dict, portrait: dict = None):
     
     for system, spheres in result.items():
         for sphere_id, insights in spheres.items():
-            for rank, ins in enumerate(insights):
+            for rank, ins in enumerate(insights, start=1):   # 1-based rank
                 rows.append({
                     "user_id":            user_id,
                     "system":             system,
                     "primary_sphere":     sphere_id,
-                    "rank":               rank,          # позиция внутри сферы
+                    "rank":               rank,
                     **ins.model_dump()
                 })
                 

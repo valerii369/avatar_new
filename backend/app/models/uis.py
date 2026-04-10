@@ -14,11 +14,14 @@ class UniversalInsight(BaseModel):
     position: str = Field(..., min_length=2, max_length=150)
 
     # --- Контент карточки ---
-    # Relaxed min_length: GPT sometimes returns valid but concise values
     core_theme: str = Field(..., min_length=3, max_length=120)
-    energy_description: str = Field(..., min_length=5, max_length=400)
-    light_aspect: str = Field(..., min_length=3, max_length=300)
-    shadow_aspect: str = Field(..., min_length=3, max_length=300)
+    description: str = Field(..., min_length=5, max_length=500)
+    light_aspect: str = Field(..., min_length=3, max_length=500)
+    shadow_aspect: str = Field(..., min_length=3, max_length=500)
+    insight: str = Field(..., min_length=5, max_length=800)
+    gift: str = Field(..., min_length=3, max_length=500)
+
+    # --- Детальный экран ---
     developmental_task: str = Field(..., min_length=5, max_length=200)
     integration_key: str = Field(..., min_length=5, max_length=200)
     triggers: list[str] = Field(..., min_length=1, max_length=8)
@@ -48,7 +51,13 @@ class UniversalInsight(BaseModel):
         return [t.strip() for t in v if t.strip()]
 
 
+class SphereResponse(BaseModel):
+    """Single-sphere response from a worker agent. No coverage validation."""
+    insights: list[UniversalInsight] = Field(..., min_length=1, max_length=15)
+
+
 class UISResponse(BaseModel):
+    """Full chart response. Requires all 12 spheres."""
     insights: list[UniversalInsight] = Field(..., min_length=12, max_length=120)
 
     @field_validator("insights")

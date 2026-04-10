@@ -37,8 +37,9 @@ next-env.d.ts
 
 # Project specific
 backend/venv/
-backend/app/ephe/
-ephe/
+# Swiss Ephemeris files are needed on VPS — do NOT ignore
+# backend/app/ephe/
+# ephe/
 Хранилище токенов.md
 *.pem
 .vercel

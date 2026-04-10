@@ -28,20 +28,18 @@ export default function BottomNav() {
   return (
     <nav style={{
       position: "fixed",
-      bottom: 16,
-      left: 16,
-      right: 16,
-      background: "rgba(13,18,38,0.92)",
+      bottom: 12, left: 12, right: 12,
+      background: "rgba(10,14,30,0.92)",
       backdropFilter: "blur(24px)",
       WebkitBackdropFilter: "blur(24px)",
-      border: "1px solid rgba(255,255,255,0.09)",
-      borderRadius: 28,
+      border: "1px solid rgba(255,255,255,0.07)",
+      borderRadius: 20,
       display: "flex",
       justifyContent: "space-around",
       alignItems: "center",
-      padding: "10px 4px",
+      padding: "8px 2px",
       zIndex: 100,
-      boxShadow: "0 8px 32px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.05) inset",
+      boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
     }}>
       {navItems.map((item) => {
         const isActive = active === item.key;
@@ -52,17 +50,13 @@ export default function BottomNav() {
             id={`nav-${item.key}`}
             onClick={() => router.push(item.path)}
             style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 4,
-              padding: "6px 12px",
-              borderRadius: 18,
-              border: "none",
-              cursor: "pointer",
-              background: isActive ? "rgba(255,255,255,0.1)" : "transparent",
+              display: "flex", flexDirection: "column",
+              alignItems: "center", gap: 3,
+              padding: "6px 10px", borderRadius: 14,
+              border: "none", cursor: "pointer",
+              background: isActive ? "rgba(255,255,255,0.07)" : "transparent",
               transition: "all 0.2s",
-              minWidth: 52,
+              minWidth: 48,
             }}
           >
             <Icon
@@ -70,12 +64,11 @@ export default function BottomNav() {
               strokeWidth={isActive ? 2.2 : 1.5}
               style={{
                 color: isActive ? "var(--text-primary)" : "var(--text-muted)",
-                transition: "all 0.2s",
+                transition: "color 0.2s",
               }}
             />
             <span style={{
-              fontSize: 10,
-              fontWeight: isActive ? 600 : 500,
+              fontSize: 9, fontWeight: isActive ? 600 : 500,
               color: isActive ? "var(--text-primary)" : "var(--text-muted)",
               letterSpacing: "0.01em",
               transition: "color 0.2s",

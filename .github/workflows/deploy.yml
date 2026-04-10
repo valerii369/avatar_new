@@ -23,7 +23,11 @@ jobs:
             set -e
             DEPLOY_DIR=/root/avatar-new
 
-            cd $DEPLOY_DIR && git fetch origin && git reset --hard origin/develop
+            cd $DEPLOY_DIR
+            echo "Remote URL: $(git remote get-url origin)"
+            git remote set-url origin https://github.com/valerii369/avatar_new.git
+            git fetch origin && git reset --hard origin/develop
+            echo "Current commit: $(git rev-parse HEAD)"
             cd backend
 
             if [ ! -d "venv" ]; then
@@ -45,12 +49,30 @@ jobs:
             set_env TELEGRAM_BOT_TOKEN "${{ secrets.TELEGRAM_BOT_TOKEN }}"
             set_env MINI_APP_URL "${{ secrets.MINI_APP_URL }}"
 
-            # Copy and enable bot service if not already installed
+            # Copy service files (always overwrite to pick up any changes)
             cp avatar-bot.service /etc/systemd/system/avatar-bot.service
+            cp avatar-backend.service /etc/systemd/system/avatar-new-backend.service
             systemctl daemon-reload
             systemctl enable avatar-bot
+            systemctl enable avatar-new-backend
 
+            # Find and show what's running on port 8000 before we change anything
+            echo "=== Port 8000 before restart ==="
+            ss -tlnp 2>/dev/null | grep :8000 || echo "(none)"
+
+            # Kill any process holding port 8000
+            fuser -k 8000/tcp 2>/dev/null || true
+            sleep 3
+
+            # Start our backend fresh
             systemctl restart avatar-new-backend
+            sleep 5
+
+            # Verify it's running correctly
+            echo "=== Port 8000 after restart ==="
+            ss -tlnp 2>/dev/null | grep :8000 || echo "(none)"
+            systemctl status avatar-new-backend --no-pager || true
+
             systemctl restart avatar-bot
             echo "✅ Backend + Bot deployed"
 
@@ -69,13 +91,34 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel
 
+      - name: Ensure NEXT_PUBLIC_API_URL in Vercel project
+        run: |
+          # List existing env vars, find the one with key NEXT_PUBLIC_API_URL
+          ENV_ID=$(curl -s "https://api.vercel.com/v9/projects/${{ secrets.VERCEL_PROJECT_ID }}/env" \
+            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
+            | python3 -c "import sys,json; envs=json.load(sys.stdin).get('envs',[]); ids=[e['id'] for e in envs if e['key']=='NEXT_PUBLIC_API_URL']; print(ids[0] if ids else '')" 2>/dev/null)
+
+          DESIRED="http://103.74.92.72:8000"
+
+          if [ -n "$ENV_ID" ]; then
+            echo "Updating existing env var $ENV_ID"
+            curl -s -X PATCH "https://api.vercel.com/v9/projects/${{ secrets.VERCEL_PROJECT_ID }}/env/$ENV_ID" \
+              -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"value\":\"$DESIRED\"}" | grep -E '"id"|"value"' || true
+          else
+            echo "Creating new env var"
+            curl -s -X POST "https://api.vercel.com/v10/projects/${{ secrets.VERCEL_PROJECT_ID }}/env" \
+              -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"key\":\"NEXT_PUBLIC_API_URL\",\"value\":\"$DESIRED\",\"type\":\"plain\",\"target\":[\"production\",\"preview\",\"development\"]}" | grep -E '"id"|"error"' || true
+          fi
+
       - name: Deploy to Vercel
         run: |
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            vercel --token ${{ secrets.VERCEL_TOKEN }} --prod --yes
-          else
-            vercel --token ${{ secrets.VERCEL_TOKEN }} --yes
-          fi
+          # Deploy both main and develop as production
+          # (develop is our active branch, main is reserved for later)
+          vercel --token ${{ secrets.VERCEL_TOKEN }} --prod --yes
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

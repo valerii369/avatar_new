@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { calcAPI, api, voiceAPI } from "@/lib/api";
 import { useUserStore } from "@/lib/store";
+import { setupTelegramViewport } from "@/lib/tma";
 import SacredGeometryLogo from "@/components/SacredGeometryLogo";
 
 const MicIcon = ({ className }: { className?: string }) => (
@@ -66,7 +67,7 @@ const MONTHS = [
     { value: "07", label: "Июль" }, { value: "08", label: "Август" }, { value: "09", label: "Сентябрь" },
     { value: "10", label: "Октябрь" }, { value: "11", label: "Ноябрь" }, { value: "12", label: "Декабрь" },
 ];
-const DAYS = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0'));
+// DAYS is now computed dynamically inside AstroFlow based on month/year
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
 const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
 const GENDER_OPTIONS = [
@@ -104,6 +105,20 @@ function AstroFlow({ step, setStep, onBack }: { step: number, setStep: React.Dis
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [geoResult, setGeoResult] = useState<any>(null);
+
+    // Dynamic days based on selected month/year
+    const validDays = useMemo(() => {
+        const maxDays = new Date(parseInt(form.birth_year), parseInt(form.birth_month), 0).getDate();
+        return Array.from({ length: maxDays }, (_, i) => String(i + 1).padStart(2, '0'));
+    }, [form.birth_year, form.birth_month]);
+
+    // Auto-clamp day if it exceeds max days for selected month/year
+    useEffect(() => {
+        const maxDays = new Date(parseInt(form.birth_year), parseInt(form.birth_month), 0).getDate();
+        if (parseInt(form.birth_day) > maxDays) {
+            setForm(f => ({ ...f, birth_day: String(maxDays).padStart(2, '0') }));
+        }
+    }, [form.birth_year, form.birth_month, form.birth_day]);
 
     const steps = [
         { id: "gender", title: "Ваш пол", hint: "Это поможет подобрать стиль общения", icon: "👤", iconColor: "var(--cyan)", description: "Выберите ваш пол для персонализации" },
@@ -177,7 +192,7 @@ function AstroFlow({ step, setStep, onBack }: { step: number, setStep: React.Dis
                             </div>
                         ) : currentStep.id === "date" ? (
                             <div className="flex gap-2">
-                                <CustomSelect label="День" value={form.birth_day} onChange={(v: string) => setForm(f => ({ ...f, birth_day: v }))} options={DAYS} flex={0.6} />
+                                <CustomSelect label="День" value={form.birth_day} onChange={(v: string) => setForm(f => ({ ...f, birth_day: v }))} options={validDays} flex={0.6} />
                                 <CustomSelect label="Месяц" value={form.birth_month} onChange={(v: string) => setForm(f => ({ ...f, birth_month: v }))} options={MONTHS} flex={1.2} />
                                 <CustomSelect label="Год" value={form.birth_year} onChange={(v: string) => setForm(f => ({ ...f, birth_year: v }))} options={YEARS} />
                             </div>
@@ -367,13 +382,19 @@ export default function OnboardingPage() {
     const progress = ((step + 1) / totalAstroSteps) * 100;
 
     useEffect(() => {
+        // TMA fullscreen
+        const tg = (window as any).Telegram?.WebApp;
+        if (tg) {
+            setupTelegramViewport(tg);
+        }
+
         const checkDebug = async () => {
             const params = new URLSearchParams(window.location.search);
             const isDebug = params.get("debug") === "true";
             const testUserId = params.get("user_id");
             if (isDebug) {
                 try {
-                    const authRes = await api.post("/api/auth", { initData: "", test_mode: true, test_user_id: testUserId ? parseInt(testUserId) : 12345678 });
+                    const authRes = await api.post("/api/auth/login", { init_data: "", is_dev: true, test_user_id: testUserId ? parseInt(testUserId) : 12345678 });
                     const d = authRes.data;
                     setUser({ userId: d.user_id, tgId: d.tg_id, firstName: d.first_name, token: d.token, energy: d.energy, streak: d.streak, evolutionLevel: d.evolution_level, title: d.title, onboardingDone: d.onboarding_done });
                     if (typeof window !== "undefined") localStorage.setItem("avatar_token", d.token);

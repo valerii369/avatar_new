@@ -9,6 +9,7 @@ import BottomNav from "@/components/BottomNav";
 import useSWR from "swr";
 import { Skeleton } from "@/components/Skeleton";
 import { EnergyIcon } from "@/components/EnergyIcon";
+import { useTmaSafeArea } from "@/lib/useTmaSafeArea";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -19,7 +20,8 @@ import { EnergyIcon } from "@/components/EnergyIcon";
 export default function ProfilePage() {
     const router = useRouter();
     const { play } = useAudio();
-    const { userId, firstName, setUser, referralCode, energy, evolutionLevel, photoUrl } = useUserStore();
+    const { userId, tgId, firstName, setUser, referralCode, energy, evolutionLevel, photoUrl } = useUserStore();
+    const tmaSafeTop = useTmaSafeArea();
     const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
     const [activeTab, setActiveTab] = useState<"main" | "settings" | "referrals">("main");
     const [showShop, setShowShop] = useState(false);
@@ -90,56 +92,23 @@ export default function ProfilePage() {
 
     return (
         <div
-            className="min-h-screen flex flex-col"
-            style={{ background: "var(--bg-deep)", paddingBottom: 96 }}
+            className="flex flex-col"
+            style={{ background: "var(--bg-deep)", height: "100dvh", overflow: "hidden", paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}
         >
             {/* ── Header ── */}
-            <div className="px-4 pt-5 pb-3">
-                <div
-                    className="flex items-center gap-3 p-3"
-                    style={{
-                        background: "rgba(255,255,255,0.05)",
-                        border: "1px solid var(--border)",
-                        borderRadius: 18,
-                    }}
-                >
-                    <div style={{
-                        width: 44, height: 44, borderRadius: "50%",
-                        background: "rgba(255,255,255,0.1)",
-                        border: "1px solid var(--border)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 24, color: "var(--text-muted)", flexShrink: 0,
-                        overflow: "hidden",
-                    }}>
-                        {photoUrl ? (
-                            <img
-                                src={photoUrl}
-                                alt={firstName}
-                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                            />
-                        ) : (
-                            "👤"
-                        )}
-                    </div>
-                    <div className="flex-1 flex justify-between items-center">
-                        <div className="flex flex-col">
-                            <span className="font-semibold text-base" style={{ color: "var(--text-primary)" }}>
-                                {firstName || "Пользователь"}
-                            </span>
-                            <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500, marginTop: -2 }}>
-                                Level <span style={{ color: "var(--text-primary)", fontWeight: 700 }}>{evolutionLevel}</span>/100
-                            </span>
-                        </div>
-                        <span className="font-semibold text-base flex items-center gap-0.5" style={{ color: "#F59E0B" }}>
-                            <EnergyIcon size={20} color="#F59E0B" />
-                            {energy}
-                        </span>
-                    </div>
-                </div>
+            <div style={{ padding: "6px 20px 8px" }}>
+                <h1 style={{
+                    fontSize: 22, fontWeight: 800, fontFamily: "'Outfit', sans-serif",
+                    margin: 0,
+                    background: "linear-gradient(135deg, var(--violet-l), var(--violet))",
+                    WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+                }}>
+                    Профиль
+                </h1>
             </div>
 
             {/* ── Menu (Tabs) ── */}
-            <div className="px-4 mb-5 flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <div className="px-4 mb-3 flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 <button
                     onClick={() => setActiveTab("main")}
                     className="flex-1 py-2.5 px-4 rounded-[16px] flex flex-col items-center justify-center gap-1 min-w-[30%] transition-all"
@@ -176,8 +145,8 @@ export default function ProfilePage() {
                 </button>
             </div>
 
-            {/* ── Tab Content ── */}
-            <div className="flex-1">
+            {/* ── Tab Content (scrollable) ── */}
+            <div className="flex-1" style={{ overflowY: "auto", paddingBottom: 90, WebkitOverflowScrolling: "touch" }}>
                 {activeTab === "main" && (
                     <MainProfileView
                         game={game}
@@ -188,7 +157,7 @@ export default function ProfilePage() {
                     />
                 )}
                 {activeTab === "settings" && (
-                    <SettingsView userId={userId!} />
+                    <SettingsView userId={userId!} tgId={tgId} />
                 )}
                 {activeTab === "referrals" && (
                     <ReferralView userId={userId!} referralCode={referralCode} />
@@ -280,9 +249,11 @@ function MainProfileView({ game, loadingGame, profile, setShowShop, setShowSubsc
     );
 }
 
-function SettingsView({ userId }: { userId: string }) {
+function SettingsView({ userId, tgId }: { userId: string; tgId: number | null }) {
     const [lang, setLang] = useState("RU");
+    const [resetting, setResetting] = useState(false);
     const { musicEnabled, sfxEnabled, toggleMusic, toggleSfx, play } = useAudio();
+    const { reset: resetStore } = useUserStore();
 
     const toggleLang = () => {
         play('click');
@@ -375,27 +346,47 @@ function SettingsView({ userId }: { userId: string }) {
                 
                 <button
                     onClick={async () => {
-                        if (confirm("Вы уверены? Это полностью сбросит ваш прогресс, удалит все карточки и сессии.")) {
-                            try {
-                                const tg = (window as any).Telegram?.WebApp;
-                                const tid = tg?.initDataUnsafe?.user?.id || userId; 
-                                if (!tid) return;
-                                await profileAPI.reset(tid);
-                                localStorage.removeItem("avatar_token");
-                                window.location.href = "/onboarding";
-                            } catch (e) {
-                                console.error("Reset error", e);
-                                alert("Ошибка при сбросе профиля");
+                        if (!confirm("Вы уверены? Это полностью сбросит ваш прогресс, удалит все карточки и сессии.")) {
+                            return;
+                        }
+                        try {
+                            setResetting(true);
+                            const tg = (window as any).Telegram?.WebApp;
+                            const resolvedTgId =
+                                tgId ??
+                                tg?.initDataUnsafe?.user?.id ??
+                                999999999;
+
+                            if (!resolvedTgId) {
+                                throw new Error("Telegram ID not found");
                             }
+
+                            await profileAPI.resetOnboardingData({
+                                userId,
+                                tgId: Number(resolvedTgId),
+                                clearGeocode: true,
+                            });
+                            resetStore();
+                            localStorage.removeItem("avatar_token");
+                            window.location.href = "/";
+                        } catch (e) {
+                            console.error("Reset error", e);
+                            const msg = (e as any)?.response?.data?.detail || "Ошибка при сбросе профиля";
+                            alert(msg);
+                        } finally {
+                            setResetting(false);
                         }
                     }}
+                    disabled={resetting}
                     className="w-full flex items-center justify-between p-3 bg-rose-500/10 rounded-2xl border border-rose-500/20 active:scale-[0.98] transition-all text-left group"
                 >
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-xl">⚠️</div>
                         <div>
-                            <p className="text-sm font-semibold text-rose-400">Начать заново</p>
-                            <p className="text-[10px] text-rose-500/40">Полный сброс параметров</p>
+                            <p className="text-sm font-semibold text-rose-400">
+                                {resetting ? "Перезапуск..." : "Перезапуск онбординга"}
+                            </p>
+                            <p className="text-[10px] text-rose-500/40">Сброс по Telegram ID и новый старт</p>
                         </div>
                     </div>
                 </button>

@@ -3,14 +3,18 @@
   "configurations": [
     {
       "name": "Frontend (Next.js)",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeExecutable": "/usr/local/bin/node",
+      "runtimeArgs": ["node_modules/.bin/next", "dev", "--port", "3000"],
       "cwd": "frontend",
-      "port": 3000
+      "port": 3000,
+      "env": {
+        "PATH": "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+        "NODE_PATH": "/usr/local/lib/node_modules"
+      }
     },
     {
       "name": "Backend (FastAPI)",
-      "runtimeExecutable": "venv/bin/uvicorn",
+      "runtimeExecutable": "/Users/valeriiguro/Desktop/AVATARv2.0/backend/venv/bin/uvicorn",
       "runtimeArgs": ["app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"],
       "cwd": "backend",
       "port": 8000
