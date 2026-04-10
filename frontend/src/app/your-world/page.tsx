@@ -738,7 +738,11 @@ export default function YourWorldPage() {
 
       <AnimatePresence>
         {selectedInsight && (
-          <InsightDetailModal insight={selectedInsight} onClose={() => setSelectedInsight(null)} />
+          <InsightDetailModal
+            insight={selectedInsight}
+            onClose={() => setSelectedInsight(null)}
+            natalPositions={hub?.natal_positions ?? []}
+          />
         )}
       </AnimatePresence>
 
