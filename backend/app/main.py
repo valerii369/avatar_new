@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from app.api import auth, portraits, assistant
 from app.api.extras import game_router, diary_router, payments_router
+from app.api.recommendations import router as recommendations_router
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
@@ -139,3 +140,4 @@ app.include_router(assistant.router,  prefix="/api/assistant", tags=["assistant"
 app.include_router(game_router,     prefix="/api/game",     tags=["game"])
 app.include_router(diary_router,    prefix="/api/diary",    tags=["diary"])
 app.include_router(payments_router, prefix="/api/payments", tags=["payments"])
+app.include_router(recommendations_router)
