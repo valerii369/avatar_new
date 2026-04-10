@@ -1,79 +1,36 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import useSWR from "swr";
+import useSWR, { mutate } from "swr";
 import { useUserStore, useInsightsStore, type Insight } from "@/lib/store";
-import { masterHubAPI } from "@/lib/api";
+import { masterHubAPI, calcAPI } from "@/lib/api";
 import { SPHERES, SPHERE_BY_ID, INFLUENCE_SORT } from "@/lib/constants";
-
-// ─── Pipeline Loading ─────────────────────────────────────────────────────────
-function PipelineLoading() {
-  const steps = [
-    "Строим натальную карту",
-    "Анализируем 12 сфер",
-    "Формируем инсайты",
-    "Собираем портрет",
-  ];
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 24px", textAlign: "center" }}>
-      <div style={{ position: "relative", width: 72, height: 72, marginBottom: 24 }}>
-        <div style={{
-          position: "absolute", inset: 0, borderRadius: "50%",
-          border: "2px solid rgba(139,92,246,0.2)",
-          borderTop: "2px solid #8B5CF6",
-          animation: "spin 1s linear infinite",
-        }} />
-        <div style={{
-          position: "absolute", inset: 0,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 28,
-        }}>✨</div>
-      </div>
-      <p style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", margin: 0, marginBottom: 8 }}>
-        Астрологический разбор вычисляется
-      </p>
-      <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0, marginBottom: 24, maxWidth: 260, lineHeight: 1.5 }}>
-        Анализируем натальную карту и составляем персональный портрет
-      </p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", maxWidth: 280 }}>
-        {steps.map((step, i) => (
-          <div key={i} style={{
-            display: "flex", alignItems: "center", gap: 10,
-            padding: "8px 14px", borderRadius: 12,
-            background: "rgba(139,92,246,0.06)",
-            border: "1px solid rgba(139,92,246,0.1)",
-          }}>
-            <motion.div
-              style={{ width: 6, height: 6, borderRadius: "50%", background: "#8B5CF6", flexShrink: 0 }}
-              animate={{ opacity: [0.3, 1, 0.3] }}
-              transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.35 }}
-            />
-            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 400 }}>{step}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 import SphereFilter from "@/components/SphereFilter";
 import InsightCard from "@/components/InsightCard";
 import InsightDetailModal from "@/components/InsightDetailModal";
 import { SkeletonCard } from "@/components/Skeleton";
 import BottomNav from "@/components/BottomNav";
+import { useTmaSafeArea } from "@/lib/useTmaSafeArea";
 
 type Tab = "portrait" | "breakdown" | "sides";
 
-// ─── Portrait Tab ─────────────────────────────────────────────────────────────
+// ─── Portrait Tab ────────────────────────────────────────────────────────────
 function PortraitTab({ hub }: { hub: any }) {
   if (!hub?.portrait_summary) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <div style={{ fontSize: 56, marginBottom: 16 }}>✨</div>
-        <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--text-primary)", margin: 0, marginBottom: 8 }}>
+      <div className="flex flex-col items-center justify-center" style={{ padding: "60px 20px", textAlign: "center" }}>
+        <div style={{
+          width: 56, height: 56, borderRadius: 16,
+          background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.1)",
+          display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16,
+        }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--violet)", opacity: 0.4 }} />
+        </div>
+        <p style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", marginBottom: 6 }}>
           Портрет формируется
-        </h3>
-        <p style={{ fontSize: 13, color: "var(--text-muted)", maxWidth: 260, lineHeight: 1.5 }}>
+        </p>
+        <p style={{ fontSize: 12, color: "var(--text-muted)", maxWidth: 260, lineHeight: 1.5 }}>
           Пройди онбординг, чтобы получить персональный архетипический портрет
         </p>
       </div>
@@ -81,53 +38,140 @@ function PortraitTab({ hub }: { hub: any }) {
   }
 
   const p = hub.portrait_summary;
+  const polarities = hub.deep_profile_data?.polarities;
+  const [expandedCard, setExpandedCard] = useState<{ label: string; value: string; color: string } | null>(null);
+
+  const attrs = [
+    { label: "Архетип",  value: p.core_archetype,  color: "#8B5CF6" },
+    { label: "Роль",     value: p.narrative_role,   color: "#3B82F6" },
+    { label: "Энергия",  value: p.energy_type,      color: "#10B981" },
+    { label: "Динамика", value: p.current_dynamic,  color: "#F59E0B" },
+  ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingBottom: 16 }}>
-      {/* Core Identity Card */}
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+
+      {/* Core Identity */}
       <div style={{
-        padding: 20, borderRadius: 20,
-        background: "linear-gradient(135deg, rgba(139,92,246,0.10), rgba(59,130,246,0.05))",
-        border: "1px solid rgba(139,92,246,0.18)",
-        position: "relative", overflow: "hidden",
+        padding: 20, borderRadius: 16,
+        background: "linear-gradient(145deg, rgba(139,92,246,0.06), rgba(59,130,246,0.03))",
+        border: "1px solid rgba(139,92,246,0.12)",
       }}>
         <div style={{
-          position: "absolute", top: -20, right: -20,
-          width: 140, height: 140,
-          background: "rgba(139,92,246,0.08)", borderRadius: "50%", filter: "blur(40px)",
-        }} />
-        <div style={{
-          fontSize: 9, fontWeight: 800, letterSpacing: "0.2em",
-          color: "rgba(139,92,246,0.7)", textTransform: "uppercase", marginBottom: 10,
+          fontSize: 10, fontWeight: 700, color: "rgba(139,92,246,0.5)",
+          textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 10,
         }}>
-          ● Идентификация Аватара
+          Идентификация Аватара
         </div>
         <p style={{ fontSize: 14, fontWeight: 500, color: "var(--text-primary)", lineHeight: 1.6, margin: 0 }}>
           {p.core_identity}
         </p>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 14 }}>
-          {[
-            { label: "Архетип",  value: p.core_archetype,  color: "#8B5CF6" },
-            { label: "Роль",     value: p.narrative_role,  color: "#3B82F6" },
-            { label: "Энергия",  value: p.energy_type,     color: "#10B981" },
-            { label: "Динамика", value: p.current_dynamic, color: "#F59E0B" },
-          ].map(({ label, value, color }) => (
-            <div key={label} style={{
-              padding: 10, borderRadius: 12,
-              background: `${color}10`, border: `1px solid ${color}20`,
-            }}>
-              <span style={{
-                fontSize: 8, fontWeight: 700, color: `${color}99`,
-                textTransform: "uppercase", display: "block", marginBottom: 3,
-              }}>{label}</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color }}>{value}</span>
-            </div>
-          ))}
-        </div>
       </div>
 
+      {/* Attributes — truncated, tap to expand */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        {attrs.map(({ label, value, color }) => {
+          const truncated = value && value.length > 40 ? value.slice(0, 37) + "..." : value;
+          return (
+            <div key={label} onClick={() => setExpandedCard({ label, value, color })} style={{
+              padding: "12px 14px", borderRadius: 14,
+              background: `${color}08`, border: `1px solid ${color}15`,
+              cursor: "pointer", minHeight: 70, display: "flex", flexDirection: "column", justifyContent: "space-between",
+            }}>
+              <span style={{
+                fontSize: 10, fontWeight: 700, color: `${color}80`,
+                textTransform: "uppercase", letterSpacing: "0.08em",
+                display: "block", marginBottom: 6,
+              }}>{label}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color, lineHeight: 1.3 }}>
+                {truncated}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Expanded card modal */}
+      <AnimatePresence>
+        {expandedCard && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setExpandedCard(null)}
+            style={{
+              position: "fixed", inset: 0, zIndex: 100,
+              background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: 24,
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: "100%", maxWidth: 340, borderRadius: 20,
+                background: "var(--bg-card)", border: `1px solid ${expandedCard.color}25`,
+                padding: 24,
+              }}
+            >
+              <span style={{
+                fontSize: 10, fontWeight: 700, color: `${expandedCard.color}80`,
+                textTransform: "uppercase", letterSpacing: "0.12em",
+                display: "block", marginBottom: 12,
+              }}>
+                {expandedCard.label}
+              </span>
+              <p style={{
+                fontSize: 15, fontWeight: 600, color: expandedCard.color,
+                lineHeight: 1.5, margin: 0, marginBottom: 16,
+              }}>
+                {expandedCard.value}
+              </p>
+              <button
+                onClick={() => setExpandedCard(null)}
+                style={{
+                  width: "100%", padding: "10px 0", borderRadius: 12,
+                  background: `${expandedCard.color}15`, border: "none",
+                  color: expandedCard.color, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                }}
+              >
+                Закрыть
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <SphereDistribution hub={hub} />
+    </div>
+  );
+}
+
+function PolarityBlock({ title, items, color }: { title: string; items: string[]; color: string }) {
+  return (
+    <div style={{
+      padding: 14, borderRadius: 14,
+      background: "rgba(255,255,255,0.02)", border: `1px solid ${color}10`,
+    }}>
+      <div style={{
+        fontSize: 10, fontWeight: 700, color,
+        textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10,
+      }}>
+        {title}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {items.length > 0 ? items.map((item: string, i: number) => (
+          <div key={i} style={{
+            fontSize: 12, color: "rgba(255,255,255,0.6)",
+            lineHeight: 1.4, fontWeight: 400,
+            display: "flex", gap: 8, alignItems: "flex-start",
+          }}>
+            <span style={{ color, opacity: 0.5, flexShrink: 0, lineHeight: 1.4 }}>·</span>
+            <span>{item}</span>
+          </div>
+        )) : (
+          <span style={{ fontSize: 11, color: "var(--text-muted)", fontStyle: "italic" }}>Исследуется...</span>
+        )}
+      </div>
     </div>
   );
 }
@@ -144,20 +188,26 @@ function SphereDistribution({ hub }: { hub: any }) {
   if (activeSpheres.length === 0) return null;
 
   return (
-    <div style={{ padding: 16, borderRadius: 18, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-      <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.15em", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", marginBottom: 12 }}>
+    <div style={{
+      padding: 16, borderRadius: 14,
+      background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)",
+    }}>
+      <div style={{
+        fontSize: 10, fontWeight: 700, letterSpacing: "0.12em",
+        color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 12,
+      }}>
         Активные сферы
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
         {activeSpheres.map(s => (
           <div key={s.id} style={{
-            display: "flex", alignItems: "center", gap: 5,
-            padding: "5px 10px", borderRadius: 10,
-            background: `${s.color}12`, border: `1px solid ${s.color}25`,
+            display: "flex", alignItems: "center", gap: 6,
+            padding: "6px 10px", borderRadius: 8,
+            background: `${s.color}08`, border: `1px solid ${s.color}15`,
           }}>
             <div style={{ width: 5, height: 5, borderRadius: "50%", background: s.color }} />
-            <span style={{ fontSize: 10, color: s.color, fontWeight: 600 }}>{s.name}</span>
-            <span style={{ fontSize: 9, color: "rgba(255,255,255,0.3)" }}>{counts[s.id]}</span>
+            <span style={{ fontSize: 11, color: s.color, fontWeight: 600 }}>{s.name}</span>
+            <span style={{ fontSize: 10, color: "var(--text-muted)" }}>{counts[s.id]}</span>
           </div>
         ))}
       </div>
@@ -165,89 +215,144 @@ function SphereDistribution({ hub }: { hub: any }) {
   );
 }
 
-// ─── Breakdown Tab ────────────────────────────────────────────────────────────
+// ─── Breakdown Tab ───────────────────────────────────────────────────────────
 function BreakdownTab({
-  insights, loading, activeSphere, setActiveSphere, onSelect,
+  insights, loading, activeSphere, setActiveSphere, onSelect, userId, onRefresh,
+  generating, setGenerating, dataReady,
 }: {
   insights: Insight[]; loading: boolean;
   activeSphere: number | null; setActiveSphere: (id: number | null) => void;
   onSelect: (i: Insight) => void;
+  userId: string | null;
+  onRefresh: () => void;
+  generating: number | null;
+  setGenerating: (id: number | null) => void;
+  dataReady: boolean;
 }) {
-  const filteredInsights = useMemo(() => {
-    let result = insights;
-    if (activeSphere !== null) result = result.filter(i => i.primary_sphere === activeSphere);
-    return [...result].sort((a, b) => {
-      if (a.primary_sphere !== b.primary_sphere) return a.primary_sphere - b.primary_sphere;
-      return (INFLUENCE_SORT[b.influence_level] || 0) - (INFLUENCE_SORT[a.influence_level] || 0);
-    });
-  }, [insights, activeSphere]);
 
-  const groupedInsights = useMemo(() => {
-    if (activeSphere !== null) return [{ sphereId: activeSphere, items: filteredInsights }];
-    const groups: { sphereId: number; items: Insight[] }[] = [];
-    let current: { sphereId: number; items: Insight[] } | null = null;
-    const sorted = [...filteredInsights].sort((a, b) => a.primary_sphere - b.primary_sphere);
-    for (const ins of sorted) {
-      if (!current || current.sphereId !== ins.primary_sphere) {
-        current = { sphereId: ins.primary_sphere, items: [] };
-        groups.push(current);
-      }
-      current.items.push(ins);
+  const insightsBySphere = useMemo(() => {
+    const map: Record<number, Insight[]> = {};
+    for (const ins of insights) {
+      if (!map[ins.primary_sphere]) map[ins.primary_sphere] = [];
+      map[ins.primary_sphere].push(ins);
     }
-    return groups;
-  }, [filteredInsights, activeSphere]);
+    // Sort within each sphere
+    for (const key of Object.keys(map)) {
+      map[Number(key)].sort((a, b) => (INFLUENCE_SORT[b.influence_level] || 0) - (INFLUENCE_SORT[a.influence_level] || 0));
+    }
+    return map;
+  }, [insights]);
+
+  const spheresToShow = useMemo(() => {
+    if (activeSphere !== null) return [activeSphere];
+    return SPHERES.map(s => s.id);
+  }, [activeSphere]);
+
+  const handleGenerate = async (sphereId: number) => {
+    if (!userId || generating) return;
+    setGenerating(sphereId);
+    try {
+      await calcAPI.generateSphere(userId, sphereId);
+      // Force SWR to refetch fresh data
+      await onRefresh();
+    } catch (err: any) {
+      const detail = err.response?.data?.detail || "Ошибка генерации";
+      alert(detail);
+    } finally {
+      setGenerating(null);
+    }
+  };
 
   return (
     <>
-      <div style={{ marginBottom: 12 }}>
+      <div style={{ marginBottom: 16 }}>
         <SphereFilter activeSphere={activeSphere} onSelect={setActiveSphere} />
       </div>
-      {loading && insights.length === 0 ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {!dataReady ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
         </div>
-      ) : insights.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div style={{ fontSize: 56, marginBottom: 16 }}>🌌</div>
-          <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--text-primary)", margin: 0, marginBottom: 8 }}>
-            Твой мир формируется
-          </h3>
-          <p style={{ fontSize: 13, color: "var(--text-muted)", maxWidth: 260, lineHeight: 1.5 }}>
-            Пройди онбординг для персонального расчёта по 12 сферам
-          </p>
-        </div>
       ) : (
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeSphere ?? "all"}
-            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            style={{ display: "flex", flexDirection: "column", gap: 20 }}
-          >
-            {groupedInsights.map(group => {
-              const sphere = SPHERE_BY_ID[group.sphereId];
-              return (
-                <div key={group.sphereId}>
-                  {activeSphere === null && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, paddingLeft: 2 }}>
-                      <div style={{
-                        width: 28, height: 28, borderRadius: 10,
-                        background: `${sphere?.color}15`, border: `1px solid ${sphere?.color}25`,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                      }}>
-                        {sphere && <sphere.icon size={14} style={{ color: sphere.color }} />}
-                      </div>
-                      <div>
-                        <h3 style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
-                          {sphere?.name}
-                        </h3>
-                        <span style={{ fontSize: 10, color: "var(--text-muted)" }}>
-                          {group.items.length} инсайтов • {sphere?.subtitle}
-                        </span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          {spheresToShow.map(sphereId => {
+            const sphere = SPHERE_BY_ID[sphereId];
+            const items = insightsBySphere[sphereId] || [];
+            const isEmpty = items.length === 0;
+            const isGenerating = generating === sphereId;
+
+            return (
+              <div key={sphereId}>
+                {/* Sphere header */}
+                <div style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  marginBottom: isEmpty ? 0 : 10, paddingLeft: 2,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{
+                      width: 6, height: 6, borderRadius: "50%",
+                      background: sphere?.color || "#8B5CF6",
+                    }} />
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
+                      {sphere?.name}
+                    </span>
+                    <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>
+                      {sphere?.subtitle}
+                    </span>
+                  </div>
+                  {!isEmpty && (
+                    <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 500 }}>
+                      {items.length}
+                    </span>
+                  )}
+                </div>
+
+                {/* Content or unlock button */}
+                {isEmpty ? (
+                  isGenerating ? (
+                    <div style={{
+                      width: "100%", padding: "24px 16px",
+                      marginTop: 8, borderRadius: 14,
+                      background: "rgba(139,92,246,0.04)",
+                      border: "1px solid rgba(139,92,246,0.12)",
+                      display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
+                    }}>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
+                        style={{ width: 24, height: 24, borderRadius: "50%", border: "2px solid rgba(139,92,246,0.2)", borderTopColor: "var(--violet)" }}
+                      />
+                      <div style={{ textAlign: "center" }}>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: "var(--violet)", margin: 0, marginBottom: 4 }}>
+                          Анализирую {sphere?.name?.toLowerCase()}
+                        </p>
+                        <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0, lineHeight: 1.4 }}>
+                          Агент изучает натальную карту и формирует инсайты...
+                        </p>
                       </div>
                     </div>
-                  )}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {group.items.map((insight, idx) => (
+                  ) : (
+                    <button
+                      onClick={() => handleGenerate(sphereId)}
+                      disabled={!!generating}
+                      style={{
+                        width: "100%", padding: "16px",
+                        marginTop: 8, borderRadius: 14,
+                        background: "rgba(255,255,255,0.02)",
+                        border: "1px dashed rgba(255,255,255,0.1)",
+                        cursor: generating ? "not-allowed" : "pointer",
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                        color: generating ? "rgba(255,255,255,0.15)" : "var(--text-muted)",
+                        fontSize: 13, fontWeight: 500,
+                        transition: "all 0.2s",
+                        opacity: generating ? 0.5 : 1,
+                      }}
+                    >
+                      Собрать разбор · 10 ⚡
+                    </button>
+                  )
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {items.map((insight, idx) => (
                       <InsightCard
                         key={insight.id || `${insight.primary_sphere}-${idx}`}
                         insight={insight}
@@ -255,17 +360,17 @@ function BreakdownTab({
                       />
                     ))}
                   </div>
-                </div>
-              );
-            })}
-          </motion.div>
-        </AnimatePresence>
+                )}
+              </div>
+            );
+          })}
+        </div>
       )}
     </>
   );
 }
 
-// ─── Sides Tab ────────────────────────────────────────────────────────────────
+// ─── Sides Tab ───────────────────────────────────────────────────────────────
 function SidesTab({ insights }: { insights: Insight[] }) {
   const [activeSphere, setActiveSphere] = useState<number | null>(null);
 
@@ -283,13 +388,19 @@ function SidesTab({ insights }: { insights: Insight[] }) {
 
   if (insights.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <div style={{ fontSize: 56, marginBottom: 16 }}>⚡</div>
-        <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--text-primary)", margin: 0, marginBottom: 8 }}>
+      <div className="flex flex-col items-center justify-center" style={{ padding: "60px 20px", textAlign: "center" }}>
+        <div style={{
+          width: 56, height: 56, borderRadius: 16,
+          background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.1)",
+          display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16,
+        }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--violet)", opacity: 0.4 }} />
+        </div>
+        <p style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", marginBottom: 6 }}>
           Стороны не определены
-        </h3>
-        <p style={{ fontSize: 13, color: "var(--text-muted)", maxWidth: 260, lineHeight: 1.5 }}>
-          Пройди онбординг, чтобы раскрыть свет и тень каждой сферы жизни
+        </p>
+        <p style={{ fontSize: 12, color: "var(--text-muted)", maxWidth: 260, lineHeight: 1.5 }}>
+          Пройди онбординг, чтобы раскрыть свет и тень каждой сферы
         </p>
       </div>
     );
@@ -297,14 +408,17 @@ function SidesTab({ insights }: { insights: Insight[] }) {
 
   return (
     <>
-      <div style={{ marginBottom: 12 }}>
+      <div style={{ marginBottom: 16 }}>
         <SphereFilter activeSphere={activeSphere} onSelect={setActiveSphere} />
       </div>
       <AnimatePresence mode="wait">
         <motion.div
           key={activeSphere ?? "all"}
-          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-          style={{ display: "flex", flexDirection: "column", gap: 16 }}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          style={{ display: "flex", flexDirection: "column", gap: 10 }}
         >
           {grouped.map(({ sphereId, items }) => {
             const sphere = SPHERE_BY_ID[sphereId];
@@ -313,20 +427,21 @@ function SidesTab({ insights }: { insights: Insight[] }) {
 
             return (
               <div key={sphereId} style={{
-                borderRadius: 20, overflow: "hidden",
-                border: `1px solid ${sphere?.color || "#fff"}18`,
+                borderRadius: 16, overflow: "hidden",
+                border: `1px solid ${sphere?.color || "#fff"}12`,
+                background: "rgba(255,255,255,0.01)",
               }}>
                 {/* Sphere header */}
                 <div style={{
                   padding: "12px 16px",
-                  background: `${sphere?.color || "#fff"}0d`,
-                  borderBottom: `1px solid ${sphere?.color || "#fff"}15`,
-                  display: "flex", alignItems: "center", gap: 8,
+                  background: `${sphere?.color || "#fff"}08`,
+                  borderBottom: `1px solid ${sphere?.color || "#fff"}10`,
+                  display: "flex", alignItems: "center", gap: 10,
                 }}>
                   {sphere && (
                     <div style={{
-                      width: 26, height: 26, borderRadius: 8,
-                      background: `${sphere.color}20`, border: `1px solid ${sphere.color}30`,
+                      width: 28, height: 28, borderRadius: 8,
+                      background: `${sphere.color}10`, border: `1px solid ${sphere.color}20`,
                       display: "flex", alignItems: "center", justifyContent: "center",
                     }}>
                       <sphere.icon size={13} style={{ color: sphere.color }} />
@@ -336,45 +451,52 @@ function SidesTab({ insights }: { insights: Insight[] }) {
                     <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
                       {sphere?.name}
                     </span>
-                    <span style={{ fontSize: 10, color: "var(--text-muted)", marginLeft: 6 }}>
+                    <span style={{ fontSize: 11, color: "var(--text-muted)", marginLeft: 8 }}>
                       {sphere?.subtitle}
                     </span>
                   </div>
                 </div>
 
-                {/* Light + Shadow grid */}
+                {/* Light + Shadow */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
-                  <div style={{ padding: 14, borderRight: "1px solid rgba(16,185,129,0.1)", background: "rgba(16,185,129,0.03)" }}>
+                  <div style={{
+                    padding: 14,
+                    borderRight: "1px solid rgba(255,255,255,0.04)",
+                    background: "rgba(16,185,129,0.02)",
+                  }}>
                     <div style={{
-                      fontSize: 8, fontWeight: 800, color: "#10B981",
-                      textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 10,
-                    }}>✦ Свет</div>
+                      fontSize: 10, fontWeight: 700, color: "#10B981",
+                      textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10,
+                    }}>Свет</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       {lights.slice(0, 3).map((text, i) => (
                         <p key={i} style={{
-                          fontSize: 11, color: "rgba(255,255,255,0.65)",
-                          lineHeight: 1.4, fontWeight: 300, margin: 0,
-                          display: "flex", gap: 5, alignItems: "flex-start",
+                          fontSize: 12, color: "rgba(255,255,255,0.6)",
+                          lineHeight: 1.4, fontWeight: 400, margin: 0,
+                          display: "flex", gap: 6, alignItems: "flex-start",
                         }}>
-                          <span style={{ color: "#10B981", opacity: 0.6, flexShrink: 0, marginTop: 1 }}>•</span>
+                          <span style={{ color: "#10B981", opacity: 0.5, flexShrink: 0 }}>·</span>
                           {text}
                         </p>
                       ))}
                     </div>
                   </div>
-                  <div style={{ padding: 14, background: "rgba(239,68,68,0.03)" }}>
+                  <div style={{
+                    padding: 14,
+                    background: "rgba(239,68,68,0.02)",
+                  }}>
                     <div style={{
-                      fontSize: 8, fontWeight: 800, color: "#EF4444",
-                      textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 10,
-                    }}>◈ Тень</div>
+                      fontSize: 10, fontWeight: 700, color: "#EF4444",
+                      textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10,
+                    }}>Тень</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       {shadows.slice(0, 3).map((text, i) => (
                         <p key={i} style={{
-                          fontSize: 11, color: "rgba(255,255,255,0.55)",
-                          lineHeight: 1.4, fontWeight: 300, margin: 0,
-                          display: "flex", gap: 5, alignItems: "flex-start",
+                          fontSize: 12, color: "rgba(255,255,255,0.5)",
+                          lineHeight: 1.4, fontWeight: 400, margin: 0,
+                          display: "flex", gap: 6, alignItems: "flex-start",
                         }}>
-                          <span style={{ color: "#EF4444", opacity: 0.5, flexShrink: 0, marginTop: 1 }}>•</span>
+                          <span style={{ color: "#EF4444", opacity: 0.4, flexShrink: 0 }}>·</span>
                           {text}
                         </p>
                       ))}
@@ -390,12 +512,76 @@ function SidesTab({ insights }: { insights: Insight[] }) {
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ─── Pipeline Loading Screen ─────────────────────────────────────────────────
+function PipelineStep({ label, index }: { label: string; index: number }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -8 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.4, duration: 0.4 }}
+      style={{
+        display: "flex", alignItems: "center", gap: 10,
+        padding: "9px 14px", borderRadius: 10,
+        background: "rgba(139,92,246,0.04)",
+        border: "1px solid rgba(139,92,246,0.10)",
+      }}
+    >
+      <motion.div
+        animate={{ opacity: [0.3, 1, 0.3] }}
+        transition={{ duration: 1.8, repeat: Infinity, delay: index * 0.45 }}
+        style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--violet)", flexShrink: 0 }}
+      />
+      <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>{label}</span>
+    </motion.div>
+  );
+}
+
+function PipelineLoading() {
+  const steps = [
+    "Расчёт натальной карты",
+    "Анализ 12 сфер жизни",
+    "Формирование инсайтов",
+    "Сборка архетипного портрета",
+  ];
+  return (
+    <div style={{
+      display: "flex", flexDirection: "column", alignItems: "center",
+      justifyContent: "center", padding: "60px 20px", textAlign: "center",
+    }}>
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+        style={{
+          width: 52, height: 52, borderRadius: "50%",
+          border: "2px solid rgba(139,92,246,0.12)",
+          borderTopColor: "var(--violet)",
+          marginBottom: 24,
+        }}
+      />
+      <p style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 6 }}>
+        Строится твой мир
+      </p>
+      <p style={{
+        fontSize: 12, color: "var(--text-muted)", maxWidth: 260,
+        lineHeight: 1.6, marginBottom: 24,
+      }}>
+        12 агентов параллельно анализируют натальную карту — обычно 1–2 минуты
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%", maxWidth: 300 }}>
+        {steps.map((s, i) => <PipelineStep key={i} label={s} index={i} />)}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ───────────────────────────────────────────────────────────────
 export default function YourWorldPage() {
+  const tmaSafeTop = useTmaSafeArea();
   const { userId, hubData, setHubData } = useUserStore();
   const { activeSphere, setActiveSphere } = useInsightsStore();
   const [activeTab, setActiveTab] = useState<Tab>("portrait");
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
+  const [generatingSphere, setGeneratingSphere] = useState<number | null>(null);
 
   const { data: hub, isValidating: loading } = useSWR(
     userId ? ["master-hub", userId] : null,
@@ -447,63 +633,89 @@ export default function YourWorldPage() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "var(--bg-deep)", paddingBottom: 96 }}>
+    <div className="flex flex-col" style={{ background: "var(--bg-deep)", height: "100dvh", overflow: "hidden", paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}>
+
       {/* Header */}
-      <div className="px-4 pt-5 pb-3">
+      <div style={{ padding: "6px 20px 8px", display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
         <h1 style={{
-          fontSize: 24, fontWeight: 800, fontFamily: "'Outfit', sans-serif",
-          margin: 0, marginBottom: 2,
-          background: "linear-gradient(135deg, var(--violet-l), var(--gold))",
+          fontSize: 22, fontWeight: 800, fontFamily: "'Outfit', sans-serif",
+          margin: 0,
+          background: "linear-gradient(135deg, var(--violet-l), var(--violet))",
           WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-        }}>Твой мир</h1>
-        <p style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 400, margin: 0 }}>
-          {isPending
-            ? <motion.span animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }}>вычисляется...</motion.span>
-            : totalCount > 0
-              ? `${totalCount} инсайтов по ${sphereCount} сферам`
-              : "Полный расчёт по 12 сферам жизни"
-          }
-        </p>
+        }}>
+          Твой мир
+        </h1>
+        {hub?.status === "pending" ? (
+          <motion.span
+            animate={{ opacity: [0.3, 0.8, 0.3] }}
+            transition={{ duration: 1.6, repeat: Infinity }}
+            style={{ fontSize: 11, color: "var(--violet)", fontWeight: 500 }}
+          >
+            вычисляется...
+          </motion.span>
+        ) : totalCount > 0 ? (
+          <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>
+            {totalCount} · {sphereCount} сфер
+          </span>
+        ) : null}
       </div>
 
       {/* Tab switcher */}
       <div className="px-4 mb-3">
-        <div style={{
-          display: "grid", gridTemplateColumns: "1fr 1fr 1fr",
-          gap: 4, padding: 4,
-          background: "rgba(255,255,255,0.04)",
-          border: "1px solid var(--border)", borderRadius: 14,
-        }}>
+        <div
+          className="grid grid-cols-3 gap-1 p-1"
+          style={{
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid var(--border)",
+            borderRadius: 14,
+          }}
+        >
           {TABS.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-              padding: "8px 0", borderRadius: 10, border: "none", cursor: "pointer",
-              fontSize: 12,
-              fontWeight: activeTab === tab.id ? 700 : 500,
-              background: activeTab === tab.id ? "rgba(255,255,255,0.1)" : "transparent",
-              color: activeTab === tab.id ? "var(--text-primary)" : "var(--text-muted)",
-              transition: "all 0.2s",
-            }}>{tab.label}</button>
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                padding: "8px 4px",
+                borderRadius: 10,
+                fontSize: 11,
+                fontWeight: 500,
+                transition: "all 0.2s",
+                background: activeTab === tab.id ? "rgba(255,255,255,0.1)" : "transparent",
+                color: activeTab === tab.id ? "var(--text-primary)" : "var(--text-muted)",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              {tab.label}
+            </button>
           ))}
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 px-4 pt-1">
-        {isPending ? (
+      {/* Content — scrollable */}
+      <div style={{ flex: 1, padding: "0 20px", overflowY: "auto", paddingBottom: 90, WebkitOverflowScrolling: "touch" }}>
+        {hub?.status === "pending" ? (
           <PipelineLoading />
         ) : (
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
-              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              transition={{ duration: 0.18 }}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
             >
-              {activeTab === "portrait"  && <PortraitTab hub={hub} />}
+              {activeTab === "portrait" && <PortraitTab hub={hub} />}
               {activeTab === "breakdown" && (
                 <BreakdownTab
                   insights={insights} loading={loading}
                   activeSphere={activeSphere} setActiveSphere={setActiveSphere}
                   onSelect={setSelectedInsight}
+                  userId={userId}
+                  onRefresh={() => mutate(["master-hub", userId])}
+                  generating={generatingSphere}
+                  setGenerating={setGeneratingSphere}
+                  dataReady={!!hub && hub.status !== "pending"}
                 />
               )}
               {activeTab === "sides" && <SidesTab insights={insights} />}
