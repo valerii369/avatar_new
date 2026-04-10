@@ -154,9 +154,11 @@ def extract_sphere_context(chart: dict, sphere_num: int) -> dict:
                        for r in _planets_in_house(planets, sphere_num)]
     resident_names  = {r["name"] for r in residents}
 
-    aspects_to_ruler    = _aspects_involving(aspects, {ruler_name})[:12] if ruler_name else []
-    aspects_to_co_ruler = _aspects_involving(aspects, {co_name})[:8]     if co_name    else []
-    resident_aspects    = _aspects_involving(aspects, resident_names)[:10]
+    aspects_to_ruler    = _aspects_involving(aspects, {ruler_name})[:15] if ruler_name else []
+    aspects_to_co_ruler = _aspects_involving(aspects, {co_name})[:10]    if co_name    else []
+    # Per-planet cap of 10, total scales with number of residents
+    _per_resident_cap = 10
+    resident_aspects    = _aspects_involving(aspects, resident_names)[:max(15, len(residents) * _per_resident_cap)]
 
     # ── Layer 2: Aspect synthesis per planet ──────────────────────────────────
     ruler_synthesis = None
@@ -174,7 +176,7 @@ def extract_sphere_context(chart: dict, sphere_num: int) -> dict:
     resident_syntheses: list[dict] = []
     for res in residents:
         res_name = res["name"]
-        res_asps = _aspects_involving(aspects, {res_name})[:10]
+        res_asps = _aspects_involving(aspects, {res_name})[:15]
         resident_syntheses.append(
             build_planet_synthesis(res_name, res_asps, res.get("dispositor"))
         )
