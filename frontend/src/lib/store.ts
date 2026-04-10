@@ -38,6 +38,10 @@ interface UserState {
   xpNext: number;
   referralCode: string;
 
+  // Cached hub data — persisted so the app shows content instantly on re-entry
+  hubData: any | null;
+  setHubData: (data: any) => void;
+
   // Assistant History
   assistantMessages: { role: string; content: string }[];
   setAssistantMessages: (messages: { role: string; content: string }[]) => void;
@@ -52,6 +56,9 @@ export const useUserStore = create<UserState>()(
     (set) => ({
       userId: null, tgId: null, firstName: "", photoUrl: "", token: null, onboardingDone: false,
       energy: 0, streak: 0, evolutionLevel: 1, title: "Новичок", xp: 0, xpCurrent: 0, xpNext: 1000, referralCode: "",
+
+      hubData: null,
+      setHubData: (data) => set({ hubData: data }),
 
       assistantMessages: [],
       setAssistantMessages: (messages) => set({ assistantMessages: messages }),

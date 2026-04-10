@@ -392,7 +392,7 @@ function SidesTab({ insights }: { insights: Insight[] }) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function YourWorldPage() {
-  const { userId } = useUserStore();
+  const { userId, hubData, setHubData } = useUserStore();
   const { activeSphere, setActiveSphere } = useInsightsStore();
   const [activeTab, setActiveTab] = useState<Tab>("portrait");
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
@@ -406,6 +406,11 @@ export default function YourWorldPage() {
     {
       revalidateOnFocus: false,
       refreshInterval: (data: any) => data?.status === "pending" ? 4000 : 0,
+      // Show cached data instantly on re-entry, revalidate in background
+      fallbackData: hubData ?? undefined,
+      onSuccess: (data) => {
+        if (data && data.status !== "pending") setHubData(data);
+      },
     }
   );
 
