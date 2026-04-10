@@ -343,7 +343,7 @@ async def generate_sphere_insights(
                 {"role": "system", "content": system_prompt},
                 {"role": "user",   "content": user_payload},
             ],
-            max_completion_tokens=10000,
+            max_completion_tokens=18000,
         )
         raw  = response.choices[0].message.content or ""
         if not raw.strip():

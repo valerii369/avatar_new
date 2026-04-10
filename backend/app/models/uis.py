@@ -58,12 +58,12 @@ class UniversalInsight(BaseModel):
 
 class SphereResponse(BaseModel):
     """Single-sphere response from a worker agent. No coverage validation."""
-    insights: list[UniversalInsight] = Field(..., min_length=1, max_length=15)
+    insights: list[UniversalInsight] = Field(..., min_length=1, max_length=18)
 
 
 class UISResponse(BaseModel):
     """Full chart response. Requires all 12 spheres."""
-    insights: list[UniversalInsight] = Field(..., min_length=12, max_length=160)
+    insights: list[UniversalInsight] = Field(..., min_length=12, max_length=220)
 
     @field_validator("insights")
     @classmethod
