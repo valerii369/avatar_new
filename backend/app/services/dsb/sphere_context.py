@@ -44,6 +44,21 @@ VIRTUAL_POINTS = {"lilith", "selena", "chiron"}
 # Personal planets — virtual points only aspected to these (narrow orb)
 PERSONAL_PLANETS = {"sun", "moon", "mercury", "venus", "mars"}
 
+CROSS_ELEMENT: dict[str, dict] = {
+    "Aries":       {"cross": "cardinal", "element": "fire"},
+    "Taurus":      {"cross": "fixed",    "element": "earth"},
+    "Gemini":      {"cross": "mutable",  "element": "air"},
+    "Cancer":      {"cross": "cardinal", "element": "water"},
+    "Leo":         {"cross": "fixed",    "element": "fire"},
+    "Virgo":       {"cross": "mutable",  "element": "earth"},
+    "Libra":       {"cross": "cardinal", "element": "air"},
+    "Scorpio":     {"cross": "fixed",    "element": "water"},
+    "Sagittarius": {"cross": "mutable",  "element": "fire"},
+    "Capricorn":   {"cross": "cardinal", "element": "earth"},
+    "Aquarius":    {"cross": "fixed",    "element": "air"},
+    "Pisces":      {"cross": "mutable",  "element": "water"},
+}
+
 SIGN_RULERSHIPS: dict[str, str] = {
     "Aries":       "mars",
     "Taurus":      "venus",
@@ -270,6 +285,36 @@ def extract_sphere_context(chart: dict, sphere_num: int) -> dict:
     sphere_planet_names = resident_names | ({ruler_name} if ruler_name else set())
     oob_here = [e for e in out_of_bounds if e["planet"] in sphere_planet_names]
 
+    # ── cross_element: modality + element of cusp sign ───────────────────────
+    cross_element = CROSS_ELEMENT.get(cusp_sign, {"cross": "unknown", "element": "unknown"})
+
+    # ── ruler_to_residents: aspects between ruler and each resident ───────────
+    ruler_to_residents: list[dict] = []
+    if ruler_name and resident_names:
+        ruler_to_residents = [
+            a for a in aspects
+            if (a["planet_a"] == ruler_name and a["planet_b"] in resident_names)
+            or (a["planet_b"] == ruler_name and a["planet_a"] in resident_names)
+        ]
+
+    # ── chain_narrative: pre-built string describing the chain of command ─────
+    chain_narrative = ""
+    if ruler:
+        ruler_sign = ruler.get("sign", "")
+        ruler_house = ruler.get("house", "")
+        ruler_dignity = ruler.get("dignity_score", 0)
+        parts = [f"{ruler_name.capitalize()} (управитель) в {ruler_sign} дом {ruler_house} (dignity {ruler_dignity:+d})"]
+        disp = ruler.get("dispositor")
+        if disp:
+            disp_sign = disp.get("sign", "")
+            disp_house = disp.get("house", "")
+            disp_dignity = disp.get("dignity_score", 0)
+            disp_retro = " ℞" if disp.get("retrograde") else ""
+            parts.append(
+                f"управляется {disp['name'].capitalize()} в {disp_sign} дом {disp_house} (dignity {disp_dignity:+d}{disp_retro})"
+            )
+        chain_narrative = ", ".join(parts)
+
     return {
         "sphere":               sphere_num,
         "sphere_name":          SPHERE_NAMES[sphere_num],
@@ -297,6 +342,10 @@ def extract_sphere_context(chart: dict, sphere_num: int) -> dict:
         "co_ruler_synthesis":   co_ruler_synthesis,
         "resident_syntheses":   resident_syntheses,
         "virtual_points":       virtual_points,   # Lilith/Selena/Chiron in this sphere
+        # Ultimate Synthesis Engine extras
+        "cross_element":        cross_element,
+        "ruler_to_residents":   ruler_to_residents,
+        "chain_narrative":      chain_narrative,
         "_target_min":          min_ins,
         "_target_max":          max_ins,
     }

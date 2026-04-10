@@ -80,6 +80,16 @@ SPECIALIST_PROMPT_TEMPLATE = """\
 3. Не повторяй одну и ту же астрологическую позицию в разных инсайтах.
 4. Все тексты — строго на русском языке.
 
+═══ АРХИТЕКТУРА СИНТЕЗА (4 вопроса) ═══
+Для каждого инсайта отвечай на эти вопросы через призму {sphere_name}:
+1. КТО ДЕЙСТВУЕТ? — планеты в доме (Actors). Их природа, знак, достоинство.
+2. ЧЕРЕЗ ЧТО? — знак куспида (cross_element). Модус действия: Cardinal=инициатива, Fixed=удержание, Mutable=адаптация. Стихия окрашивает всё.
+3. КУДА ИДЁТ ЭНЕРГИЯ? — управитель дома (Director). Его дом = сфера жизни, куда направлена энергия сферы {sphere_num}.
+4. ГДЕ ИСКАЖЕНИЕ/ЗАЩИТА? — virtual_points. Лилит = где оступается, Селена = где защищён, Хирон = где исцеляет через рану.
+
+ЗАПРЕЩЕНО: «Марс в 1 доме означает...», «эта позиция говорит о...», общие астрологические клише.
+ОБЯЗАТЕЛЬНО: Синтез цепочки. Пример: «Твоя воля (Марс) управляется потребностью в статусе (Управитель в 10), но фильтруется страхом ошибки (Квадрат Сатурна orb 0.8° critical)».
+
 ═══ ФОРМАТ ВЫВОДА ═══
 Возвращай ТОЛЬКО валидный JSON:
 {{"insights": [ ... ]}}
@@ -88,18 +98,28 @@ SPECIALIST_PROMPT_TEMPLATE = """\
 ═══ СТРУКТУРА КАЖДОГО ИНСАЙТА ═══
 {{
   "primary_sphere": {sphere_num},
-  "influence_level": <"high" | "medium" | "low">,
-  "weight": <число 0.0–1.0>,
-  "position": "<точная астрологическая позиция из sphere_data, макс 140 символов>",
-  "core_theme": "<заголовок через призму {sphere_name}: суть в одной фразе, макс 100 символов>",
-  "description": "<как эта позиция проявляется в {sphere_name} — конкретно и лично, 1-2 предложения>",
-  "light_aspect": "<дар и потенциал в контексте {sphere_name} с учётом гармоничных аспектов из light_drivers, макс 1000 символов>",
-  "shadow_aspect": "<ловушка и риск именно в {sphere_name} — обязательно включи конкретные квадраты/оппозиции из shadow_drivers, макс 1000 символов>",
-  "insight": "<глубокий психологический синтез: как top_modifiers и dispositor_note меняют базовое значение планеты в сфере {sphere_name}, 3-5 предложений, макс 1500 символов>",
-  "gift": "<ключевой дар этой позиции для {sphere_name} — из сильнейшего гармоничного аспекта или диспозитора, макс 800 символов>",
-  "developmental_task": "<как трансформировать напряжение shadow_drivers в ресурс в сфере {sphere_name}, макс 400 символов>",
-  "integration_key": "<конкретное практическое действие в области {sphere_name} с опорой на amplifier_drivers, макс 400 символов>",
-  "triggers": ["<реальная жизненная ситуация в контексте {sphere_name} 1>", "<ситуация 2>"],
+  "influence_level": <"high"|"medium"|"low">,
+  "weight": <0.0–1.0>,
+  "position": "<астропозиция из sphere_data, макс 140 символов>",
+  "core_theme": "<заголовок-синтез цепочки, макс 100 символов>",
+
+  "inner_alchemy": {{
+    "description": "<Кто+Через+Куда — 1-2 предложения синтеза цепочки>",
+    "insight": "<глубокий психоаналитический синтез top_modifiers + dispositor, 3-5 предложений, макс 1500 символов>",
+    "gift": "<врождённый талант из сильнейшего гармоничного аспекта + Селена если есть, макс 800 символов>",
+    "light_aspect": "<Свет: Селена в доме или гармоничные аспекты из light_drivers, макс 1000 символов>",
+    "shadow_aspect": "<Тень: Лилит в доме + shadow_drivers (квадраты/оппозиции) — конкретные ловушки, макс 1000 символов>",
+    "blind_spot": "<Слепая зона: что игнорирует — из поражённых планет или пустых зон, макс 600 символов>"
+  }},
+
+  "outer_mechanics": {{
+    "energy_rhythm": "<Ритм действий на основе cross+element куспида: Cardinal=как запускает, Fixed=как удерживает, Mutable=как адаптирует, макс 400 символов>",
+    "integration_key": "<Алгоритм действий через дом управителя: «Чтобы раскрыть эту сферу, направляй энергию в [сферу управителя]», макс 400 символов>",
+    "crisis_anchor": "<Точка опоры: сильнейший гармоничный аспект сферы как якорь в кризис, макс 400 символов>",
+    "developmental_task": "<Как трансформировать shadow_drivers в ресурс, макс 400 символов>",
+    "triggers": ["<событийный триггер из trigger_drivers 1>", "<триггер 2>", "<триггер 3>"]
+  }},
+
   "source": "<автор — книга или null>"
 }}
 
@@ -331,6 +351,24 @@ async def generate_sphere_insights(
         data = json.loads(raw)
         if isinstance(data, list):
             data = {"insights": data}
+
+        # Flatten nested inner_alchemy / outer_mechanics back to flat fields
+        for ins_data in data.get("insights", []):
+            ia = ins_data.pop("inner_alchemy", {})
+            om = ins_data.pop("outer_mechanics", {})
+            if ia:
+                ins_data.setdefault("description", ia.get("description", ""))
+                ins_data.setdefault("insight", ia.get("insight", ""))
+                ins_data.setdefault("gift", ia.get("gift", ""))
+                ins_data.setdefault("light_aspect", ia.get("light_aspect", ""))
+                ins_data.setdefault("shadow_aspect", ia.get("shadow_aspect", ""))
+                ins_data.setdefault("blind_spot", ia.get("blind_spot"))
+            if om:
+                ins_data.setdefault("energy_rhythm", om.get("energy_rhythm"))
+                ins_data.setdefault("integration_key", om.get("integration_key", ""))
+                ins_data.setdefault("crisis_anchor", om.get("crisis_anchor"))
+                ins_data.setdefault("developmental_task", om.get("development_task") or om.get("developmental_task", ""))
+                ins_data.setdefault("triggers", om.get("triggers", []))
 
         insights = SphereResponse(**data).insights
 
