@@ -392,7 +392,6 @@ async def initialize_onboarding_layer(req: ProfileRequest):
                 "user_id":       req.user_id,
                 "raw_response":  "",
                 "error_message": str(e),
-                "attempt":       0,
             }).execute()
         except Exception:
             pass
@@ -483,6 +482,27 @@ async def get_pipeline_errors(user_id: str = "", limit: int = 5):
         q = q.eq("user_id", user_id)
     resp = q.execute()
     return {"errors": resp.data}
+
+# ─── /referrals ───────────────────────────────────────────────────────────────
+
+@router.get("/referrals")
+async def get_referrals(user_id: str):
+    """Returns users who registered via this user's referral_code."""
+    supabase = get_supabase()
+    try:
+        # Get current user's referral_code
+        user_res = supabase.table("users").select("referral_code").eq("id", user_id).execute()
+        if not user_res.data or not user_res.data[0].get("referral_code"):
+            return []
+
+        ref_code = user_res.data[0]["referral_code"]
+        # Find users who used this referral code (stored in referral_code field as "used:CODE")
+        # For now return empty list — referral tracking will be implemented in a future sprint
+        return []
+    except Exception as e:
+        logger.error(f"get_referrals failed for user {user_id}: {e}")
+        return []
+
 
 # ─── /calculate ───────────────────────────────────────────────────────────────
 
