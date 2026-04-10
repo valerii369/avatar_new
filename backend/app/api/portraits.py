@@ -57,6 +57,17 @@ def _fmt_position(data: dict) -> str:
     return f"{deg}°{minutes:02d}′ {sign_ru}, {house} дом{retro}"
 
 
+ASPECT_LABELS_RU: dict[str, str] = {
+    "conjunction": "Соединение",
+    "opposition":  "Оппозиция",
+    "trine":       "Тригон",
+    "square":      "Квадрат",
+    "sextile":     "Секстиль",
+}
+
+MAJOR_ASPECTS = {"conjunction", "opposition", "trine", "square", "sextile"}
+
+
 def _build_natal_positions(planets: dict) -> list[dict]:
     """Return ordered list of {key, label, position_str} for all planets."""
     order = [
@@ -74,6 +85,28 @@ def _build_natal_positions(planets: dict) -> list[dict]:
             "label":        PLANET_LABELS.get(key, key),
             "position_str": _fmt_position(planets[key]),
         })
+    return result
+
+
+def _build_natal_aspects(aspects: list) -> list[dict]:
+    """Return major aspects formatted for frontend display."""
+    result = []
+    for asp in aspects:
+        if asp.get("type") not in MAJOR_ASPECTS:
+            continue
+        result.append({
+            "planet_a":   asp["planet_a"],
+            "planet_b":   asp["planet_b"],
+            "label_a":    PLANET_LABELS.get(asp["planet_a"], asp["planet_a"]),
+            "label_b":    PLANET_LABELS.get(asp["planet_b"], asp["planet_b"]),
+            "type":       asp["type"],
+            "type_label": ASPECT_LABELS_RU.get(asp["type"], asp["type"]),
+            "orb":        asp["orb"],
+            "angle":      asp["angle"],
+            "applying":   asp.get("applying", False),
+        })
+    # Sort: tighter orb first
+    result.sort(key=lambda x: x["orb"])
     return result
 
 
@@ -107,6 +140,7 @@ async def get_portrait(user_id: str):
 
         # 3. Natal chart positions (computed from birth data)
         natal_positions: list[dict] = []
+        natal_aspects: list[dict] = []
         try:
             birth_resp = (
                 supabase.table("user_birth_data")
@@ -119,6 +153,7 @@ async def get_portrait(user_id: str):
                 b = birth_resp.data[0]
                 chart = await calculate_chart(b["birth_date"], b["birth_time"], b["birth_place"])
                 natal_positions = _build_natal_positions(chart.get("planets", {}))
+                natal_aspects   = _build_natal_aspects(chart.get("aspects", []))
         except Exception as e:
             logger.warning(f"Could not compute natal positions for {user_id}: {e}")
 
@@ -160,6 +195,7 @@ async def get_portrait(user_id: str):
             } if portrait_data else None,
             "deep_profile_data":  portrait_data.get("deep_profile_data") if portrait_data else None,
             "natal_positions":    natal_positions,
+            "natal_aspects":      natal_aspects,
         }
 
         return hub

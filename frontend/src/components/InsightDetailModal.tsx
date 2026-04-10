@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Sparkles, AlertCircle, Zap, Target, Key, Lightbulb, Star } from "lucide-react";
 import { SPHERE_BY_ID, INFLUENCE_CONFIG, SYSTEM_SHORT } from "@/lib/constants";
-import type { Insight, NatalPosition } from "@/lib/store";
+import type { Insight, NatalPosition, NatalAspect } from "@/lib/store";
 import { useTmaSafeArea } from "@/lib/useTmaSafeArea";
 
 // Map planet keys → russian/latin keywords to match against insight.position text
@@ -36,13 +36,23 @@ function matchNatalPositions(positionText: string, natalPositions: NatalPosition
   });
 }
 
+// Aspect type → colour
+const ASPECT_COLORS: Record<string, string> = {
+  trine:       "#10B981",
+  sextile:     "#3B82F6",
+  conjunction: "#A78BFA",
+  square:      "#EF4444",
+  opposition:  "#F59E0B",
+};
+
 interface InsightDetailModalProps {
   insight: Insight | null;
   onClose: () => void;
   natalPositions?: NatalPosition[];
+  natalAspects?: NatalAspect[];
 }
 
-export default function InsightDetailModal({ insight, onClose, natalPositions = [] }: InsightDetailModalProps) {
+export default function InsightDetailModal({ insight, onClose, natalPositions = [], natalAspects = [] }: InsightDetailModalProps) {
   const tmaSafeTop = useTmaSafeArea();
 
   if (!insight) return null;
@@ -288,42 +298,93 @@ export default function InsightDetailModal({ insight, onClose, natalPositions = 
             </div>
           )}
 
-          {/* Natal positions for this insight */}
+          {/* Natal positions + aspects for this insight */}
           {(() => {
             const matched = matchNatalPositions(insight.position, natalPositions);
             if (!matched.length) return null;
+            const matchedKeys = new Set(matched.map(p => p.key));
+            // Aspects where at least one planet is in matched set
+            const relevantAspects = natalAspects.filter(
+              a => matchedKeys.has(a.planet_a) || matchedKeys.has(a.planet_b)
+            );
             return (
               <div style={{
                 paddingTop: 12,
                 borderTop: insight.source ? "none" : "1px solid var(--border)",
+                display: "flex", flexDirection: "column", gap: 10,
               }}>
-                <div style={{
-                  fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.2)",
-                  textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8,
-                }}>
-                  Точные позиции
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  {matched.map(p => (
-                    <div key={p.key} style={{
-                      display: "flex", alignItems: "center", justifyContent: "space-between",
-                      padding: "6px 10px", borderRadius: 8,
-                      background: "rgba(255,255,255,0.02)",
-                      border: "1px solid rgba(255,255,255,0.05)",
-                    }}>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.35)" }}>
-                        {p.label}
-                      </span>
-                      <span style={{
-                        fontSize: 12, fontWeight: 500, color: "rgba(255,255,255,0.55)",
-                        fontVariantNumeric: "tabular-nums",
-                        letterSpacing: "0.02em",
+                {/* Planet positions */}
+                <div>
+                  <div style={{
+                    fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.2)",
+                    textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6,
+                  }}>
+                    Точные позиции
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    {matched.map(p => (
+                      <div key={p.key} style={{
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                        padding: "6px 10px", borderRadius: 8,
+                        background: "rgba(255,255,255,0.02)",
+                        border: "1px solid rgba(255,255,255,0.05)",
                       }}>
-                        {p.position_str}
-                      </span>
-                    </div>
-                  ))}
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.35)" }}>
+                          {p.label}
+                        </span>
+                        <span style={{
+                          fontSize: 12, fontWeight: 500, color: "rgba(255,255,255,0.55)",
+                          fontVariantNumeric: "tabular-nums", letterSpacing: "0.02em",
+                        }}>
+                          {p.position_str}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+
+                {/* Aspects */}
+                {relevantAspects.length > 0 && (
+                  <div>
+                    <div style={{
+                      fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.2)",
+                      textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6,
+                    }}>
+                      Аспекты
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      {relevantAspects.map((a, i) => {
+                        const col = ASPECT_COLORS[a.type] || "rgba(255,255,255,0.4)";
+                        return (
+                          <div key={i} style={{
+                            display: "flex", alignItems: "center", justifyContent: "space-between",
+                            padding: "6px 10px", borderRadius: 8,
+                            background: `${col}06`,
+                            border: `1px solid ${col}18`,
+                          }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <span style={{
+                                fontSize: 10, fontWeight: 700, color: col,
+                                minWidth: 76,
+                              }}>
+                                {a.type_label}
+                              </span>
+                              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", fontWeight: 500 }}>
+                                {a.label_a} · {a.label_b}
+                              </span>
+                            </div>
+                            <span style={{
+                              fontSize: 11, color: "rgba(255,255,255,0.3)",
+                              fontVariantNumeric: "tabular-nums",
+                            }}>
+                              {a.angle}° <span style={{ opacity: 0.6 }}>orb {a.orb}°</span>
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })()}

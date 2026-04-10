@@ -7,6 +7,18 @@ export interface NatalPosition {
   position_str: string;
 }
 
+export interface NatalAspect {
+  planet_a: string;
+  planet_b: string;
+  label_a: string;
+  label_b: string;
+  type: string;
+  type_label: string;
+  orb: number;
+  angle: number;
+  applying: boolean;
+}
+
 export interface Insight {
   id?: string;
   system: string;

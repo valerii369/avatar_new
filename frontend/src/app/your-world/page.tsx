@@ -742,6 +742,7 @@ export default function YourWorldPage() {
             insight={selectedInsight}
             onClose={() => setSelectedInsight(null)}
             natalPositions={hub?.natal_positions ?? []}
+            natalAspects={hub?.natal_aspects ?? []}
           />
         )}
       </AnimatePresence>
