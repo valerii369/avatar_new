@@ -6,6 +6,7 @@ Rule: each sphere agent sees ONLY the data relevant to its house.
 This eliminates hallucinations caused by LLM "attention diffusion" over a large JSON.
 """
 from __future__ import annotations
+from app.services.dsb.aspect_synthesis import build_planet_synthesis
 
 SPHERE_NAMES: dict[int, str] = {
     1:  "Личность и тело",
@@ -157,6 +158,27 @@ def extract_sphere_context(chart: dict, sphere_num: int) -> dict:
     aspects_to_co_ruler = _aspects_involving(aspects, {co_name})[:8]     if co_name    else []
     resident_aspects    = _aspects_involving(aspects, resident_names)[:10]
 
+    # ── Layer 2: Aspect synthesis per planet ──────────────────────────────────
+    ruler_synthesis = None
+    if ruler and ruler_name:
+        ruler_synthesis = build_planet_synthesis(
+            ruler_name, aspects_to_ruler, ruler.get("dispositor")
+        )
+
+    co_ruler_synthesis = None
+    if co_ruler and co_name:
+        co_ruler_synthesis = build_planet_synthesis(
+            co_name, aspects_to_co_ruler, co_ruler.get("dispositor")
+        )
+
+    resident_syntheses: list[dict] = []
+    for res in residents:
+        res_name = res["name"]
+        res_asps = _aspects_involving(aspects, {res_name})[:10]
+        resident_syntheses.append(
+            build_planet_synthesis(res_name, res_asps, res.get("dispositor"))
+        )
+
     ruler_receptions = [
         mr for mr in mutual
         if ruler_name in (mr.get("planet_a"), mr.get("planet_b"))
@@ -201,8 +223,12 @@ def extract_sphere_context(chart: dict, sphere_num: int) -> dict:
         "unaspected_planets":   unaspected,
         "planets_on_angles":    on_angles,
         # OOB & intercepted (sphere-scoped)
-        "out_of_bounds_here":   oob_here,           # OOB planets in this sphere
-        "intercepted_sign":     intercepted_here,   # sign intercepted in this house
+        "out_of_bounds_here":   oob_here,
+        "intercepted_sign":     intercepted_here,
+        # Layer 2: aspect synthesis scaffolds
+        "ruler_synthesis":      ruler_synthesis,
+        "co_ruler_synthesis":   co_ruler_synthesis,
+        "resident_syntheses":   resident_syntheses,
         "_target_min":          min_ins,
         "_target_max":          max_ins,
     }
