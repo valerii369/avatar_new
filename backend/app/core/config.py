@@ -13,15 +13,15 @@ class Settings(BaseSettings):
 
     # ── OpenAI models ────────────────────────────────────────────────────────
     # Override any of these in .env to switch models without touching code.
-    # Current default: gpt-4.1-mini — fast, smart, cost-effective.
+    # Current default: gpt-5.4-mini — 400k context, 128k output, fast & smart.
     #
-    # Quick-switch presets (copy the line into .env):
-    #   gpt-4.1-mini   → MODEL_HEAVY=gpt-4.1-mini   MODEL_LIGHT=gpt-4.1-mini
-    #   gpt-4.1        → MODEL_HEAVY=gpt-4.1         MODEL_LIGHT=gpt-4.1-mini
-    #   gpt-4o         → MODEL_HEAVY=gpt-4o          MODEL_LIGHT=gpt-4o-mini
-    #   o4-mini        → MODEL_HEAVY=o4-mini         MODEL_LIGHT=o4-mini
-    MODEL_HEAVY: str = "gpt-4.1-mini"   # DSB pipeline, transit synthesis, portraits
-    MODEL_LIGHT: str = "gpt-4.1-mini"   # chat assistant, summaries, quick tasks
+    # Quick-switch presets (copy the lines into .env):
+    #   gpt-5.4-mini           → MODEL_HEAVY=gpt-5.4-mini    MODEL_LIGHT=gpt-5.4-mini
+    #   gpt-5.4 (full)         → MODEL_HEAVY=gpt-5.4         MODEL_LIGHT=gpt-5.4-mini
+    #   gpt-5.4-nano (cheapest)→ MODEL_HEAVY=gpt-5.4-mini    MODEL_LIGHT=gpt-5.4-nano
+    #   gpt-4.1-mini (fallback)→ MODEL_HEAVY=gpt-4.1-mini    MODEL_LIGHT=gpt-4.1-mini
+    MODEL_HEAVY: str = "gpt-5.4-mini"   # DSB pipeline, transit synthesis, portraits
+    MODEL_LIGHT: str = "gpt-5.4-mini"   # chat assistant, summaries, quick tasks
 
     model_config = SettingsConfigDict(
         env_file=str(ENV_FILE),
