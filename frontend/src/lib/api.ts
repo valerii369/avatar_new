@@ -47,6 +47,8 @@ export const masterHubAPI = {
 };
 
 export const recommendationsAPI = {
+  list:     (userId: string, period: string) =>
+    api.get(`/api/recommendations/${userId}/${period}`),
   generate: (userId: string, period: string) =>
     api.post(`/api/recommendations/${userId}/${period}`, {}, { timeout: 60000 }),
   invalidate: (userId: string, period: string) =>

@@ -115,6 +115,21 @@ async def get_recommendation(user_id: str, period: PeriodType):
     return {"cached": False, "data": result}
 
 
+@router.get("/{user_id}/{period}")
+async def list_recommendations(user_id: str, period: PeriodType):
+    """Return all saved recommendations for a period, newest first."""
+    sb = get_supabase()
+    resp = (
+        sb.table("user_recommendations")
+        .select("id,period,date_from,date_to,result,created_at")
+        .eq("user_id", user_id)
+        .eq("period", period)
+        .order("date_from", desc=True)
+        .execute()
+    )
+    return {"items": resp.data or []}
+
+
 @router.delete("/{user_id}/{period}")
 async def invalidate_recommendation(user_id: str, period: PeriodType):
     """Force regeneration by clearing the cache for this period."""
