@@ -221,13 +221,13 @@ async def generate_sphere_insights(
 
     try:
         response = await openai_client.chat.completions.create(
-            model="o4-mini",
+            model="gpt-5.4-mini",
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user",   "content": user_payload},
             ],
-            max_completion_tokens=12000,
+            max_tokens=12000,
         )
         raw  = response.choices[0].message.content
         data = json.loads(raw)
