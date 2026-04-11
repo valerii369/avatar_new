@@ -41,15 +41,25 @@ class GeocodeRequest(BaseModel):
 # ─── Helpers ───────────────────────────────────────────────────────────────────
 
 def _default_user_fields() -> dict:
-    """Fields that exist in the Supabase 'users' table."""
+    """Gameplay / status fields reset to defaults (excludes identity fields like referral_code)."""
     return {
-        "xp":             0,
+        "xp":              0,
         "evolution_level": 1,
-        "title":          "Новичок",
-        "energy":         100,
-        "streak":         0,
-        "referral_code":  "",
+        "title":           "Новичок",
+        "energy":          100,
+        "streak":          0,
         "onboarding_done": False,
+    }
+
+def _default_chat_profile_fields() -> dict:
+    """Chat-context profile fields reset to defaults."""
+    return {
+        "chat_onboarding_completed": False,
+        "current_location":          None,
+        "work_sphere":               None,
+        "work_satisfaction":         None,
+        "relationship_status":       None,
+        "life_focus":                None,
     }
 
 def _computed_xp_fields(user: dict) -> dict:
@@ -282,44 +292,67 @@ async def reset_user(request: ResetRequest):
     # Some legacy rows may store tg_id in user_id field, so clear both variants.
     user_variants = list({resolved_user_id, resolved_tg_id})
 
-    try:
-        birth_places: set[str] = set()
-        for uid in user_variants:
+    errors: list[str] = []
+
+    # ── Collect birth places for optional geocode cleanup ──────────────────────
+    birth_places: set[str] = set()
+    for uid in user_variants:
+        try:
             birth_rows = supabase.table("user_birth_data").select("birth_place").eq("user_id", uid).execute()
             for row in (birth_rows.data or []):
                 place = (row.get("birth_place") or "").strip()
                 if place:
                     birth_places.add(place)
+        except Exception as e:
+            logger.warning(f"Could not fetch birth_place for uid={uid}: {e}")
 
-        for uid in user_variants:
-            supabase.table("user_insights").delete().eq("user_id", uid).execute()
-            supabase.table("user_portraits").delete().eq("user_id", uid).execute()
-            supabase.table("user_birth_data").delete().eq("user_id", uid).execute()
-            supabase.table("user_memory").delete().eq("user_id", uid).execute()
-            supabase.table("uis_errors").delete().eq("user_id", uid).execute()
-            supabase.table("retriever_traces").delete().eq("user_id", uid).execute()
+    # ── Delete user data tables ────────────────────────────────────────────────
+    TABLES_TO_CLEAR = [
+        "user_insights",
+        "user_portraits",
+        "user_birth_data",
+        "user_memory",
+        "uis_errors",
+        "retriever_traces",
+    ]
+    for uid in user_variants:
+        for table in TABLES_TO_CLEAR:
+            try:
+                supabase.table(table).delete().eq("user_id", uid).execute()
+            except Exception as e:
+                msg = f"{table}[{uid}]: {e}"
+                logger.error(f"Reset: delete failed — {msg}")
+                errors.append(msg)
 
-        if request.clear_geocode:
-            for place in birth_places:
+    # ── Optional geocode cleanup ───────────────────────────────────────────────
+    if request.clear_geocode:
+        for place in birth_places:
+            try:
                 supabase.table("geocode_cache").delete().eq("city_name", place).execute()
+            except Exception as e:
+                logger.warning(f"geocode_cache delete failed for '{place}': {e}")
 
+    # ── Reset user flags and stats ─────────────────────────────────────────────
+    try:
         supabase.table("users").update({
-            "onboarding_done": False,
             **_default_user_fields(),
+            **_default_chat_profile_fields(),
         }).eq("id", resolved_user_id).execute()
-
-        return {
-            "status": "ok",
-            "message": "User reset completed",
-            "resolved_user_id": resolved_user_id,
-            "resolved_tg_id": resolved_tg_id,
-            "cleared_user_ids": user_variants,
-            "geocode_cleared": bool(request.clear_geocode),
-            "cleared_places": sorted(list(birth_places)) if request.clear_geocode else [],
-        }
     except Exception as e:
-        logger.error(f"Reset failed for user_id={resolved_user_id}, tg_id={resolved_tg_id}: {e}")
-        raise HTTPException(status_code=500, detail="Reset failed")
+        msg = f"users update: {e}"
+        logger.error(f"Reset: {msg}")
+        errors.append(msg)
+
+    return {
+        "status":           "ok" if not errors else "partial",
+        "message":          "User reset completed" if not errors else f"Reset done with {len(errors)} error(s)",
+        "resolved_user_id": resolved_user_id,
+        "resolved_tg_id":   resolved_tg_id,
+        "cleared_user_ids": user_variants,
+        "geocode_cleared":  bool(request.clear_geocode),
+        "cleared_places":   sorted(list(birth_places)) if request.clear_geocode else [],
+        "errors":           errors,
+    }
 
 
 # ─── DSB Pipeline background task ────────────────────────────────────────────
