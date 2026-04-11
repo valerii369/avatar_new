@@ -1,24 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export interface NatalPosition {
-  key: string;
-  label: string;
-  position_str: string;
-}
-
-export interface NatalAspect {
-  planet_a: string;
-  planet_b: string;
-  label_a: string;
-  label_b: string;
-  type: string;
-  type_label: string;
-  orb: number;
-  angle: number;
-  applying: boolean;
-}
-
 export interface Insight {
   id?: string;
   system: string;
@@ -28,18 +10,15 @@ export interface Insight {
   weight: number;
   position: string;
   core_theme: string;
-  description: string;
+  energy_description: string;
   light_aspect: string;
   shadow_aspect: string;
-  insight: string;
-  gift: string;
+  insight?: string | null;
+  gift?: string | null;
   developmental_task: string;
   integration_key: string;
   triggers: string[];
   source?: string | null;
-  blind_spot?: string;
-  energy_rhythm?: string;
-  crisis_anchor?: string;
 }
 
 interface UserState {
@@ -59,10 +38,6 @@ interface UserState {
   xpNext: number;
   referralCode: string;
 
-  // Cached hub data — persisted so the app shows content instantly on re-entry
-  hubData: any | null;
-  setHubData: (data: any) => void;
-
   // Assistant History
   assistantMessages: { role: string; content: string }[];
   setAssistantMessages: (messages: { role: string; content: string }[]) => void;
@@ -77,9 +52,6 @@ export const useUserStore = create<UserState>()(
     (set) => ({
       userId: null, tgId: null, firstName: "", photoUrl: "", token: null, onboardingDone: false,
       energy: 0, streak: 0, evolutionLevel: 1, title: "Новичок", xp: 0, xpCurrent: 0, xpNext: 1000, referralCode: "",
-
-      hubData: null,
-      setHubData: (data) => set({ hubData: data }),
 
       assistantMessages: [],
       setAssistantMessages: (messages) => set({ assistantMessages: messages }),
