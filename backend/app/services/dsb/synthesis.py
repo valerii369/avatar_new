@@ -140,9 +140,14 @@ async def generate_master_portrait(sphere_summaries: dict) -> dict:
         return {}
 
 
-async def update_sphere_summary(user_id: str, sphere_id: int, short_summary: str) -> None:
+async def update_sphere_summary(
+    user_id: str,
+    sphere_id: int,
+    short_summary: str,
+    sphere_archetype: str = "",
+) -> None:
     """
-    Upserts short_summary for one sphere into user_portraits.sphere_summaries.
+    Upserts short_summary + sphere_archetype for one sphere into user_portraits.
     Triggers master synthesis automatically when active_spheres_count reaches 12.
     """
     if not short_summary:
@@ -152,17 +157,23 @@ async def update_sphere_summary(user_id: str, sphere_id: int, short_summary: str
 
     try:
         res = supabase.table("user_portraits") \
-            .select("id, sphere_summaries, active_spheres_count") \
+            .select("id, sphere_summaries, sphere_archetypes, active_spheres_count") \
             .eq("user_id", user_id).execute()
 
         if res.data:
             row = res.data[0]
             summaries: dict = dict(row.get("sphere_summaries") or {})
+            archetypes: dict = dict(row.get("sphere_archetypes") or {})
+
             summaries[str(sphere_id)] = short_summary
+            if sphere_archetype:
+                archetypes[str(sphere_id)] = sphere_archetype
+
             active_count = len(summaries)
 
             update_payload: dict = {
-                "sphere_summaries": summaries,
+                "sphere_summaries":   summaries,
+                "sphere_archetypes":  archetypes,
                 "active_spheres_count": active_count,
             }
 
@@ -182,6 +193,7 @@ async def update_sphere_summary(user_id: str, sphere_id: int, short_summary: str
             supabase.table("user_portraits").insert({
                 "user_id":              user_id,
                 "sphere_summaries":     {str(sphere_id): short_summary},
+                "sphere_archetypes":    {str(sphere_id): sphere_archetype} if sphere_archetype else {},
                 "active_spheres_count": 1,
                 "core_identity":        "",
                 "core_archetype":       "",
@@ -200,6 +212,7 @@ async def save_to_supabase(
     result: dict,
     portrait: dict | None = None,
     sphere_summaries: dict | None = None,
+    sphere_archetypes: dict | None = None,
 ) -> bool:
     """Saves synthesized insights and portrait to Supabase. Preserves accumulated sphere_summaries."""
     supabase = get_supabase()
@@ -239,14 +252,19 @@ async def save_to_supabase(
                 "deep_profile_data": {"polarities": portrait.get("polarities", {})},
             }
 
-            # Merge incoming sphere_summaries with any already stored
+            # Merge incoming sphere_summaries and sphere_archetypes with any already stored
             if sphere_summaries:
                 existing_summaries: dict = {}
+                existing_archetypes: dict = {}
                 if existing_res.data:
                     existing_summaries = dict(existing_res.data[0].get("sphere_summaries") or {})
+                    existing_archetypes = dict(existing_res.data[0].get("sphere_archetypes") or {})
                 merged = {**existing_summaries, **{str(k): v for k, v in sphere_summaries.items()}}
                 portrait_data["sphere_summaries"] = merged
                 portrait_data["active_spheres_count"] = len(merged)
+                if sphere_archetypes:
+                    merged_arch = {**existing_archetypes, **{str(k): v for k, v in sphere_archetypes.items()}}
+                    portrait_data["sphere_archetypes"] = merged_arch
 
                 if len(merged) == 12:
                     logger.info(f"All 12 summaries present for {user_id} — triggering master synthesis")

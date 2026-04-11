@@ -201,9 +201,10 @@ async def get_portrait(user_id: str):
             "natal_positions":        natal_positions,
             "natal_aspects":          natal_aspects,
             # Progressive portrait synthesis
-            "sphere_summaries":       portrait_data.get("sphere_summaries") or {}  if portrait_data else {},
-            "active_spheres_count":   portrait_data.get("active_spheres_count", 0) if portrait_data else 0,
-            "master_portrait":        portrait_data.get("master_portrait")          if portrait_data else None,
+            "sphere_summaries":       portrait_data.get("sphere_summaries") or {}    if portrait_data else {},
+            "sphere_archetypes":      portrait_data.get("sphere_archetypes") or {}   if portrait_data else {},
+            "active_spheres_count":   portrait_data.get("active_spheres_count", 0)   if portrait_data else 0,
+            "master_portrait":        portrait_data.get("master_portrait")            if portrait_data else None,
         }
 
         return hub

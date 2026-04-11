@@ -52,11 +52,14 @@ SPECIALIST_PROMPT_TEMPLATE = """\
 
 ═══ ФОРМАТ ВЫВОДА ═══
 Возвращай ТОЛЬКО валидный JSON:
-{{"insights": [ ... ], "short_summary": "<емкая суть этой сферы для пользователя, до 200 символов, на русском>"}}
+{{"insights": [ ... ], "short_summary": "<емкая суть этой сферы для пользователя, до 200 символов, на русском>", "sphere_archetype": "<архетип этой сферы — 2-3 слова, образный и точный>"}}
 Никакого текста до или после JSON. Никаких markdown-блоков.
 
 short_summary — это одна яркая фраза, раскрывающая суть данной сферы конкретного человека.
 Например: «Твоя личность — лабиринт, где острый ум встречает глубокое чувство» или «Ресурсы растут через дисциплину и доверие к медленному накоплению».
+
+sphere_archetype — архетипное имя для этой сферы данного человека, 2-3 слова на русском.
+Примеры: «Хранитель Огня», «Строитель Систем», «Странник Душ», «Мастер Равновесия», «Зеркало Мира», «Страж Порогов».
 
 ═══ СТРУКТУРА КАЖДОГО ИНСАЙТА ═══
 {{
@@ -237,8 +240,9 @@ async def generate_sphere_insights(
         if isinstance(data, list):
             data = {"insights": data}
 
-        # Extract short_summary before model validation
+        # Extract short_summary and sphere_archetype before model validation
         short_summary: str = data.pop("short_summary", "") or ""
+        sphere_archetype: str = data.pop("sphere_archetype", "") or ""
 
         insights = SphereResponse(**data).insights
 
@@ -246,25 +250,25 @@ async def generate_sphere_insights(
         for ins in insights:
             ins.primary_sphere = sphere_id
 
-        logger.info(f"Sphere {sphere_id}: {len(insights)} insights, summary={bool(short_summary)}")
-        return insights, short_summary
+        logger.info(f"Sphere {sphere_id}: {len(insights)} insights, summary={bool(short_summary)}, archetype={bool(sphere_archetype)}")
+        return insights, short_summary, sphere_archetype
 
     except Exception as e:
         logger.error(f"Sphere {sphere_id} failed (attempt {attempt}): {e}")
         if attempt < 2:
             await asyncio.sleep(1)
             return await generate_sphere_insights(chart, sphere_id, attempt + 1, user_id)
-        return [], ""
+        return [], "", ""
 
 
 # ─── Orchestrator ─────────────────────────────────────────────────────────────
 
-async def generate_insights(chart: dict, user_id: str = "") -> tuple[UISResponse, dict[int, str]]:
+async def generate_insights(chart: dict, user_id: str = "") -> tuple[UISResponse, dict[int, str], dict[int, str]]:
     """
     Orchestrator: launches all 12 sphere workers simultaneously.
     Used for full-chart generation (initial build or full rebuild).
 
-    Returns (UISResponse, sphere_summaries) where sphere_summaries is {sphere_id: short_summary}.
+    Returns (UISResponse, sphere_summaries, sphere_archetypes).
     """
     logger.info("Orchestrator: launching 12 sphere agents in parallel")
 
@@ -276,15 +280,18 @@ async def generate_insights(chart: dict, user_id: str = "") -> tuple[UISResponse
 
     all_insights: list[UniversalInsight] = []
     sphere_summaries: dict[int, str] = {}
+    sphere_archetypes: dict[int, str] = {}
 
     for sphere_id, result in enumerate(results, start=1):
         if isinstance(result, Exception):
             logger.error(f"Sphere {sphere_id} raised: {result}")
             continue
-        insights, short_summary = result
+        insights, short_summary, sphere_archetype = result
         all_insights.extend(insights)
         if short_summary:
             sphere_summaries[sphere_id] = short_summary
+        if sphere_archetype:
+            sphere_archetypes[sphere_id] = sphere_archetype
 
-    logger.info(f"Orchestrator: total assembled = {len(all_insights)} insights, summaries = {len(sphere_summaries)}")
-    return UISResponse(insights=all_insights), sphere_summaries
+    logger.info(f"Orchestrator: total assembled = {len(all_insights)} insights, summaries = {len(sphere_summaries)}, archetypes = {len(sphere_archetypes)}")
+    return UISResponse(insights=all_insights), sphere_summaries, sphere_archetypes

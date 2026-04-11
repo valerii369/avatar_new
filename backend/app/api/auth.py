@@ -390,12 +390,15 @@ async def initialize_onboarding_layer(req: ProfileRequest):
         from app.services.dsb.western_astrology_agent import generate_sphere_insights
         all_insights = []
         free_sphere_summaries: dict[int, str] = {}
+        free_sphere_archetypes: dict[int, str] = {}
         for sphere_id in FREE_SPHERES:
             t_sphere = time.perf_counter()
-            insights, short_summary = await generate_sphere_insights(astro_chart, sphere_id, user_id=req.user_id)
+            insights, short_summary, sphere_archetype = await generate_sphere_insights(astro_chart, sphere_id, user_id=req.user_id)
             all_insights.extend(insights)
             if short_summary:
                 free_sphere_summaries[sphere_id] = short_summary
+            if sphere_archetype:
+                free_sphere_archetypes[sphere_id] = sphere_archetype
             logger.info(f"Free sphere {sphere_id}: {len(insights)} insights")
             logger.info(f"[TIMING] onboarding.layer2_sphere_{sphere_id}={time.perf_counter() - t_sphere:.2f}s user={req.user_id}")
 
@@ -411,7 +414,7 @@ async def initialize_onboarding_layer(req: ProfileRequest):
 
         # Save everything (with sphere summaries)
         t_save = time.perf_counter()
-        await save_to_supabase(req.user_id, synthesized_data, portrait, free_sphere_summaries)
+        await save_to_supabase(req.user_id, synthesized_data, portrait, free_sphere_summaries, free_sphere_archetypes)
         logger.info(f"[TIMING] onboarding.layer5_save={time.perf_counter() - t_save:.2f}s user={req.user_id}")
 
         # Mark onboarding done
@@ -484,7 +487,7 @@ async def generate_sphere(request: GenerateSphereRequest):
 
         # Layer 2: Per-sphere agent
         from app.services.dsb.western_astrology_agent import generate_sphere_insights
-        insights, short_summary = await generate_sphere_insights(astro_chart, request.sphere_id, user_id=request.user_id)
+        insights, short_summary, sphere_archetype = await generate_sphere_insights(astro_chart, request.sphere_id, user_id=request.user_id)
 
         if not insights:
             raise HTTPException(status_code=500, detail="No insights generated")
@@ -497,8 +500,8 @@ async def generate_sphere(request: GenerateSphereRequest):
             row["rank"] = rank
             supabase.table("user_insights").insert(row).execute()
 
-        # Save sphere summary + potentially trigger master synthesis at 12 spheres
-        await update_sphere_summary(request.user_id, request.sphere_id, short_summary)
+        # Save sphere summary + archetype + potentially trigger master synthesis at 12 spheres
+        await update_sphere_summary(request.user_id, request.sphere_id, short_summary, sphere_archetype)
 
         # Deduct energy
         supabase.table("users").update({"energy": user["energy"] - 10})\
@@ -674,7 +677,7 @@ async def calculate_sync(request: ProfileRequest):
         steps.append(f"chart: {len(astro_chart.get('planets',{}))} planets, {len(astro_chart.get('aspects',[]))} aspects")
 
         # Step 3: Generate insights
-        uis_response, sphere_summaries = await generate_insights(astro_chart, user_id=request.user_id)
+        uis_response, sphere_summaries, sphere_archetypes = await generate_insights(astro_chart, user_id=request.user_id)
         steps.append(f"insights: {len(uis_response.insights)} generated, summaries: {len(sphere_summaries)}")
 
         # Step 4: Synthesis
@@ -686,7 +689,7 @@ async def calculate_sync(request: ProfileRequest):
         steps.append(f"portrait: {bool(portrait)}")
 
         # Step 6: Save (with sphere summaries — master synthesis triggered inside if 12 summaries)
-        await save_to_supabase(request.user_id, synthesized_data, portrait, sphere_summaries)
+        await save_to_supabase(request.user_id, synthesized_data, portrait, sphere_summaries, sphere_archetypes)
         steps.append("saved to supabase")
 
         # Step 7: Mark onboarding done
