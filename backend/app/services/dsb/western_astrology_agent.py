@@ -52,8 +52,11 @@ SPECIALIST_PROMPT_TEMPLATE = """\
 
 ═══ ФОРМАТ ВЫВОДА ═══
 Возвращай ТОЛЬКО валидный JSON:
-{{"insights": [ ... ]}}
+{{"insights": [ ... ], "short_summary": "<емкая суть этой сферы для пользователя, до 200 символов, на русском>"}}
 Никакого текста до или после JSON. Никаких markdown-блоков.
+
+short_summary — это одна яркая фраза, раскрывающая суть данной сферы конкретного человека.
+Например: «Твоя личность — лабиринт, где острый ум встречает глубокое чувство» или «Ресурсы растут через дисциплину и доверие к медленному накоплению».
 
 ═══ СТРУКТУРА КАЖДОГО ИНСАЙТА ═══
 {{
@@ -187,7 +190,8 @@ async def generate_sphere_insights(
     chart: dict,
     sphere_id: int,
     attempt: int = 0,
-) -> list[UniversalInsight]:
+    user_id: str = "",
+) -> tuple[list[UniversalInsight], str]:
     """
     Worker agent for one sphere.
     Extracts isolated context → targeted RAG → specialist LLM call.
@@ -230,46 +234,54 @@ async def generate_sphere_insights(
         if isinstance(data, list):
             data = {"insights": data}
 
+        # Extract short_summary before model validation
+        short_summary: str = data.pop("short_summary", "") or ""
+
         insights = SphereResponse(**data).insights
 
         # Enforce correct sphere_id on every insight
         for ins in insights:
             ins.primary_sphere = sphere_id
 
-        logger.info(f"Sphere {sphere_id}: {len(insights)} insights")
-        return insights
+        logger.info(f"Sphere {sphere_id}: {len(insights)} insights, summary={bool(short_summary)}")
+        return insights, short_summary
 
     except Exception as e:
         logger.error(f"Sphere {sphere_id} failed (attempt {attempt}): {e}")
         if attempt < 2:
             await asyncio.sleep(1)
-            return await generate_sphere_insights(chart, sphere_id, attempt + 1)
-        return []
+            return await generate_sphere_insights(chart, sphere_id, attempt + 1, user_id)
+        return [], ""
 
 
 # ─── Orchestrator ─────────────────────────────────────────────────────────────
 
-async def generate_insights(chart: dict) -> UISResponse:
+async def generate_insights(chart: dict, user_id: str = "") -> tuple[UISResponse, dict[int, str]]:
     """
     Orchestrator: launches all 12 sphere workers simultaneously.
     Used for full-chart generation (initial build or full rebuild).
 
-    Returns merged UISResponse with insights from all spheres.
+    Returns (UISResponse, sphere_summaries) where sphere_summaries is {sphere_id: short_summary}.
     """
     logger.info("Orchestrator: launching 12 sphere agents in parallel")
 
     tasks = [
-        generate_sphere_insights(chart, sphere_id)
+        generate_sphere_insights(chart, sphere_id, user_id=user_id)
         for sphere_id in range(1, 13)
     ]
     results: list = await asyncio.gather(*tasks, return_exceptions=True)
 
     all_insights: list[UniversalInsight] = []
+    sphere_summaries: dict[int, str] = {}
+
     for sphere_id, result in enumerate(results, start=1):
         if isinstance(result, Exception):
             logger.error(f"Sphere {sphere_id} raised: {result}")
             continue
-        all_insights.extend(result)
+        insights, short_summary = result
+        all_insights.extend(insights)
+        if short_summary:
+            sphere_summaries[sphere_id] = short_summary
 
-    logger.info(f"Orchestrator: total assembled = {len(all_insights)} insights")
-    return UISResponse(insights=all_insights)
+    logger.info(f"Orchestrator: total assembled = {len(all_insights)} insights, summaries = {len(sphere_summaries)}")
+    return UISResponse(insights=all_insights), sphere_summaries

@@ -16,21 +16,168 @@ import RecommendationsTab from "@/components/RecommendationsTab";
 
 type Tab = "portrait" | "recommendations" | "breakdown" | "sides";
 
+// ─── Portrait Lock Screen ────────────────────────────────────────────────────
+function PortraitLockScreen({ activeSphereCount }: { activeSphereCount: number }) {
+  const pct = Math.round((activeSphereCount / 12) * 100);
+  return (
+    <div style={{ padding: "48px 0 24px", display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
+      <motion.div
+        animate={{ scale: [1, 1.06, 1] }}
+        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        style={{
+          width: 64, height: 64, borderRadius: 20,
+          background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.14)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 28,
+        }}
+      >
+        🔒
+      </motion.div>
+
+      <div style={{ textAlign: "center" }}>
+        <p style={{ fontSize: 26, fontWeight: 800, color: "var(--text-primary)", margin: 0, lineHeight: 1.2 }}>
+          {activeSphereCount}
+          <span style={{ fontSize: 16, color: "var(--text-muted)", fontWeight: 500 }}>/12</span>
+        </p>
+        <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "4px 0 0", letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600 }}>
+          сфер открыто
+        </p>
+      </div>
+
+      {/* Progress bar */}
+      <div style={{ width: "100%", maxWidth: 280, height: 5, borderRadius: 3, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          style={{ height: "100%", background: "linear-gradient(90deg, var(--violet), #a78bfa)", borderRadius: 3 }}
+        />
+      </div>
+
+      <p style={{
+        fontSize: 13, color: "var(--text-muted)", textAlign: "center",
+        maxWidth: 280, lineHeight: 1.6, margin: 0,
+      }}>
+        Твой истинный Аватар ещё формируется. Открой все 12 сфер, чтобы собрать полную картину своей личности.
+      </p>
+    </div>
+  );
+}
+
+// ─── Sphere Progress Grid ────────────────────────────────────────────────────
+function SphereProgressGrid({ hub }: { hub: any }) {
+  const sphereSummaries: Record<string, string> = hub?.sphere_summaries || {};
+  const activeSphereCount: number = hub?.active_spheres_count ?? Object.keys(sphereSummaries).length;
+  const [selectedSphere, setSelectedSphere] = useState<{ id: number; name: string; color: string; summary: string } | null>(null);
+  const pct = Math.round((activeSphereCount / 12) * 100);
+
+  return (
+    <div style={{ padding: "16px", borderRadius: 16, background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)" }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.12em" }}>
+          Активные сферы
+        </span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--violet)" }}>{activeSphereCount}/12</span>
+      </div>
+
+      {/* Progress bar */}
+      <div style={{ height: 3, background: "rgba(255,255,255,0.05)", borderRadius: 2, marginBottom: 14, overflow: "hidden" }}>
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.7, ease: "easeOut" }}
+          style={{ height: "100%", background: "linear-gradient(90deg, var(--violet), #a78bfa)", borderRadius: 2 }}
+        />
+      </div>
+
+      {/* 12-cell grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
+        {SPHERES.map(s => {
+          const summary = sphereSummaries[String(s.id)];
+          const isActive = !!summary;
+          return (
+            <motion.div
+              key={s.id}
+              whileTap={isActive ? { scale: 0.93 } : {}}
+              onClick={() => isActive && setSelectedSphere({ id: s.id, name: s.name, color: s.color, summary })}
+              style={{
+                padding: "10px 6px", borderRadius: 12,
+                background: isActive ? `${s.color}08` : "rgba(255,255,255,0.02)",
+                border: `1px solid ${isActive ? `${s.color}25` : "rgba(255,255,255,0.04)"}`,
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 5,
+                cursor: isActive ? "pointer" : "default",
+                transition: "background 0.2s, border 0.2s",
+              }}
+            >
+              {isActive ? (
+                <s.icon size={13} style={{ color: s.color }} />
+              ) : (
+                <div style={{ width: 13, height: 13, borderRadius: 3, background: "rgba(255,255,255,0.05)" }} />
+              )}
+              <span style={{ fontSize: 9, fontWeight: 600, color: isActive ? s.color : "rgba(255,255,255,0.12)", textAlign: "center", lineHeight: 1.1 }}>
+                {s.id}
+              </span>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* Sphere summary modal */}
+      <AnimatePresence>
+        {selectedSphere && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setSelectedSphere(null)}
+            style={{ position: "fixed", inset: 0, zIndex: 120, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(10px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+          >
+            <motion.div
+              initial={{ scale: 0.88, opacity: 0, y: 16 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0 }}
+              transition={{ type: "spring", damping: 22, stiffness: 320 }}
+              onClick={e => e.stopPropagation()}
+              style={{ width: "100%", maxWidth: 340, borderRadius: 20, background: "var(--bg-card)", border: `1px solid ${selectedSphere.color}20`, padding: 24 }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: `${selectedSphere.color}12`, border: `1px solid ${selectedSphere.color}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {(() => { const s = SPHERE_BY_ID[selectedSphere.id]; return s ? <s.icon size={16} style={{ color: selectedSphere.color }} /> : null; })()}
+                </div>
+                <div>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: `${selectedSphere.color}80`, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>Сфера {selectedSphere.id}</p>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: selectedSphere.color, margin: 0 }}>{selectedSphere.name}</p>
+                </div>
+              </div>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", lineHeight: 1.6, margin: "0 0 16px" }}>
+                {selectedSphere.summary}
+              </p>
+              <button onClick={() => setSelectedSphere(null)} style={{ width: "100%", padding: "10px 0", borderRadius: 12, background: `${selectedSphere.color}12`, border: "none", color: selectedSphere.color, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                Закрыть
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // ─── Portrait Tab ────────────────────────────────────────────────────────────
 function PortraitTab({ hub }: { hub: any }) {
-  if (!hub?.portrait_summary) {
+  const activeSphereCount: number = hub?.active_spheres_count ?? 0;
+  const masterPortrait = hub?.master_portrait;
+  const portraitSummary = hub?.portrait_summary;
+
+  const [expandedCard, setExpandedCard] = useState<{
+    label: string; value: string; description?: string; color: string;
+  } | null>(null);
+
+  // No data at all
+  if (!portraitSummary && activeSphereCount === 0) {
     return (
       <div className="flex flex-col items-center justify-center" style={{ padding: "60px 20px", textAlign: "center" }}>
-        <div style={{
-          width: 56, height: 56, borderRadius: 16,
-          background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.1)",
-          display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16,
-        }}>
+        <div style={{ width: 56, height: 56, borderRadius: 16, background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.1)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
           <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--violet)", opacity: 0.4 }} />
         </div>
-        <p style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", marginBottom: 6 }}>
-          Портрет формируется
-        </p>
+        <p style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", marginBottom: 6 }}>Портрет формируется</p>
         <p style={{ fontSize: 12, color: "var(--text-muted)", maxWidth: 260, lineHeight: 1.5 }}>
           Пройди онбординг, чтобы получить персональный архетипический портрет
         </p>
@@ -38,194 +185,116 @@ function PortraitTab({ hub }: { hub: any }) {
     );
   }
 
-  const p = hub.portrait_summary;
-  const polarities = hub.deep_profile_data?.polarities;
-  const [expandedCard, setExpandedCard] = useState<{ label: string; value: string; color: string } | null>(null);
+  // Sphere grid is always shown at top
+  // Portrait is locked until 12 spheres
+  const isLocked = activeSphereCount < 12 || !masterPortrait;
 
-  const attrs = [
-    { label: "Архетип",  value: p.core_archetype,  color: "#8B5CF6" },
-    { label: "Роль",     value: p.narrative_role,   color: "#3B82F6" },
-    { label: "Энергия",  value: p.energy_type,      color: "#10B981" },
-    { label: "Динамика", value: p.current_dynamic,  color: "#F59E0B" },
-  ];
+  // Build attribute cards from master_portrait (preferred) or fallback to portrait_summary
+  const attrs: { label: string; value: string; description?: string; color: string }[] = masterPortrait ? [
+    { label: "Идентификация", value: masterPortrait.identification?.value ?? "", description: masterPortrait.identification?.description, color: "#8B5CF6" },
+    { label: "Архетип",       value: masterPortrait.archetype?.value      ?? "", description: masterPortrait.archetype?.description,       color: "#3B82F6" },
+    { label: "Роль",          value: masterPortrait.role?.value            ?? "", description: masterPortrait.role?.description,            color: "#10B981" },
+    { label: "Энергия",       value: masterPortrait.energy?.value          ?? "", description: masterPortrait.energy?.description,          color: "#F59E0B" },
+    { label: "Динамика",      value: masterPortrait.dynamics?.value        ?? "", description: masterPortrait.dynamics?.description,        color: "#EF4444" },
+    { label: "Атмосфера",     value: masterPortrait.atmosphere?.value      ?? "", description: masterPortrait.atmosphere?.description,      color: "#EC4899" },
+  ] : portraitSummary ? [
+    { label: "Архетип",  value: portraitSummary.core_archetype,  color: "#8B5CF6" },
+    { label: "Роль",     value: portraitSummary.narrative_role,   color: "#3B82F6" },
+    { label: "Энергия",  value: portraitSummary.energy_type,      color: "#10B981" },
+    { label: "Динамика", value: portraitSummary.current_dynamic,  color: "#F59E0B" },
+  ] : [];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
-      {/* Core Identity */}
-      <div style={{
-        padding: 20, borderRadius: 16,
-        background: "linear-gradient(145deg, rgba(139,92,246,0.06), rgba(59,130,246,0.03))",
-        border: "1px solid rgba(139,92,246,0.12)",
-      }}>
-        <div style={{
-          fontSize: 10, fontWeight: 700, color: "rgba(139,92,246,0.5)",
-          textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 10,
-        }}>
-          Идентификация Аватара
-        </div>
-        <p style={{
-          fontSize: 13, fontWeight: 400, color: "var(--text-primary)", lineHeight: 1.3, margin: 0,
-          display: "-webkit-box",
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: "vertical",
-          overflow: "hidden",
-        }}>
-          {p.core_identity}
-        </p>
-      </div>
+      {/* Sphere progress grid — always at top */}
+      <SphereProgressGrid hub={hub} />
 
-      {/* Attributes — truncated, tap to expand */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-        {attrs.map(({ label, value, color }) => {
-          const truncated = value && value.length > 40 ? value.slice(0, 37) + "..." : value;
-          return (
-            <div key={label} onClick={() => setExpandedCard({ label, value, color })} style={{
-              padding: "12px 14px", borderRadius: 14,
-              background: `${color}08`, border: `1px solid ${color}15`,
-              cursor: "pointer", minHeight: 70, display: "flex", flexDirection: "column", justifyContent: "flex-start",
-            }}>
-              <span style={{
-                fontSize: 10, fontWeight: 700, color: `${color}80`,
-                textTransform: "uppercase", letterSpacing: "0.08em",
-                display: "block", marginBottom: 6,
-              }}>{label}</span>
-              <span style={{
-                fontSize: 13, fontWeight: 700, color, lineHeight: 1.3,
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-              }}>
-                {value}
-              </span>
+      {/* Portrait lock screen */}
+      {isLocked ? (
+        <PortraitLockScreen activeSphereCount={activeSphereCount} />
+      ) : (
+        <>
+          {/* Master portrait header */}
+          <div style={{
+            padding: 20, borderRadius: 16,
+            background: "linear-gradient(145deg, rgba(139,92,246,0.08), rgba(59,130,246,0.04))",
+            border: "1px solid rgba(139,92,246,0.15)",
+          }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(139,92,246,0.5)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 10 }}>
+              Аватар раскрыт
             </div>
-          );
-        })}
-      </div>
+            <p style={{ fontSize: 13, color: "var(--text-primary)", lineHeight: 1.5, margin: 0 }}>
+              {masterPortrait?.identification?.description ?? portraitSummary?.core_identity ?? ""}
+            </p>
+          </div>
 
-      {/* Expanded card modal */}
+          {/* Attribute cards — 2 columns */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            {attrs.map(({ label, value, description, color }) => (
+              <div
+                key={label}
+                onClick={() => setExpandedCard({ label, value, description, color })}
+                style={{
+                  padding: "12px 14px", borderRadius: 14,
+                  background: `${color}08`, border: `1px solid ${color}15`,
+                  cursor: "pointer", minHeight: 70, display: "flex", flexDirection: "column", justifyContent: "flex-start",
+                }}
+              >
+                <span style={{ fontSize: 10, fontWeight: 700, color: `${color}80`, textTransform: "uppercase", letterSpacing: "0.08em", display: "block", marginBottom: 6 }}>
+                  {label}
+                </span>
+                <span style={{ fontSize: 13, fontWeight: 700, color, lineHeight: 1.3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                  {value}
+                </span>
+                {description && (
+                  <span style={{ fontSize: 9, color: `${color}50`, marginTop: 4, fontWeight: 500 }}>Нажми для описания</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Tooltip modal (works in both locked and unlocked states) */}
       <AnimatePresence>
         {expandedCard && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={() => setExpandedCard(null)}
-            style={{
-              position: "fixed", inset: 0, zIndex: 100,
-              background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              padding: 24,
-            }}
+            style={{ position: "fixed", inset: 0, zIndex: 110, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(10px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                width: "100%", maxWidth: 340, borderRadius: 20,
-                background: "var(--bg-card)", border: `1px solid ${expandedCard.color}25`,
-                padding: 24,
-              }}
+              initial={{ scale: 0.88, opacity: 0, y: 16 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0 }}
+              transition={{ type: "spring", damping: 22, stiffness: 320 }}
+              onClick={e => e.stopPropagation()}
+              style={{ width: "100%", maxWidth: 340, borderRadius: 20, background: "var(--bg-card)", border: `1px solid ${expandedCard.color}25`, padding: 24 }}
             >
-              <span style={{
-                fontSize: 10, fontWeight: 700, color: `${expandedCard.color}80`,
-                textTransform: "uppercase", letterSpacing: "0.12em",
-                display: "block", marginBottom: 12,
-              }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: `${expandedCard.color}80`, textTransform: "uppercase", letterSpacing: "0.12em", display: "block", marginBottom: 8 }}>
                 {expandedCard.label}
               </span>
-              <p style={{
-                fontSize: 15, fontWeight: 600, color: expandedCard.color,
-                lineHeight: 1.5, margin: 0, marginBottom: 16,
-              }}>
+              <p style={{ fontSize: 17, fontWeight: 700, color: expandedCard.color, lineHeight: 1.3, margin: "0 0 12px" }}>
                 {expandedCard.value}
               </p>
-              <button
-                onClick={() => setExpandedCard(null)}
-                style={{
-                  width: "100%", padding: "10px 0", borderRadius: 12,
-                  background: `${expandedCard.color}15`, border: "none",
-                  color: expandedCard.color, fontSize: 13, fontWeight: 600, cursor: "pointer",
-                }}
-              >
+              {expandedCard.description && (
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.6, margin: "0 0 16px" }}>
+                  {expandedCard.description}
+                </p>
+              )}
+              <button onClick={() => setExpandedCard(null)} style={{ width: "100%", padding: "10px 0", borderRadius: 12, background: `${expandedCard.color}15`, border: "none", color: expandedCard.color, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
                 Закрыть
               </button>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-
-      <SphereDistribution hub={hub} />
-    </div>
-  );
-}
-
-function PolarityBlock({ title, items, color }: { title: string; items: string[]; color: string }) {
-  return (
-    <div style={{
-      padding: 14, borderRadius: 14,
-      background: "rgba(255,255,255,0.02)", border: `1px solid ${color}10`,
-    }}>
-      <div style={{
-        fontSize: 10, fontWeight: 700, color,
-        textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10,
-      }}>
-        {title}
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {items.length > 0 ? items.map((item: string, i: number) => (
-          <div key={i} style={{
-            fontSize: 12, color: "rgba(255,255,255,0.6)",
-            lineHeight: 1.4, fontWeight: 400,
-            display: "flex", gap: 8, alignItems: "flex-start",
-          }}>
-            <span style={{ color, opacity: 0.5, flexShrink: 0, lineHeight: 1.4 }}>·</span>
-            <span>{item}</span>
-          </div>
-        )) : (
-          <span style={{ fontSize: 11, color: "var(--text-muted)", fontStyle: "italic" }}>Исследуется...</span>
-        )}
-      </div>
     </div>
   );
 }
 
 function SphereDistribution({ hub }: { hub: any }) {
-  const systems = hub?.insights || {};
-  const counts: Record<number, number> = {};
-  Object.values(systems).forEach((spheres: any) => {
-    Object.entries(spheres).forEach(([sphereId, items]: [string, any]) => {
-      counts[parseInt(sphereId)] = (counts[parseInt(sphereId)] || 0) + items.length;
-    });
-  });
-  const activeSpheres = SPHERES.filter(s => counts[s.id]);
-  if (activeSpheres.length === 0) return null;
-
-  return (
-    <div style={{
-      padding: 16, borderRadius: 14,
-      background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)",
-    }}>
-      <div style={{
-        fontSize: 10, fontWeight: 700, letterSpacing: "0.12em",
-        color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 12,
-      }}>
-        Активные сферы
-      </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-        {activeSpheres.map(s => (
-          <div key={s.id} style={{
-            display: "flex", alignItems: "center", gap: 6,
-            padding: "6px 10px", borderRadius: 8,
-            background: `${s.color}08`, border: `1px solid ${s.color}15`,
-          }}>
-            <div style={{ width: 5, height: 5, borderRadius: "50%", background: s.color }} />
-            <span style={{ fontSize: 11, color: s.color, fontWeight: 600 }}>{s.name}</span>
-            <span style={{ fontSize: 10, color: "var(--text-muted)" }}>{counts[s.id]}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  // Kept for backward compat — renders nothing (replaced by SphereProgressGrid in PortraitTab)
+  return null;
 }
 
 // ─── Breakdown Tab ───────────────────────────────────────────────────────────

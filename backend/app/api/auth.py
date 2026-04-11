@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from typing import Optional
 from app.services.dsb.natal_chart import calculate_chart
 from app.services.dsb.western_astrology_agent import generate_insights
-from app.services.dsb.synthesis import synthesize, save_to_supabase, generate_portrait_summary
+from app.services.dsb.synthesis import synthesize, save_to_supabase, generate_portrait_summary, update_sphere_summary
 from app.core.db import get_supabase
 from app.core.config import settings
 import logging
@@ -354,10 +354,13 @@ async def initialize_onboarding_layer(req: ProfileRequest):
         # Layer 2 — Generate only free spheres (per-sphere agents)
         from app.services.dsb.western_astrology_agent import generate_sphere_insights
         all_insights = []
+        free_sphere_summaries: dict[int, str] = {}
         for sphere_id in FREE_SPHERES:
             t_sphere = time.perf_counter()
-            insights = await generate_sphere_insights(astro_chart, sphere_id, user_id=req.user_id)
+            insights, short_summary = await generate_sphere_insights(astro_chart, sphere_id, user_id=req.user_id)
             all_insights.extend(insights)
+            if short_summary:
+                free_sphere_summaries[sphere_id] = short_summary
             logger.info(f"Free sphere {sphere_id}: {len(insights)} insights")
             logger.info(f"[TIMING] onboarding.layer2_sphere_{sphere_id}={time.perf_counter() - t_sphere:.2f}s user={req.user_id}")
 
@@ -371,9 +374,9 @@ async def initialize_onboarding_layer(req: ProfileRequest):
         portrait = await generate_portrait_summary(req.user_id, synthesized_data)
         logger.info(f"[TIMING] onboarding.layer4_portrait={time.perf_counter() - t_portrait:.2f}s user={req.user_id}")
 
-        # Save everything
+        # Save everything (with sphere summaries)
         t_save = time.perf_counter()
-        await save_to_supabase(req.user_id, synthesized_data, portrait)
+        await save_to_supabase(req.user_id, synthesized_data, portrait, free_sphere_summaries)
         logger.info(f"[TIMING] onboarding.layer5_save={time.perf_counter() - t_save:.2f}s user={req.user_id}")
 
         # Mark onboarding done
@@ -446,7 +449,7 @@ async def generate_sphere(request: GenerateSphereRequest):
 
         # Layer 2: Per-sphere agent
         from app.services.dsb.western_astrology_agent import generate_sphere_insights
-        insights = await generate_sphere_insights(astro_chart, request.sphere_id, user_id=request.user_id)
+        insights, short_summary = await generate_sphere_insights(astro_chart, request.sphere_id, user_id=request.user_id)
 
         if not insights:
             raise HTTPException(status_code=500, detail="No insights generated")
@@ -458,6 +461,9 @@ async def generate_sphere(request: GenerateSphereRequest):
             row["system"] = "western_astrology"
             row["rank"] = rank
             supabase.table("user_insights").insert(row).execute()
+
+        # Save sphere summary + potentially trigger master synthesis at 12 spheres
+        await update_sphere_summary(request.user_id, request.sphere_id, short_summary)
 
         # Deduct energy
         supabase.table("users").update({"energy": user["energy"] - 10})\
@@ -554,8 +560,8 @@ async def calculate_sync(request: ProfileRequest):
         steps.append(f"chart: {len(astro_chart.get('planets',{}))} planets, {len(astro_chart.get('aspects',[]))} aspects")
 
         # Step 3: Generate insights
-        uis_response = await generate_insights(astro_chart, user_id=request.user_id)
-        steps.append(f"insights: {len(uis_response.insights)} generated")
+        uis_response, sphere_summaries = await generate_insights(astro_chart, user_id=request.user_id)
+        steps.append(f"insights: {len(uis_response.insights)} generated, summaries: {len(sphere_summaries)}")
 
         # Step 4: Synthesis
         synthesized_data = synthesize(uis_response.insights)
@@ -565,8 +571,8 @@ async def calculate_sync(request: ProfileRequest):
         portrait = await generate_portrait_summary(request.user_id, synthesized_data)
         steps.append(f"portrait: {bool(portrait)}")
 
-        # Step 6: Save
-        await save_to_supabase(request.user_id, synthesized_data, portrait)
+        # Step 6: Save (with sphere summaries — master synthesis triggered inside if 12 summaries)
+        await save_to_supabase(request.user_id, synthesized_data, portrait, sphere_summaries)
         steps.append("saved to supabase")
 
         # Step 7: Mark onboarding done

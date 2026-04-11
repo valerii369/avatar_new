@@ -54,13 +54,16 @@ async def get_portrait(user_id: str):
         hub = {
             "insights": {sys: dict(sph) for sys, sph in spheres.items()},
             "portrait_summary": {
-                "core_identity": portrait_data.get("core_identity") if portrait_data else "Инициация...",
-                "core_archetype": portrait_data.get("core_archetype") if portrait_data else "Странник",
-                "narrative_role": portrait_data.get("narrative_role") if portrait_data else "Искатель",
-                "energy_type": portrait_data.get("energy_type") if portrait_data else "Неопределена",
+                "core_identity":   portrait_data.get("core_identity")   if portrait_data else "Инициация...",
+                "core_archetype":  portrait_data.get("core_archetype")  if portrait_data else "Странник",
+                "narrative_role":  portrait_data.get("narrative_role")  if portrait_data else "Искатель",
+                "energy_type":     portrait_data.get("energy_type")     if portrait_data else "Неопределена",
                 "current_dynamic": portrait_data.get("current_dynamic") if portrait_data else "Трансформация",
             } if portrait_data else None,
-            "deep_profile_data": portrait_data.get("deep_profile_data") if portrait_data else None
+            "deep_profile_data":      portrait_data.get("deep_profile_data")      if portrait_data else None,
+            "sphere_summaries":       portrait_data.get("sphere_summaries") or {}  if portrait_data else {},
+            "active_spheres_count":   portrait_data.get("active_spheres_count", 0) if portrait_data else 0,
+            "master_portrait":        portrait_data.get("master_portrait")          if portrait_data else None,
         }
 
         return hub
