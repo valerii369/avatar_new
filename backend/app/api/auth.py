@@ -314,6 +314,8 @@ async def reset_user(request: ResetRequest):
         "user_memory",
         "uis_errors",
         "retriever_traces",
+        "user_recommendations",
+        "user_sphere_access",
     ]
     for uid in user_variants:
         for table in TABLES_TO_CLEAR:
