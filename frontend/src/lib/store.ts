@@ -37,6 +37,9 @@ export interface Insight {
   integration_key: string;
   triggers: string[];
   source?: string | null;
+  blind_spot?: string;
+  energy_rhythm?: string;
+  crisis_anchor?: string;
 }
 
 interface UserState {
