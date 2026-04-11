@@ -227,7 +227,7 @@ async def generate_sphere_insights(
                 {"role": "system", "content": system_prompt},
                 {"role": "user",   "content": user_payload},
             ],
-            max_tokens=12000,
+            max_completion_tokens=12000,
         )
         raw  = response.choices[0].message.content
         data = json.loads(raw)
