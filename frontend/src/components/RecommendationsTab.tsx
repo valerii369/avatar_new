@@ -2,16 +2,33 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { recommendationsAPI } from "@/lib/api";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type PeriodKey = "week" | "month" | "quarter" | "year";
 
 interface RecommendationEvent {
+  sphere?: number;
   title: string;
   description: string;
   dates: string;
 }
+
+// ── Sphere metadata ───────────────────────────────────────────────────────────
+const SPHERE_NAMES: Record<number, string> = {
+  1:  "Личность",    2:  "Ресурсы",      3:  "Связи",
+  4:  "Корни",       5:  "Творчество",   6:  "Служение",
+  7:  "Партнёрство", 8:  "Психология",   9:  "Мировоззрение",
+  10: "Реализация",  11: "Сообщества",   12: "Запредельное",
+};
+
+const SPHERE_COLORS: Record<number, string> = {
+  1:  "#F87171",  2:  "#FBBF24",  3:  "#34D399",
+  4:  "#60A5FA",  5:  "#F472B6",  6:  "#A3E635",
+  7:  "#FB923C",  8:  "#C084FC",  9:  "#38BDF8",
+  10: "#4ADE80",  11: "#818CF8",  12: "#94A3B8",
+};
 
 interface RecommendationData {
   period: string;
@@ -126,24 +143,44 @@ function LuckRiskBar({ score }: { score: number }) {
 
 // ── Event Item ────────────────────────────────────────────────────────────────
 function EventItem({ event, priority }: { event: RecommendationEvent; priority: "high" | "medium" }) {
-  const accent = priority === "high" ? "#F59E0B" : "#8B5CF6";
+  const accent      = priority === "high" ? "#F59E0B" : "#8B5CF6";
+  const sphereColor = event.sphere ? (SPHERE_COLORS[event.sphere] ?? accent) : accent;
+  const sphereName  = event.sphere ? (SPHERE_NAMES[event.sphere]  ?? `Сфера ${event.sphere}`) : null;
+
   return (
     <div style={{
       padding: "12px 14px", borderRadius: 12,
       background: `${accent}08`, border: `1px solid ${accent}18`,
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-        <div style={{ width: 6, height: 6, borderRadius: "50%", background: accent, flexShrink: 0 }} />
-        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)", flex: 1 }}>
-          {event.title}
-        </span>
+      {/* Row 1: sphere badge + date */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
+        {sphereName ? (
+          <span style={{
+            fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+            textTransform: "uppercase", color: sphereColor,
+            background: `${sphereColor}18`, border: `1px solid ${sphereColor}30`,
+            borderRadius: 5, padding: "2px 7px",
+          }}>
+            {event.sphere} · {sphereName}
+          </span>
+        ) : (
+          <span />
+        )}
         {event.dates && (
           <span style={{ fontSize: 10, color: accent, fontWeight: 600, whiteSpace: "nowrap" }}>
             {event.dates}
           </span>
         )}
       </div>
-      <p style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5, margin: 0, paddingLeft: 14 }}>
+      {/* Row 2: title */}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
+        <div style={{ width: 5, height: 5, borderRadius: "50%", background: accent, flexShrink: 0, marginTop: 4 }} />
+        <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.35 }}>
+          {event.title}
+        </span>
+      </div>
+      {/* Row 3: description */}
+      <p style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5, margin: 0, paddingLeft: 13 }}>
         {event.description}
       </p>
     </div>
@@ -363,13 +400,93 @@ function GenerateButton({
   );
 }
 
+// ── Location Guard Modal ───────────────────────────────────────────────────────
+function LocationGuardModal({ onClose }: { onClose: () => void }) {
+  const router = useRouter();
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, zIndex: 200,
+        background: "rgba(0,0,0,0.72)", backdropFilter: "blur(10px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: 24,
+      }}
+    >
+      <motion.div
+        initial={{ scale: 0.88, opacity: 0, y: 16 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.92, opacity: 0 }}
+        transition={{ type: "spring", damping: 22, stiffness: 320 }}
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: "100%", maxWidth: 320, borderRadius: 24,
+          background: "var(--bg-card)",
+          border: "1px solid rgba(139,92,246,0.2)",
+          padding: 24, textAlign: "center",
+        }}
+      >
+        {/* Icon */}
+        <div style={{
+          width: 52, height: 52, borderRadius: 16,
+          background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.2)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 24, margin: "0 auto 16px",
+        }}>
+          📍
+        </div>
+
+        <p style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
+          Укажи местоположение
+        </p>
+        <p style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.55, marginBottom: 20 }}>
+          Для точного расчёта транзитных аспектов необходима твоя текущая геолокация. Укажи её в профиле.
+        </p>
+
+        <button
+          onClick={() => router.push("/profile")}
+          style={{
+            width: "100%", padding: "12px 0", borderRadius: 14,
+            background: "linear-gradient(135deg, rgba(139,92,246,0.18), rgba(59,130,246,0.12))",
+            border: "1px solid rgba(139,92,246,0.3)",
+            color: "var(--violet)", fontSize: 13, fontWeight: 700, cursor: "pointer",
+            marginBottom: 10,
+          }}
+        >
+          Открыть Профиль →
+        </button>
+
+        <button
+          onClick={onClose}
+          style={{
+            width: "100%", padding: "8px 0", background: "transparent",
+            border: "none", color: "var(--text-muted)", fontSize: 12, cursor: "pointer",
+          }}
+        >
+          Закрыть
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
-export default function RecommendationsTab({ userId }: { userId: string }) {
-  const [activePeriod, setActivePeriod] = useState<PeriodKey>("week");
-  const [items,        setItems]        = useState<StoredRec[]>([]);
-  const [loadingList,  setLoadingList]  = useState(false);
-  const [generating,   setGenerating]   = useState(false);
-  const [error,        setError]        = useState<string | null>(null);
+export default function RecommendationsTab({
+  userId,
+  currentLocation,
+}: {
+  userId: string;
+  currentLocation?: string | null;
+}) {
+  const [activePeriod,    setActivePeriod]    = useState<PeriodKey>("week");
+  const [items,           setItems]           = useState<StoredRec[]>([]);
+  const [loadingList,     setLoadingList]     = useState(false);
+  const [generating,      setGenerating]      = useState(false);
+  const [error,           setError]           = useState<string | null>(null);
+  const [showLocModal,    setShowLocModal]    = useState(false);
 
   // ── Load list when period changes ────────────────────────────────────────
   const loadList = useCallback(async () => {
@@ -392,13 +509,16 @@ export default function RecommendationsTab({ userId }: { userId: string }) {
   // ── Generate new recommendation ──────────────────────────────────────────
   const handleGenerate = async () => {
     if (generating) return;
+    // Block if we know location is missing (null = loaded but empty)
+    if (currentLocation === null || currentLocation === "") {
+      setShowLocModal(true);
+      return;
+    }
     setGenerating(true);
     setError(null);
     try {
-      const res = await recommendationsAPI.generate(userId, activePeriod);
-      // Prepend new card and reload list
+      await recommendationsAPI.generate(userId, activePeriod);
       await loadList();
-      // Scroll-to-top is handled by layout
     } catch (e: any) {
       setError(e?.response?.data?.detail || "Ошибка расчёта");
     } finally {
@@ -509,6 +629,13 @@ export default function RecommendationsTab({ userId }: { userId: string }) {
           ))}
         </AnimatePresence>
       )}
+
+      {/* ── Location guard modal ── */}
+      <AnimatePresence>
+        {showLocModal && (
+          <LocationGuardModal onClose={() => setShowLocModal(false)} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

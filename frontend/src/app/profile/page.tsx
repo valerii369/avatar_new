@@ -2,11 +2,11 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { authAPI, profileAPI, gameAPI, paymentsAPI } from "@/lib/api";
+import { authAPI, profileAPI, gameAPI, paymentsAPI, calcAPI } from "@/lib/api";
 import { useUserStore } from "@/lib/store";
 import { useAudio } from "@/lib/hooks/useAudio";
 import BottomNav from "@/components/BottomNav";
-import useSWR from "swr";
+import useSWR, { mutate } from "swr";
 import { Skeleton } from "@/components/Skeleton";
 import { EnergyIcon } from "@/components/EnergyIcon";
 import { useTmaSafeArea } from "@/lib/useTmaSafeArea";
@@ -149,11 +149,13 @@ export default function ProfilePage() {
             <div className="flex-1" style={{ overflowY: "auto", paddingBottom: 90, WebkitOverflowScrolling: "touch" }}>
                 {activeTab === "main" && (
                     <MainProfileView
+                        userId={userId!}
                         game={game}
                         loadingGame={loadingGame}
                         profile={profile}
                         setShowShop={setShowShop}
                         setShowSubscription={setShowSubscription}
+                        onLocationSaved={() => mutate(["profile", userId])}
                     />
                 )}
                 {activeTab === "settings" && (
@@ -179,7 +181,167 @@ export default function ProfilePage() {
 
 // ─── Sub-Views ───────────────────────────────────────────────────────────────
 
-function MainProfileView({ game, loadingGame, profile, setShowShop, setShowSubscription }: any) {
+// ─── LocationSection ─────────────────────────────────────────────────────────
+function LocationSection({
+    userId,
+    currentLocation,
+    onSaved,
+}: {
+    userId: string;
+    currentLocation?: string | null;
+    onSaved?: () => void;
+}) {
+    const [editing, setEditing] = useState(false);
+    const [input, setInput] = useState(currentLocation || "");
+    const [geoResult, setGeoResult] = useState<any>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        if (currentLocation && !editing) setInput(currentLocation);
+    }, [currentLocation]);
+
+    const handleSearch = async () => {
+        if (!input.trim()) return;
+        setLoading(true);
+        setError("");
+        setGeoResult(null);
+        try {
+            const res = await calcAPI.geocode(input);
+            setGeoResult(res.data);
+        } catch {
+            setError("Не удалось найти место. Попробуйте уточнить.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSave = async () => {
+        if (!geoResult) return;
+        setLoading(true);
+        setError("");
+        try {
+            await profileAPI.updateLocation(userId, geoResult.place || input);
+            onSaved?.();
+            setEditing(false);
+            setGeoResult(null);
+            setInput(geoResult.place || input);
+        } catch {
+            setError("Ошибка сохранения. Попробуйте ещё раз.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="px-4 mb-4">
+            <div className="glass p-4 space-y-3">
+                <h3 className="text-sm font-bold text-white/40 uppercase tracking-widest">
+                    Текущее местоположение
+                </h3>
+
+                {!editing ? (
+                    <div className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/10">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-xl flex-shrink-0">
+                                📍
+                            </div>
+                            <div>
+                                <p className="text-sm font-semibold text-white">
+                                    {currentLocation || "Не указано"}
+                                </p>
+                                <p className="text-[10px] text-white/30">
+                                    Влияет на точность транзитов
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => { setEditing(true); setGeoResult(null); setError(""); }}
+                            className="px-3 py-1.5 bg-white/10 rounded-xl text-xs font-bold text-violet-300 border border-violet-500/20 flex-shrink-0"
+                        >
+                            {currentLocation ? "Изменить" : "Указать"}
+                        </button>
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={input}
+                                onChange={e => setInput(e.target.value)}
+                                onKeyDown={e => e.key === "Enter" && handleSearch()}
+                                placeholder="Москва, Россия"
+                                autoFocus
+                                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20 outline-none focus:border-emerald-500/50 transition-all"
+                            />
+                            <button
+                                onClick={handleSearch}
+                                disabled={loading || !input.trim()}
+                                className="px-4 py-2.5 bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-sm font-bold text-emerald-400 disabled:opacity-40 flex-shrink-0"
+                            >
+                                {loading && !geoResult ? "..." : "Найти"}
+                            </button>
+                        </div>
+
+                        {error && <p className="text-xs text-rose-400 px-1">{error}</p>}
+
+                        {geoResult && (
+                            <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-2xl p-4 text-center">
+                                <div className="flex flex-col items-center mb-3">
+                                    <div className="w-9 h-9 rounded-full bg-emerald-500/20 flex items-center justify-center mb-2">
+                                        <span className="text-emerald-400">📍</span>
+                                    </div>
+                                    <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">
+                                        Место определено
+                                    </p>
+                                    <p className="text-base font-bold text-white leading-tight">{geoResult.place}</p>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 py-3 border-t border-emerald-500/10 text-[10px] text-white/40 font-mono mb-3">
+                                    <div className="flex flex-col">
+                                        <span className="mb-0.5">ШИРОТА</span>
+                                        <span className="text-white/80 font-bold">
+                                            {geoResult.lat != null ? geoResult.lat.toFixed(4) : "—"}°
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="mb-0.5">ДОЛГОТА</span>
+                                        <span className="text-white/80 font-bold">
+                                            {geoResult.lon != null ? geoResult.lon.toFixed(4) : "—"}°
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="mb-0.5">ЗОНА</span>
+                                        <span className="text-white/80 font-bold truncate">
+                                            {geoResult.tz_name?.split("/").pop() || "—"}
+                                        </span>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={handleSave}
+                                    disabled={loading}
+                                    className="w-full py-2.5 bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-sm font-bold text-emerald-400 disabled:opacity-40 transition-all"
+                                >
+                                    {loading ? "Сохранение..." : "✓ Сохранить местоположение"}
+                                </button>
+                            </div>
+                        )}
+
+                        {!geoResult && currentLocation && (
+                            <button
+                                onClick={() => { setEditing(false); setError(""); setInput(currentLocation); }}
+                                className="w-full text-[10px] font-bold text-white/20 uppercase tracking-widest"
+                            >
+                                Отмена
+                            </button>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function MainProfileView({ userId, game, loadingGame, profile, setShowShop, setShowSubscription, onLocationSaved }: any) {
     const { play } = useAudio();
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -202,6 +364,13 @@ function MainProfileView({ game, loadingGame, profile, setShowShop, setShowSubsc
                 </div>
             </div>
 
+
+            {/* Location section */}
+            <LocationSection
+                userId={userId}
+                currentLocation={profile?.current_location}
+                onSaved={onLocationSaved}
+            />
 
             {/* Payments section redesigned as settings-style block */}
             <div className="px-4 mb-6">

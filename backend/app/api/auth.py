@@ -232,6 +232,13 @@ async def get_profile(user_id: str):
             "title":          user.get("title", "Новичок"),
             "energy":         user.get("energy", 100),
             "streak":         user.get("streak", 0),
+            # Chat-context profile fields
+            "chat_onboarding_completed": user.get("chat_onboarding_completed", False),
+            "current_location":          user.get("current_location"),
+            "work_sphere":               user.get("work_sphere"),
+            "work_satisfaction":         user.get("work_satisfaction"),
+            "relationship_status":       user.get("relationship_status"),
+            "life_focus":                user.get("life_focus"),
         }
 
     except Exception as e:
@@ -482,6 +489,26 @@ async def get_pipeline_errors(user_id: str = "", limit: int = 5):
         q = q.eq("user_id", user_id)
     resp = q.execute()
     return {"errors": resp.data}
+
+# ─── /location ────────────────────────────────────────────────────────────────
+
+class UpdateLocationRequest(BaseModel):
+    user_id: str
+    current_location: str
+
+@router.post("/location")
+async def update_location(request: UpdateLocationRequest):
+    """Update user's current location (city/country) for transit calculations."""
+    supabase = get_supabase()
+    try:
+        supabase.table("users").update(
+            {"current_location": request.current_location}
+        ).eq("id", request.user_id).execute()
+        return {"ok": True, "current_location": request.current_location}
+    except Exception as e:
+        logger.error(f"update_location failed for {request.user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update location")
+
 
 # ─── /referrals ───────────────────────────────────────────────────────────────
 

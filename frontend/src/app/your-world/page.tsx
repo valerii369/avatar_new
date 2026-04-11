@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR, { mutate } from "swr";
 import { useUserStore, useInsightsStore, type Insight } from "@/lib/store";
-import { masterHubAPI, calcAPI } from "@/lib/api";
+import { masterHubAPI, calcAPI, profileAPI } from "@/lib/api";
 import { SPHERES, SPHERE_BY_ID, INFLUENCE_SORT } from "@/lib/constants";
 import SphereFilter from "@/components/SphereFilter";
 import InsightCard from "@/components/InsightCard";
@@ -596,6 +596,12 @@ export default function YourWorldPage() {
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
   const [generatingSphere, setGeneratingSphere] = useState<number | null>(null);
 
+  const { data: userProfile } = useSWR(
+    userId ? ["profile", userId] : null,
+    () => profileAPI.get(userId!).then(res => res.data),
+    { revalidateOnFocus: false }
+  );
+
   const { data: hub, isValidating: loading } = useSWR(
     userId ? ["master-hub", userId] : null,
     async () => {
@@ -734,7 +740,10 @@ export default function YourWorldPage() {
               )}
               {activeTab === "sides" && <SidesTab insights={insights} />}
               {activeTab === "recommendations" && userId && (
-                <RecommendationsTab userId={userId} />
+                <RecommendationsTab
+                  userId={userId}
+                  currentLocation={userProfile?.current_location ?? null}
+                />
               )}
             </motion.div>
           </AnimatePresence>
