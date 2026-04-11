@@ -13,6 +13,8 @@ export interface Insight {
   energy_description: string;
   light_aspect: string;
   shadow_aspect: string;
+  insight?: string | null;
+  gift?: string | null;
   developmental_task: string;
   integration_key: string;
   triggers: string[];

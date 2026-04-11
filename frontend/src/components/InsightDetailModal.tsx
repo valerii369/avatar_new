@@ -116,8 +116,26 @@ export default function InsightDetailModal({ insight, onClose }: InsightDetailMo
             </p>
           </Section>
 
+          {/* Psychological Insight */}
+          {insight.insight && (
+            <Section title="Психологический инсайт" icon={Sparkles} color="#8B5CF6">
+              <p style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", lineHeight: 1.7, fontWeight: 300, margin: 0 }}>
+                {insight.insight}
+              </p>
+            </Section>
+          )}
+
+          {/* Gift */}
+          {insight.gift && (
+            <Section title="Ключевой дар" icon={Zap} color="#F59E0B">
+              <p style={{ fontSize: 14, color: "rgba(255,255,255,0.8)", lineHeight: 1.6, fontWeight: 300, margin: 0 }}>
+                {insight.gift}
+              </p>
+            </Section>
+          )}
+
           {/* Light */}
-          <Section title="Свет / Дар" icon={Sparkles} color="#10B981">
+          <Section title="Свет / Потенциал" icon={Sparkles} color="#10B981">
             <p style={{ fontSize: 14, color: "rgba(255,255,255,0.75)", lineHeight: 1.6, fontWeight: 300, margin: 0 }}>
               {insight.light_aspect}
             </p>
