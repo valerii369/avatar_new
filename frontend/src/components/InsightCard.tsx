@@ -92,28 +92,6 @@ export default function InsightCard({ insight, onClick }: InsightCardProps) {
         {insight.energy_description}
       </p>
 
-      {/* Gift preview */}
-      {insight.gift && (
-        <div style={{
-          display: "flex", alignItems: "flex-start", gap: 6,
-          padding: "8px 10px", borderRadius: 10,
-          background: "rgba(245,158,11,0.05)",
-          border: "1px solid rgba(245,158,11,0.12)",
-        }}>
-          <span style={{ fontSize: 11, lineHeight: 1 }}>✦</span>
-          <p style={{
-            fontSize: 11, color: "rgba(245,158,11,0.75)",
-            lineHeight: 1.4, fontWeight: 400, margin: 0,
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-          }}>
-            {insight.gift}
-          </p>
-        </div>
-      )}
-
       {/* Light / Shadow compact */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         <div style={{
