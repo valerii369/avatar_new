@@ -1,9 +1,10 @@
 import axios from "axios";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
+// In production, Next.js rewrites proxy /api/* → backend (see next.config.ts).
+// No baseURL needed — all requests go to the same origin, avoiding mixed content.
+// In development, rewrites also handle it via NEXT_PUBLIC_API_URL.
 export const api = axios.create({
-  baseURL: API_BASE_URL,
+  timeout: 15000,
 });
 
 // Auto-inject token if exists
@@ -25,16 +26,35 @@ export const authAPI = {
 export const profileAPI = {
   get: (userId: string) => api.get(`/api/auth/profile?user_id=${userId}`),
   reset: (userId: string | number) => api.post(`/api/auth/reset`, { user_id: userId }),
+  resetOnboardingData: (params: { userId?: string; tgId?: number; clearGeocode?: boolean }) =>
+    api.post(`/api/auth/reset`, {
+      user_id: params.userId,
+      tg_id: params.tgId,
+      clear_geocode: params.clearGeocode ?? false,
+    }),
   getReferrals: (userId: string) => api.get(`/api/auth/referrals?user_id=${userId}`),
+  updateLocation: (userId: string, location: string) =>
+    api.post(`/api/auth/location`, { user_id: userId, current_location: location }),
 };
 
 export const calcAPI = {
   geocode: (place: string) => api.post("/api/auth/geocode", { place }),
   calculate: (data: any) => api.post("/api/auth/calculate", data),
+  generateSphere: (userId: string, sphereId: number) =>
+    api.post("/api/auth/generate-sphere", { user_id: userId, sphere_id: sphereId }, { timeout: 120000 }),
 };
 
 export const masterHubAPI = {
   get: (userId: string) => api.get(`/api/portraits/${userId}`),
+};
+
+export const recommendationsAPI = {
+  list:     (userId: string, period: string) =>
+    api.get(`/api/recommendations/${userId}/${period}`),
+  generate: (userId: string, period: string) =>
+    api.post(`/api/recommendations/${userId}/${period}`, {}, { timeout: 60000 }),
+  invalidate: (userId: string, period: string) =>
+    api.delete(`/api/recommendations/${userId}/${period}`),
 };
 
 export const assistantAPI = {
