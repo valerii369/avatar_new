@@ -70,7 +70,7 @@ async def generate_portrait_summary(user_id: str, synthesized_data: dict) -> dic
     client = openai.AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
     try:
         response = await client.chat.completions.create(
-            model="gpt-5.4-mini",
+            model=settings.MODEL_HEAVY,
             messages=[
                 {"role": "system", "content": "Ты — мастер психологической и эволюционной астрологии. Отвечай строго на русском."},
                 {"role": "user", "content": prompt},
@@ -125,7 +125,7 @@ async def generate_master_portrait(sphere_summaries: dict) -> dict:
     client = openai.AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
     try:
         response = await client.chat.completions.create(
-            model="gpt-5.4-mini",
+            model=settings.MODEL_HEAVY,
             messages=[
                 {"role": "system", "content": "Ты — архетипный синтезатор личности. Создаёшь точные, глубокие, персонализированные портреты."},
                 {"role": "user", "content": prompt},

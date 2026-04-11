@@ -224,7 +224,7 @@ async def generate_sphere_insights(
 
     try:
         response = await openai_client.chat.completions.create(
-            model="gpt-5.4-mini",
+            model=settings.MODEL_HEAVY,
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": system_prompt},
