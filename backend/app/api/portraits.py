@@ -31,18 +31,22 @@ async def get_portrait(user_id: str):
             sys = row["system"]
             sphere = row["primary_sphere"]
             insight = {
-                "primary_sphere": row["primary_sphere"],
-                "influence_level": row["influence_level"],
-                "weight": row["weight"],
-                "position": row["position"],
-                "core_theme": row["core_theme"],
-                "energy_description": row["energy_description"],
-                "light_aspect": row["light_aspect"],
-                "shadow_aspect": row["shadow_aspect"],
+                "primary_sphere":     row["primary_sphere"],
+                "influence_level":    row["influence_level"],
+                "weight":             row["weight"],
+                "position":           row["position"],
+                "core_theme":         row["core_theme"],
+                # DB column is "description"; expose as "energy_description" for frontend compat
+                "energy_description": row.get("description") or row.get("energy_description", ""),
+                "light_aspect":       row["light_aspect"],
+                "shadow_aspect":      row["shadow_aspect"],
                 "developmental_task": row["developmental_task"],
-                "integration_key": row["integration_key"],
-                "triggers": row["triggers"],
-                "source": row.get("source")
+                "integration_key":    row["integration_key"],
+                "triggers":           row["triggers"],
+                "source":             row.get("source"),
+                # Extended fields saved by the sphere worker
+                "insight":            row.get("insight"),
+                "gift":               row.get("gift"),
             }
             spheres[sys][str(sphere)].append(insight)
 
