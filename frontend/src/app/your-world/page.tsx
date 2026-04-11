@@ -17,11 +17,18 @@ import RecommendationsTab from "@/components/RecommendationsTab";
 type Tab = "portrait" | "recommendations" | "breakdown" | "sides";
 
 // ─── Energy Toast ─────────────────────────────────────────────────────────────
-function EnergyToast({ message, onClose }: { message: string; onClose: () => void }) {
+function Toast({ type, title, message, onClose }: {
+  type: "energy" | "error";
+  title: string;
+  message: string;
+  onClose: () => void;
+}) {
   useEffect(() => {
     const t = setTimeout(onClose, 4000);
     return () => clearTimeout(t);
   }, [onClose]);
+
+  const isEnergy = type === "energy";
 
   return (
     <motion.div
@@ -35,8 +42,12 @@ function EnergyToast({ message, onClose }: { message: string; onClose: () => voi
         left: 16,
         right: 16,
         zIndex: 9999,
-        background: "linear-gradient(135deg, rgba(245,158,11,0.18) 0%, rgba(239,68,68,0.12) 100%)",
-        border: "1px solid rgba(245,158,11,0.35)",
+        background: isEnergy
+          ? "linear-gradient(135deg, rgba(245,158,11,0.18) 0%, rgba(239,68,68,0.12) 100%)"
+          : "linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(139,92,246,0.08) 100%)",
+        border: isEnergy
+          ? "1px solid rgba(245,158,11,0.35)"
+          : "1px solid rgba(239,68,68,0.30)",
         borderRadius: 18,
         padding: "14px 18px",
         display: "flex",
@@ -47,10 +58,13 @@ function EnergyToast({ message, onClose }: { message: string; onClose: () => voi
       }}
       onClick={onClose}
     >
-      <span style={{ fontSize: 26 }}>⚡️</span>
+      <span style={{ fontSize: 26 }}>{isEnergy ? "⚡️" : "⚠️"}</span>
       <div style={{ flex: 1 }}>
-        <p style={{ fontSize: 14, fontWeight: 700, color: "#F59E0B", margin: 0, marginBottom: 2 }}>
-          Не хватает энергии
+        <p style={{
+          fontSize: 14, fontWeight: 700, margin: 0, marginBottom: 2,
+          color: isEnergy ? "#F59E0B" : "#EF4444",
+        }}>
+          {title}
         </p>
         <p style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", margin: 0 }}>
           {message}
@@ -355,7 +369,7 @@ function BreakdownTab({
   setGenerating: (id: number | null) => void;
   dataReady: boolean;
 }) {
-  const [energyToast, setEnergyToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ type: "energy" | "error"; title: string; message: string } | null>(null);
 
   const insightsBySphere = useMemo(() => {
     const map: Record<number, Insight[]> = {};
@@ -386,9 +400,9 @@ function BreakdownTab({
       const status = err.response?.status;
       const detail = err.response?.data?.detail || "Ошибка генерации";
       if (status === 402) {
-        setEnergyToast("Пополни энергию через промокод или реферальную программу");
+        setToast({ type: "energy", title: "Не хватает энергии", message: "Пополни энергию через промокод или реферальную программу" });
       } else {
-        setEnergyToast(detail);
+        setToast({ type: "error", title: "Ошибка генерации", message: "Попробуй ещё раз — сервер временно недоступен" });
       }
     } finally {
       setGenerating(null);
@@ -398,10 +412,12 @@ function BreakdownTab({
   return (
     <>
       <AnimatePresence>
-        {energyToast && (
-          <EnergyToast
-            message={energyToast}
-            onClose={() => setEnergyToast(null)}
+        {toast && (
+          <Toast
+            type={toast.type}
+            title={toast.title}
+            message={toast.message}
+            onClose={() => setToast(null)}
           />
         )}
       </AnimatePresence>
