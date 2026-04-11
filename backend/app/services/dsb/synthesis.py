@@ -5,41 +5,24 @@ import logging
 from app.core.config import settings
 import json
 import openai
-import time
-
-# Columns that are guaranteed to exist in the Supabase user_insights table.
-# New optional columns (blind_spot, energy_rhythm, crisis_anchor) may not exist
-# in older deployments; we fall back to base fields if Supabase raises an APIError
-# mentioning "column".
-_BASE_FIELDS: set[str] = {
-    "user_id", "system", "primary_sphere", "rank",
-    "influence_level", "weight", "position", "core_theme",
-    "description", "light_aspect", "shadow_aspect",
-    "insight", "gift", "developmental_task", "integration_key",
-    "triggers", "source",
-}
 
 logger = logging.getLogger(__name__)
 
+SPHERE_NAMES_RU: dict[int, str] = {
+    1: "Личность",      2: "Ресурсы",       3: "Связи",
+    4: "Корни",         5: "Творчество",    6: "Служение",
+    7: "Партнёрство",   8: "Психология",    9: "Мировоззрение",
+    10: "Реализация",   11: "Сообщества",   12: "Запредельное",
+}
 
-def _usage_to_dict(usage) -> dict:
-    if not usage:
-        return {}
-    return {
-        "prompt_tokens": getattr(usage, "prompt_tokens", None),
-        "completion_tokens": getattr(usage, "completion_tokens", None),
-        "total_tokens": getattr(usage, "total_tokens", None),
-    }
 
 def synthesize(insights: list[UniversalInsight], system_name: str = "western_astrology") -> dict:
     level_order = {"high": 0, "medium": 1, "low": 2}
 
-    # система → сфера → карточки
     result = defaultdict(lambda: defaultdict(list))
     for ins in insights:
         result[system_name][ins.primary_sphere].append(ins)
 
-    # сортировка карточек внутри каждой сферы
     for system in result:
         for sphere_id in result[system]:
             result[system][sphere_id].sort(
@@ -48,77 +31,53 @@ def synthesize(insights: list[UniversalInsight], system_name: str = "western_ast
 
     return result
 
+
 async def generate_portrait_summary(user_id: str, synthesized_data: dict) -> dict:
-    """
-    Generates a high-level character portrait summary using GPT-4o-mini
-    based on the top synthesized insights.
-    """
-    # Collect top insights for prompt context
+    """Generates legacy portrait summary (used as fallback before 12 spheres)."""
     top_insights = []
     for system in synthesized_data:
         for sphere_id in synthesized_data[system]:
-            # Take top 2 high-influence items per sphere to avoid token bloat
             sphere_items = synthesized_data[system][sphere_id][:2]
             for item in sphere_items:
                 top_insights.append({
                     "sphere": item.primary_sphere,
                     "theme": item.core_theme,
-                    "description": item.description,
-                    "insight": item.insight,
-                    "gift": item.gift
+                    "energy": item.energy_description,
                 })
 
     prompt = f"""
-    Ты — движок синтеза AVATAR.
-    На основе астрологических инсайтов составь целостный психологический портрет.
-    ВЕСЬ ТЕКСТ СТРОГО НА РУССКОМ ЯЗЫКЕ.
-    Ответ в формате JSON.
+    You are the AVATAR Synthesis Engine.
+    Based on the following astrological insights, generate a cohesive character portrait.
+    Provide the response in STRICT JSON format. All text in RUSSIAN.
 
-    Инсайты:
+    Insights:
     {json.dumps(top_insights, ensure_ascii=False)}
 
-    Структура JSON:
+    JSON Structure:
     {{
-        "core_identity": "Одно предложение — суть души человека (на русском)",
-        "core_archetype": "Творческое название архетипа (например: Космический Архитектор)",
-        "narrative_role": "Роль в социальном и духовном контексте (на русском)",
-        "energy_type": "Описание доминирующей вибрации / типа энергии (на русском)",
-        "current_dynamic": "Что человек сейчас интегрирует или с чем сталкивается (на русском)",
+        "core_identity": "A 1-sentence powerful description of the soul's essence",
+        "core_archetype": "A creative title (e.g. Космический Архитектор)",
+        "narrative_role": "Their role in the social/universal play",
+        "energy_type": "Description of their dominant vibration",
+        "current_dynamic": "What they are currently integrating or facing",
         "polarities": {{
-            "core_strengths": ["3 ключевые сильные стороны на русском"],
-            "shadow_aspects": ["3 ключевые теневые черты на русском"]
+            "core_strengths": ["list of 3 key strengths"],
+            "shadow_aspects": ["list of 3 key shadow traits"]
         }}
     }}
     """
 
     client = openai.AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
     try:
-        t0 = time.perf_counter()
-        system_prompt = "Ты — мастер психологической и эволюционной астрологии. Отвечай ТОЛЬКО на русском языке."
         response = await client.chat.completions.create(
-            model=settings.MODEL_LIGHT,
+            model="gpt-4.1-mini",
             messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": "Ты — мастер психологической и эволюционной астрологии. Отвечай строго на русском."},
+                {"role": "user", "content": prompt},
             ],
-            response_format={"type": "json_object"}
+            response_format={"type": "json_object"},
         )
-        raw_content = response.choices[0].message.content or "{}"
-        duration_s = time.perf_counter() - t0
-        logger.info(
-            "[LLM_TRACE] label=portrait_summary model=%s duration=%.2fs usage=%s\n"
-            "----- SYSTEM PROMPT BEGIN -----\n%s\n"
-            "----- SYSTEM PROMPT END -----\n"
-            "----- USER PAYLOAD BEGIN -----\n%s\n"
-            "----- USER PAYLOAD END -----\n"
-            "----- LLM RESPONSE BEGIN -----\n%s\n"
-            "----- LLM RESPONSE END -----",
-            settings.MODEL_LIGHT, duration_s,
-            json.dumps(_usage_to_dict(response.usage), ensure_ascii=False),
-            system_prompt, prompt, raw_content,
-        )
-        summary = json.loads(raw_content)
-        return summary
+        return json.loads(response.choices[0].message.content)
     except Exception as e:
         logger.error(f"Failed to generate portrait summary: {e}")
         return {
@@ -127,62 +86,184 @@ async def generate_portrait_summary(user_id: str, synthesized_data: dict) -> dic
             "narrative_role": "Искатель истины",
             "energy_type": "Сбалансированная",
             "current_dynamic": "Ожидание активации",
-            "polarities": {"core_strengths": [], "shadow_aspects": []}
+            "polarities": {"core_strengths": [], "shadow_aspects": []},
         }
 
-async def save_to_supabase(user_id: str, result: dict, portrait: dict = None):
-    """Saves the fully synthesized insights and optional portrait summary to Supabase"""
+
+async def generate_master_portrait(sphere_summaries: dict) -> dict:
+    """
+    Master Synthesizer — финальный портрет из 12 микро-выжимок сфер.
+    Возвращает JSON с 6 полями, каждое содержит value + description.
+    """
+    summaries_text = "\n".join([
+        f"Сфера {k} ({SPHERE_NAMES_RU.get(int(k), k)}): {v}"
+        for k, v in sorted(sphere_summaries.items(), key=lambda x: int(x[0]))
+    ])
+
+    prompt = f"""Ты — AVATAR Master Synthesizer. На основе 12 микро-выжимок сфер жизни собери итоговый архетипный портрет.
+
+Микро-выжимки сфер пользователя:
+{summaries_text}
+
+Верни строго валидный JSON без markdown-блоков:
+{{
+  "identification": {{"value": "...", "description": "..."}},
+  "archetype":      {{"value": "...", "description": "..."}},
+  "role":           {{"value": "...", "description": "..."}},
+  "energy":         {{"value": "...", "description": "..."}},
+  "dynamics":       {{"value": "...", "description": "..."}},
+  "atmosphere":     {{"value": "...", "description": "..."}}
+}}
+
+Правила:
+- value: 2–4 слова, точное и образное определение
+- description: до 200 символов, персонализированное раскрытие смысла для конкретного человека
+- atmosphere.description: кинематографичная атмосфера ауры — запах, текстура, свет, общее впечатление; не более 200 символов
+- Максимально персонализировано на основе выжимок, не шаблонно
+- Весь текст строго на русском языке"""
+
+    client = openai.AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+    try:
+        response = await client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=[
+                {"role": "system", "content": "Ты — архетипный синтезатор личности. Создаёшь точные, глубокие, персонализированные портреты."},
+                {"role": "user", "content": prompt},
+            ],
+            response_format={"type": "json_object"},
+        )
+        result = json.loads(response.choices[0].message.content)
+        logger.info(f"Master portrait generated: {list(result.keys())}")
+        return result
+    except Exception as e:
+        logger.error(f"Master portrait generation failed: {e}")
+        return {}
+
+
+async def update_sphere_summary(user_id: str, sphere_id: int, short_summary: str) -> None:
+    """
+    Upserts short_summary for one sphere into user_portraits.sphere_summaries.
+    Triggers master synthesis automatically when active_spheres_count reaches 12.
+    """
+    if not short_summary:
+        return
+
+    supabase = get_supabase()
+
+    try:
+        res = supabase.table("user_portraits") \
+            .select("id, sphere_summaries, active_spheres_count") \
+            .eq("user_id", user_id).execute()
+
+        if res.data:
+            row = res.data[0]
+            summaries: dict = dict(row.get("sphere_summaries") or {})
+            summaries[str(sphere_id)] = short_summary
+            active_count = len(summaries)
+
+            update_payload: dict = {
+                "sphere_summaries": summaries,
+                "active_spheres_count": active_count,
+            }
+
+            if active_count == 12:
+                logger.info(f"All 12 spheres ready for {user_id} — triggering master synthesis")
+                try:
+                    master = await generate_master_portrait(summaries)
+                    if master:
+                        update_payload["master_portrait"] = master
+                except Exception as e:
+                    logger.error(f"Master synthesis failed for {user_id}: {e}")
+
+            supabase.table("user_portraits").update(update_payload).eq("user_id", user_id).execute()
+
+        else:
+            # No portrait row yet — create minimal one
+            supabase.table("user_portraits").insert({
+                "user_id":              user_id,
+                "sphere_summaries":     {str(sphere_id): short_summary},
+                "active_spheres_count": 1,
+                "core_identity":        "",
+                "core_archetype":       "",
+                "narrative_role":       "",
+                "energy_type":          "",
+                "current_dynamic":      "",
+                "deep_profile_data":    {"polarities": {"core_strengths": [], "shadow_aspects": []}},
+            }).execute()
+
+    except Exception as e:
+        logger.error(f"update_sphere_summary failed for user={user_id} sphere={sphere_id}: {e}")
+
+
+async def save_to_supabase(
+    user_id: str,
+    result: dict,
+    portrait: dict | None = None,
+    sphere_summaries: dict | None = None,
+) -> bool:
+    """Saves synthesized insights and portrait to Supabase. Preserves accumulated sphere_summaries."""
     supabase = get_supabase()
     rows = []
-    
+
     for system, spheres in result.items():
         for sphere_id, insights in spheres.items():
-            for rank, ins in enumerate(insights, start=1):   # 1-based rank
+            for rank, ins in enumerate(insights):
                 rows.append({
-                    "user_id":            user_id,
-                    "system":             system,
-                    "primary_sphere":     sphere_id,
-                    "rank":               rank,
-                    **ins.model_dump()
+                    "user_id":        user_id,
+                    "system":         system,
+                    "primary_sphere": sphere_id,
+                    "rank":           rank,
+                    **ins.model_dump(),
                 })
-                
+
     try:
-        # We delete existing insights for this user/system combo
-        # so recalculations are clean rewrites.
-        systems = list(result.keys())
-        for sys in systems:
-             supabase.table("user_insights").delete().eq("user_id", user_id).eq("system", sys).execute()
-
-        # Insert new rows — try full row first; fall back to base fields if
-        # Supabase raises an APIError about an unknown column (schema not yet migrated).
-        try:
+        # Clean rewrite for insights
+        for sys in list(result.keys()):
+            supabase.table("user_insights").delete().eq("user_id", user_id).eq("system", sys).execute()
+        if rows:
             supabase.table("user_insights").insert(rows).execute()
-        except Exception as api_err:
-            err_str = str(api_err)
-            if "column" in err_str.lower():
-                logger.warning(
-                    "Supabase insert failed with column error (%s); retrying with base fields only.", err_str
-                )
-                base_rows = [{k: v for k, v in row.items() if k in _BASE_FIELDS} for row in rows]
-                supabase.table("user_insights").insert(base_rows).execute()
-            else:
-                raise
 
-        # Handle Portrait Summary
+        # Portrait — upsert to preserve sphere_summaries
         if portrait:
-            portrait_row = {
-                "user_id": user_id,
-                "core_identity": portrait.get("core_identity", ""),
-                "core_archetype": portrait.get("core_archetype", ""),
-                "narrative_role": portrait.get("narrative_role", ""),
-                "energy_type": portrait.get("energy_type", ""),
-                "current_dynamic": portrait.get("current_dynamic", ""),
-                "deep_profile_data": {"polarities": portrait.get("polarities", {})}
+            existing_res = supabase.table("user_portraits") \
+                .select("id, sphere_summaries, active_spheres_count") \
+                .eq("user_id", user_id).execute()
+
+            portrait_data: dict = {
+                "user_id":          user_id,
+                "core_identity":    portrait.get("core_identity", ""),
+                "core_archetype":   portrait.get("core_archetype", ""),
+                "narrative_role":   portrait.get("narrative_role", ""),
+                "energy_type":      portrait.get("energy_type", ""),
+                "current_dynamic":  portrait.get("current_dynamic", ""),
+                "deep_profile_data": {"polarities": portrait.get("polarities", {})},
             }
-            supabase.table("user_portraits").delete().eq("user_id", user_id).execute()
-            supabase.table("user_portraits").insert(portrait_row).execute()
+
+            # Merge incoming sphere_summaries with any already stored
+            if sphere_summaries:
+                existing_summaries: dict = {}
+                if existing_res.data:
+                    existing_summaries = dict(existing_res.data[0].get("sphere_summaries") or {})
+                merged = {**existing_summaries, **{str(k): v for k, v in sphere_summaries.items()}}
+                portrait_data["sphere_summaries"] = merged
+                portrait_data["active_spheres_count"] = len(merged)
+
+                if len(merged) == 12:
+                    logger.info(f"All 12 summaries present for {user_id} — triggering master synthesis")
+                    try:
+                        master = await generate_master_portrait(merged)
+                        if master:
+                            portrait_data["master_portrait"] = master
+                    except Exception as e:
+                        logger.error(f"Master synthesis failed: {e}")
+
+            if existing_res.data:
+                supabase.table("user_portraits").update(portrait_data).eq("user_id", user_id).execute()
+            else:
+                supabase.table("user_portraits").insert(portrait_data).execute()
 
         return True
+
     except Exception as e:
-        logger.error(f"Failed to save insights to Supabase: {e}")
+        logger.error(f"Failed to save to Supabase: {e}")
         raise e
