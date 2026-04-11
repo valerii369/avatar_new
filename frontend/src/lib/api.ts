@@ -33,6 +33,8 @@ export const profileAPI = {
       clear_geocode: params.clearGeocode ?? false,
     }),
   getReferrals: (userId: string) => api.get(`/api/auth/referrals?user_id=${userId}`),
+  redeemPromo: (userId: string, code: string) =>
+    api.post("/api/auth/redeem-promo", { user_id: userId, code }),
   updateLocation: (userId: string, location: string) =>
     api.post(`/api/auth/location`, { user_id: userId, current_location: location }),
 };

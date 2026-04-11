@@ -572,6 +572,85 @@ async def get_referrals(user_id: str):
         return []
 
 
+# ─── /redeem-promo ────────────────────────────────────────────────────────────
+
+class RedeemPromoRequest(BaseModel):
+    user_id: str
+    code: str
+
+@router.post("/redeem-promo")
+async def redeem_promo(request: RedeemPromoRequest):
+    """
+    Redeem a promo code for energy.
+    - Each user can use each code only once.
+    - Code must exist in promo_codes table and not exceed max_uses.
+    """
+    supabase = get_supabase()
+    code = request.code.strip().upper()
+
+    try:
+        # 1. Find code
+        promo_res = supabase.table("promo_codes") \
+            .select("id,code,energy_reward,max_uses,uses_count,active") \
+            .eq("code", code) \
+            .execute()
+
+        if not promo_res.data:
+            raise HTTPException(status_code=404, detail="Промокод не найден")
+
+        promo = promo_res.data[0]
+
+        if not promo.get("active", True):
+            raise HTTPException(status_code=400, detail="Промокод больше не активен")
+
+        if promo.get("max_uses") is not None and promo["uses_count"] >= promo["max_uses"]:
+            raise HTTPException(status_code=400, detail="Промокод уже использован максимальное количество раз")
+
+        # 2. Check if user already used this code
+        use_res = supabase.table("promo_code_uses") \
+            .select("id") \
+            .eq("user_id", request.user_id) \
+            .eq("code", code) \
+            .execute()
+
+        if use_res.data:
+            raise HTTPException(status_code=400, detail="Ты уже использовал этот промокод")
+
+        # 3. Award energy
+        user_res = supabase.table("users").select("energy").eq("id", request.user_id).execute()
+        if not user_res.data:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+        new_energy = user_res.data[0]["energy"] + promo["energy_reward"]
+        supabase.table("users").update({"energy": new_energy}).eq("id", request.user_id).execute()
+
+        # 4. Record use
+        supabase.table("promo_code_uses").insert({
+            "user_id": request.user_id,
+            "code": code,
+        }).execute()
+
+        # 5. Increment uses_count
+        supabase.table("promo_codes") \
+            .update({"uses_count": promo["uses_count"] + 1}) \
+            .eq("id", promo["id"]) \
+            .execute()
+
+        logger.info(f"Promo '{code}' redeemed by {request.user_id}: +{promo['energy_reward']} energy")
+        return {
+            "success": True,
+            "energy_reward": promo["energy_reward"],
+            "new_energy": new_energy,
+            "message": f"Отлично! +{promo['energy_reward']} ✦ энергии начислено",
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"redeem_promo failed for {request.user_id}, code={code}: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка при активации промокода")
+
+
 # ─── /calculate ───────────────────────────────────────────────────────────────
 
 @router.post("/calculate-sync")

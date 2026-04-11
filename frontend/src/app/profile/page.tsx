@@ -571,15 +571,41 @@ function SettingsView({ userId, tgId }: { userId: string; tgId: number | null })
 function ReferralView({ userId, referralCode }: { userId: string; referralCode: string }) {
     const botUsername = "avatarmatrixtest_bot";
     const refLink = `https://t.me/${botUsername}?start=${referralCode}`;
+    const { setUser } = useUserStore();
 
     const { data: referrals, isLoading } = useSWR(
         userId ? ["referrals", userId] : null,
         () => profileAPI.getReferrals(userId).then(res => res.data)
     );
 
+    // Promo code state
+    const [promoCode, setPromoCode] = useState("");
+    const [promoLoading, setPromoLoading] = useState(false);
+    const [promoResult, setPromoResult] = useState<{ success: boolean; message: string } | null>(null);
+
     const handleCopy = () => {
         navigator.clipboard.writeText(refLink);
         alert("Ссылка скопирована!");
+    };
+
+    const handleRedeemPromo = async () => {
+        if (!promoCode.trim() || promoLoading) return;
+        setPromoLoading(true);
+        setPromoResult(null);
+        try {
+            const res = await profileAPI.redeemPromo(userId, promoCode.trim());
+            setPromoResult({ success: true, message: res.data.message });
+            setPromoCode("");
+            // Update energy in store
+            if (res.data.new_energy !== undefined) {
+                setUser({ energy: res.data.new_energy });
+            }
+        } catch (err: any) {
+            const msg = err.response?.data?.detail || "Ошибка активации промокода";
+            setPromoResult({ success: false, message: msg });
+        } finally {
+            setPromoLoading(false);
+        }
     };
 
     return (
@@ -620,6 +646,47 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
                         </button>
                     </div>
                 </div>
+            </div>
+
+            {/* Promo code block */}
+            <div className="glass p-5 space-y-3">
+                <div>
+                    <h4 className="text-sm font-bold text-white mb-0.5">Промокод</h4>
+                    <p className="text-xs text-white/40">Введи промокод, чтобы получить бонус ✦ Энергии</p>
+                </div>
+                <div className="flex gap-2">
+                    <input
+                        type="text"
+                        value={promoCode}
+                        onChange={e => setPromoCode(e.target.value.toUpperCase())}
+                        onKeyDown={e => e.key === "Enter" && handleRedeemPromo()}
+                        placeholder="ВВЕДИ ПРОМОКОД"
+                        maxLength={32}
+                        className="flex-1 bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/20 uppercase tracking-widest outline-none focus:border-violet-500/60 transition-colors"
+                    />
+                    <button
+                        onClick={handleRedeemPromo}
+                        disabled={promoLoading || !promoCode.trim()}
+                        className="bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-4 rounded-xl font-bold text-sm transition-colors flex items-center gap-1.5"
+                    >
+                        {promoLoading ? (
+                            <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                        ) : "Активировать"}
+                    </button>
+                </div>
+                {promoResult && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`text-xs font-medium px-3 py-2 rounded-xl border ${
+                            promoResult.success
+                                ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                                : "bg-red-500/10 border-red-500/20 text-red-400"
+                        }`}
+                    >
+                        {promoResult.success ? "✓ " : "✗ "}{promoResult.message}
+                    </motion.div>
+                )}
             </div>
 
             <div className="glass p-4">

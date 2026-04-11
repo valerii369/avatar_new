@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR, { mutate } from "swr";
 import { useUserStore, useInsightsStore, type Insight } from "@/lib/store";
@@ -15,6 +15,50 @@ import { useTmaSafeArea } from "@/lib/useTmaSafeArea";
 import RecommendationsTab from "@/components/RecommendationsTab";
 
 type Tab = "portrait" | "recommendations" | "breakdown" | "sides";
+
+// ─── Energy Toast ─────────────────────────────────────────────────────────────
+function EnergyToast({ message, onClose }: { message: string; onClose: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 4000);
+    return () => clearTimeout(t);
+  }, [onClose]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 60, scale: 0.92 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 40, scale: 0.92 }}
+      transition={{ type: "spring", stiffness: 340, damping: 28 }}
+      style={{
+        position: "fixed",
+        bottom: 96,
+        left: 16,
+        right: 16,
+        zIndex: 9999,
+        background: "linear-gradient(135deg, rgba(245,158,11,0.18) 0%, rgba(239,68,68,0.12) 100%)",
+        border: "1px solid rgba(245,158,11,0.35)",
+        borderRadius: 18,
+        padding: "14px 18px",
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        backdropFilter: "blur(16px)",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+      }}
+      onClick={onClose}
+    >
+      <span style={{ fontSize: 26 }}>⚡️</span>
+      <div style={{ flex: 1 }}>
+        <p style={{ fontSize: 14, fontWeight: 700, color: "#F59E0B", margin: 0, marginBottom: 2 }}>
+          Не хватает энергии
+        </p>
+        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", margin: 0 }}>
+          {message}
+        </p>
+      </div>
+    </motion.div>
+  );
+}
 
 // ─── Portrait Lock Screen ────────────────────────────────────────────────────
 function PortraitLockScreen({ activeSphereCount }: { activeSphereCount: number }) {
@@ -311,6 +355,7 @@ function BreakdownTab({
   setGenerating: (id: number | null) => void;
   dataReady: boolean;
 }) {
+  const [energyToast, setEnergyToast] = useState<string | null>(null);
 
   const insightsBySphere = useMemo(() => {
     const map: Record<number, Insight[]> = {};
@@ -338,8 +383,13 @@ function BreakdownTab({
       // Force SWR to refetch fresh data
       await onRefresh();
     } catch (err: any) {
+      const status = err.response?.status;
       const detail = err.response?.data?.detail || "Ошибка генерации";
-      alert(detail);
+      if (status === 402) {
+        setEnergyToast("Пополни энергию через промокод или реферальную программу");
+      } else {
+        setEnergyToast(detail);
+      }
     } finally {
       setGenerating(null);
     }
@@ -347,6 +397,14 @@ function BreakdownTab({
 
   return (
     <>
+      <AnimatePresence>
+        {energyToast && (
+          <EnergyToast
+            message={energyToast}
+            onClose={() => setEnergyToast(null)}
+          />
+        )}
+      </AnimatePresence>
       <div style={{ marginBottom: 16 }}>
         <SphereFilter activeSphere={activeSphere} onSelect={setActiveSphere} />
       </div>
