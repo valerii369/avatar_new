@@ -24,42 +24,58 @@ PLANET_LABELS: dict[str, str] = {
     "south_node":     "Ю. Узел",
     "chiron":         "Хирон",
     "lilith":         "Лилит",
+    "selena":         "Селена",
     "asc":            "АСЦ",
     "mc":             "МС",
     "part_of_fortune":"Парс",
 }
 
+# ── Zodiac sign abbreviations (RU) ────────────────────────────────────────────
 SIGN_RU: dict[str, str] = {
-    "Aries": "Овен", "Taurus": "Телец", "Gemini": "Близнецы",
-    "Cancer": "Рак", "Leo": "Лев", "Virgo": "Дева",
-    "Libra": "Весы", "Scorpio": "Скорпион", "Sagittarius": "Стрелец",
-    "Capricorn": "Козерог", "Aquarius": "Водолей", "Pisces": "Рыбы",
+    "Aries":       "Овен",
+    "Taurus":      "Телец",
+    "Gemini":      "Близнецы",
+    "Cancer":      "Рак",
+    "Leo":         "Лев",
+    "Virgo":       "Дева",
+    "Libra":       "Весы",
+    "Scorpio":     "Скорпион",
+    "Sagittarius": "Стрелец",
+    "Capricorn":   "Козерог",
+    "Aquarius":    "Водолей",
+    "Pisces":      "Рыбы",
 }
 
-MAJOR_ASPECTS = {"conjunction", "opposition", "trine", "square", "sextile"}
+
+def _fmt_position(data: dict) -> str:
+    """Format planet data as '14°32′ Телец, 1 дом'."""
+    deg_float = data.get("degree_in_sign", 0.0)
+    deg = int(deg_float)
+    minutes = round((deg_float - deg) * 60)
+    sign_ru = SIGN_RU.get(data.get("sign", ""), data.get("sign", ""))
+    house = data.get("house", "")
+    retro = " ℞" if data.get("retrograde") else ""
+    return f"{deg}°{minutes:02d}′ {sign_ru}, {house} дом{retro}"
+
 
 ASPECT_LABELS_RU: dict[str, str] = {
     "conjunction": "Соединение",
     "opposition":  "Оппозиция",
-    "trine":       "Трин",
+    "trine":       "Тригон",
     "square":      "Квадрат",
     "sextile":     "Секстиль",
 }
 
-
-def _fmt_position(planet: dict) -> str:
-    deg = planet.get("longitude", 0) % 30
-    sign_en = planet.get("sign", "")
-    sign = SIGN_RU.get(sign_en, sign_en)
-    retro = " ℞" if planet.get("retrograde") else ""
-    return f"{deg:.1f}° {sign}{retro}"
+MAJOR_ASPECTS = {"conjunction", "opposition", "trine", "square", "sextile"}
 
 
 def _build_natal_positions(planets: dict) -> list[dict]:
+    """Return ordered list of {key, label, position_str} for all planets."""
     order = [
         "sun", "moon", "mercury", "venus", "mars",
         "jupiter", "saturn", "uranus", "neptune", "pluto",
-        "north_node", "south_node", "chiron", "lilith", "asc", "mc",
+        "north_node", "south_node", "chiron", "lilith", "selena",
+        "asc", "mc",
     ]
     result = []
     for key in order:
@@ -74,6 +90,7 @@ def _build_natal_positions(planets: dict) -> list[dict]:
 
 
 def _build_natal_aspects(aspects: list) -> list[dict]:
+    """Return major aspects formatted for frontend display."""
     result = []
     for asp in aspects:
         if asp.get("type") not in MAJOR_ASPECTS:
@@ -89,6 +106,7 @@ def _build_natal_aspects(aspects: list) -> list[dict]:
             "angle":      asp["angle"],
             "applying":   asp.get("applying", False),
         })
+    # Sort: tighter orb first
     result.sort(key=lambda x: x["orb"])
     return result
 
@@ -101,7 +119,7 @@ async def get_portrait(user_id: str):
     try:
         supabase = get_supabase()
 
-        # 1. Fetch insights
+        # 1. Fetch 12-Sphere Insights
         insights_resp = (
             supabase.table("user_insights")
             .select("*")
@@ -110,7 +128,7 @@ async def get_portrait(user_id: str):
             .execute()
         )
 
-        # 2. Fetch portrait
+        # 2. Fetch Portrait Summary
         portrait_resp = (
             supabase.table("user_portraits")
             .select("*")
@@ -162,6 +180,9 @@ async def get_portrait(user_id: str):
                 "integration_key":    row["integration_key"],
                 "triggers":           row["triggers"],
                 "source":             row.get("source"),
+                "blind_spot":         row.get("blind_spot", ""),
+                "energy_rhythm":      row.get("energy_rhythm", ""),
+                "crisis_anchor":      row.get("crisis_anchor", ""),
             }
             spheres[sys][str(sphere)].append(insight)
 
@@ -179,7 +200,7 @@ async def get_portrait(user_id: str):
             "deep_profile_data":      portrait_data.get("deep_profile_data")      if portrait_data else None,
             "natal_positions":        natal_positions,
             "natal_aspects":          natal_aspects,
-            # Progressive portrait synthesis fields
+            # Progressive portrait synthesis
             "sphere_summaries":       portrait_data.get("sphere_summaries") or {}  if portrait_data else {},
             "active_spheres_count":   portrait_data.get("active_spheres_count", 0) if portrait_data else 0,
             "master_portrait":        portrait_data.get("master_portrait")          if portrait_data else None,
