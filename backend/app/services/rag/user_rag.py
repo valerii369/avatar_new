@@ -25,6 +25,7 @@ SPHERE_NAMES = {
 
 # Roles used in user_memory to distinguish DSB chunks from chat history
 DSB_ROLE_PREFIX = "dsb:"
+INSIGHT_ROLE_PREFIX = "dsb:insight"
 
 
 async def _embed(text: str) -> list[float]:
@@ -58,17 +59,25 @@ def _insight_to_text(ins: dict) -> str:
 
 
 async def is_indexed(user_id: str) -> bool:
-    """Check if DSB chunks already exist in user_memory for this user."""
+    """Check if DSB insight chunks already exist in user_memory for this user."""
     supabase = get_supabase()
     resp = (
         supabase.table("user_memory")
         .select("id")
         .eq("user_id", user_id)
-        .like("role", f"{DSB_ROLE_PREFIX}%")
+        .like("role", f"{INSIGHT_ROLE_PREFIX}%")
         .limit(1)
         .execute()
     )
     return bool(resp.data)
+
+
+def _format_matches(matches: list[dict]) -> str:
+    if not matches:
+        return ""
+    return "=== Релевантный контекст о пользователе ===\n" + "\n\n---\n".join(
+        match["message"] for match in matches
+    )
 
 
 async def index_user_dsb(user_id: str) -> int:
@@ -151,9 +160,19 @@ async def index_user_dsb(user_id: str) -> int:
 
 
 async def retrieve_context(user_id: str, query: str, k: int = 6, threshold: float = 0.3) -> str:
+    context, _matches = await retrieve_context_with_matches(user_id, query, k=k, threshold=threshold)
+    return context
+
+
+async def retrieve_context_with_matches(
+    user_id: str,
+    query: str,
+    k: int = 6,
+    threshold: float = 0.3,
+) -> tuple[str, list[dict]]:
     """
     Retrieve the most relevant DSB chunks for a given user query.
-    Returns a formatted string ready to inject into the system prompt.
+    Returns a formatted string plus structured matches for tracing.
     """
     try:
         embedding = await _embed(query)
@@ -167,20 +186,25 @@ async def retrieve_context(user_id: str, query: str, k: int = 6, threshold: floa
         }).execute()
 
         if not resp.data:
-            return ""
+            return "", []
 
-        # Filter to DSB chunks only (exclude chat history stored by other parts)
-        dsb_chunks = [
-            row["message"]
+        # Filter to insight chunks only. Birth data / portrait should not dominate assistant retrieval.
+        insight_matches = [
+            {
+                "chunk_id": row.get("id"),
+                "role": row.get("role", ""),
+                "similarity": float(row.get("similarity") or 0),
+                "message": row.get("message", ""),
+            }
             for row in resp.data
-            if row.get("role", "").startswith(DSB_ROLE_PREFIX)
+            if row.get("role", "").startswith(INSIGHT_ROLE_PREFIX)
         ]
 
-        if not dsb_chunks:
-            return ""
+        if not insight_matches:
+            return "", []
 
-        return "=== Релевантный контекст о пользователе ===\n" + "\n\n---\n".join(dsb_chunks)
+        return _format_matches(insight_matches), insight_matches
 
     except Exception as e:
         logger.warning(f"RAG retrieval failed for user {user_id}: {e}")
-        return ""
+        return "", []

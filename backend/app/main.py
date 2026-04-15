@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api import auth, portraits, assistant
+from app.api import auth, portraits, assistant, assistant_v2
 from app.api.extras import game_router, diary_router, payments_router
 from app.api.recommendations import router as recommendations_router
 from fastapi.middleware.cors import CORSMiddleware
@@ -135,6 +135,7 @@ async def health_check():
 app.include_router(auth.router,       prefix="/api/auth",      tags=["auth"])
 app.include_router(portraits.router,  prefix="/api/portraits", tags=["portraits"])
 app.include_router(assistant.router,  prefix="/api/assistant", tags=["assistant"])
+app.include_router(assistant_v2.router, prefix="/api/assistant-v2", tags=["assistant-v2"])
 
 # Feature routers (stubs — full impl in future sprints)
 app.include_router(game_router,     prefix="/api/game",     tags=["game"])

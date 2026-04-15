@@ -6,6 +6,7 @@ from app.services.dsb.western_astrology_agent import generate_insights
 from app.services.dsb.synthesis import synthesize, save_to_supabase, generate_portrait_summary, update_sphere_summary
 from app.core.db import get_supabase
 from app.core.config import settings
+from app.services.rag.user_rag import index_user_dsb
 import logging
 import httpx
 import time
@@ -69,6 +70,21 @@ def _computed_xp_fields(user: dict) -> dict:
     xp_current = (level - 1) * 1000
     xp_next = level * 1000
     return {"xp_current": xp_current, "xp_next": xp_next}
+
+
+def _is_dev_tg_id(value: str | int | None) -> bool:
+    try:
+        return int(value or 0) == 999999999
+    except (TypeError, ValueError):
+        return False
+
+
+def _looks_like_int(value: str | int | None) -> bool:
+    try:
+        int(str(value or "").strip())
+        return True
+    except (TypeError, ValueError):
+        return False
 
 # ─── /geocode ─────────────────────────────────────────────────────────────────
 
@@ -214,9 +230,9 @@ async def get_profile(user_id: str):
 
     try:
         user_res = supabase.table("users").select("*").eq("id", user_id).execute()
-        if not user_res.data:
+        if not user_res.data and _looks_like_int(user_id):
             # Fallback: try by tg_id
-            user_res = supabase.table("users").select("*").eq("tg_id", user_id).execute()
+            user_res = supabase.table("users").select("*").eq("tg_id", int(user_id)).execute()
 
         user = user_res.data[0] if user_res.data else {}
 
@@ -267,6 +283,7 @@ async def reset_user(request: ResetRequest):
     """
     Hard reset user data by user_id and/or tg_id:
     - user_birth_data, user_insights, user_portraits, user_memory, uis_errors, retriever_traces
+    - assistant_sessions (with cascading assistant_messages / assistant_generations)
     - users flags/stats reset to defaults
     - optional geocode_cache cleanup by user's birth_place values
     """
@@ -316,6 +333,7 @@ async def reset_user(request: ResetRequest):
         "retriever_traces",
         "user_recommendations",
         "user_sphere_access",
+        "assistant_sessions",
     ]
     for uid in user_variants:
         for table in TABLES_TO_CLEAR:
@@ -334,14 +352,18 @@ async def reset_user(request: ResetRequest):
             except Exception as e:
                 logger.warning(f"geocode_cache delete failed for '{place}': {e}")
 
-    # ── Reset user flags and stats ─────────────────────────────────────────────
+    # ── Reset or delete user row ───────────────────────────────────────────────
     try:
-        supabase.table("users").update({
-            **_default_user_fields(),
-            **_default_chat_profile_fields(),
-        }).eq("id", resolved_user_id).execute()
+        if _is_dev_tg_id(resolved_tg_id):
+            supabase.table("users").delete().eq("id", resolved_user_id).execute()
+        else:
+            supabase.table("users").update({
+                **_default_user_fields(),
+                **_default_chat_profile_fields(),
+            }).eq("id", resolved_user_id).execute()
     except Exception as e:
-        msg = f"users update: {e}"
+        action = "users delete" if _is_dev_tg_id(resolved_tg_id) else "users update"
+        msg = f"{action}: {e}"
         logger.error(f"Reset: {msg}")
         errors.append(msg)
 
@@ -416,6 +438,11 @@ async def initialize_onboarding_layer(req: ProfileRequest):
         t_save = time.perf_counter()
         await save_to_supabase(req.user_id, synthesized_data, portrait, free_sphere_summaries, free_sphere_archetypes)
         logger.info(f"[TIMING] onboarding.layer5_save={time.perf_counter() - t_save:.2f}s user={req.user_id}")
+
+        try:
+            await index_user_dsb(req.user_id)
+        except Exception as reindex_err:
+            logger.warning(f"Post-onboarding reindex failed for {req.user_id}: {reindex_err}")
 
         # Mark onboarding done
         t_done = time.perf_counter()
@@ -502,6 +529,13 @@ async def generate_sphere(request: GenerateSphereRequest):
 
         # Save sphere summary + archetype + potentially trigger master synthesis at 12 spheres
         await update_sphere_summary(request.user_id, request.sphere_id, short_summary, sphere_archetype)
+
+        try:
+            await index_user_dsb(request.user_id)
+        except Exception as reindex_err:
+            logger.warning(
+                f"Post-generate-sphere reindex failed for user {request.user_id}, sphere {request.sphere_id}: {reindex_err}"
+            )
 
         # Deduct energy
         supabase.table("users").update({"energy": user["energy"] - 10})\
@@ -691,6 +725,13 @@ async def calculate_sync(request: ProfileRequest):
         # Step 6: Save (with sphere summaries — master synthesis triggered inside if 12 summaries)
         await save_to_supabase(request.user_id, synthesized_data, portrait, sphere_summaries, sphere_archetypes)
         steps.append("saved to supabase")
+
+        try:
+            await index_user_dsb(request.user_id)
+            steps.append("user_memory reindexed")
+        except Exception as reindex_err:
+            logger.warning(f"Post-calculate-sync reindex failed for {request.user_id}: {reindex_err}")
+            steps.append(f"user_memory reindex failed: {reindex_err}")
 
         # Step 7: Mark onboarding done
         supabase.table("users").update({"onboarding_done": True}).eq("id", request.user_id).execute()
