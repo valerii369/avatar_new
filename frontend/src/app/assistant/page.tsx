@@ -16,6 +16,84 @@ const MicIcon = ({ className }: { className?: string }) => (
     </svg>
 );
 
+function renderInlineMarkdown(text: string) {
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((part, index) => {
+        if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+            return <strong key={index} style={{ fontWeight: 700, color: "rgba(255,255,255,0.96)" }}>{part.slice(2, -2)}</strong>;
+        }
+        return <span key={index}>{part}</span>;
+    });
+}
+
+function MessageContent({ content }: { content: string }) {
+    const normalized = content.replace(/\r\n/g, "\n").trim();
+    const blocks = normalized ? normalized.split(/\n{2,}/).filter(Boolean) : [];
+
+    if (blocks.length === 0) {
+        return null;
+    }
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {blocks.map((block, blockIndex) => {
+                const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
+                const unordered = lines.every((line) => /^[-*]\s+/.test(line));
+                const ordered = lines.every((line) => /^\d+\.\s+/.test(line));
+
+                if (unordered) {
+                    return (
+                        <ul
+                            key={blockIndex}
+                            style={{
+                                margin: 0,
+                                paddingLeft: 18,
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 6,
+                            }}
+                        >
+                            {lines.map((line, lineIndex) => (
+                                <li key={lineIndex}>{renderInlineMarkdown(line.replace(/^[-*]\s+/, ""))}</li>
+                            ))}
+                        </ul>
+                    );
+                }
+
+                if (ordered) {
+                    return (
+                        <ol
+                            key={blockIndex}
+                            style={{
+                                margin: 0,
+                                paddingLeft: 20,
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 6,
+                            }}
+                        >
+                            {lines.map((line, lineIndex) => (
+                                <li key={lineIndex}>{renderInlineMarkdown(line.replace(/^\d+\.\s+/, ""))}</li>
+                            ))}
+                        </ol>
+                    );
+                }
+
+                return (
+                    <p key={blockIndex} style={{ margin: 0 }}>
+                        {lines.map((line, lineIndex) => (
+                            <span key={lineIndex}>
+                                {renderInlineMarkdown(line.replace(/^#{1,6}\s*/, ""))}
+                                {lineIndex < lines.length - 1 ? <br /> : null}
+                            </span>
+                        ))}
+                    </p>
+                );
+            })}
+        </div>
+    );
+}
+
 const useVoiceRecorder = (userId: string | null, setInput: React.Dispatch<React.SetStateAction<string>>) => {
     const [isRecording, setIsRecording] = useState(false);
     const [isTranscribing, setIsTranscribing] = useState(false);
@@ -246,7 +324,7 @@ export default function AssistantPage() {
                             color: msg.role === "user" ? "#FEF3C7" : "rgba(255,255,255,0.9)",
                             border: msg.role === "user" ? "1px solid rgba(245,158,11,0.15)" : "1px solid rgba(255,255,255,0.08)",
                         }}>
-                            {msg.content}
+                            {msg.role === "assistant" ? <MessageContent content={msg.content} /> : msg.content}
                         </div>
                     </div>
                 ))}
