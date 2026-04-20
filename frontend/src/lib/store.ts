@@ -72,11 +72,29 @@ interface UserState {
   reset: () => void;
 }
 
+const initialUserState = {
+  userId: null,
+  tgId: null,
+  firstName: "",
+  photoUrl: "",
+  token: null,
+  onboardingDone: false,
+  energy: 0,
+  streak: 0,
+  evolutionLevel: 1,
+  title: "Новичок",
+  xp: 0,
+  xpCurrent: 0,
+  xpNext: 1000,
+  referralCode: "",
+  hubData: null,
+  assistantMessages: [],
+};
+
 export const useUserStore = create<UserState>()(
   persist(
     (set) => ({
-      userId: null, tgId: null, firstName: "", photoUrl: "", token: null, onboardingDone: false,
-      energy: 0, streak: 0, evolutionLevel: 1, title: "Новичок", xp: 0, xpCurrent: 0, xpNext: 1000, referralCode: "",
+      ...initialUserState,
 
       hubData: null,
       setHubData: (data) => set({ hubData: data }),
@@ -85,7 +103,7 @@ export const useUserStore = create<UserState>()(
       setAssistantMessages: (messages) => set({ assistantMessages: messages }),
 
       setUser: (data) => set((state) => ({ ...state, ...data })),
-      reset: () => set({ userId: null, tgId: null, firstName: "", token: null, onboardingDone: false }),
+      reset: () => set({ ...initialUserState }),
     }),
     { name: "avatar-user-storage" }
   )

@@ -60,13 +60,13 @@ export const recommendationsAPI = {
 };
 
 export const assistantAPI = {
-  init: (userId: string) => api.get(`/api/assistant/init/${userId}`),
+  init: (userId: string) => api.get(`/api/assistant-v2/init/${userId}`),
   chat: (userId: string, sessionId: number, message: string) =>
-    api.post("/api/assistant/chat", { user_id: userId, session_id: sessionId, message }),
+    api.post("/api/assistant-v2/chat", { user_id: userId, session_id: sessionId, message }),
   finish: (userId: string, sessionId: number) =>
-    api.post("/api/assistant/finish", { user_id: userId, session_id: sessionId }),
+    api.post("/api/assistant-v2/finish", { user_id: userId, session_id: sessionId }),
   saveToDiary: (userId: string, sessionId: number) =>
-    api.post("/api/assistant/diary/save", { user_id: userId, session_id: sessionId }),
+    api.post("/api/assistant-v2/diary/save", { user_id: userId, session_id: sessionId }),
 };
 
 export const diaryAPI = {
@@ -95,7 +95,7 @@ export const voiceAPI = {
     formData.append("file", audioBlob);
     formData.append("user_id", userId.toString());
     formData.append("context", context);
-    return api.post("/api/assistant/transcribe", formData, {
+    return api.post("/api/assistant-v2/transcribe", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
   },

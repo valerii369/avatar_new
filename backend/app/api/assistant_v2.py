@@ -14,12 +14,19 @@ from openai import AsyncOpenAI
 
 from app.core.config import settings
 from app.core.db import get_supabase
-from app.services.rag.user_rag import index_user_dsb, is_indexed, retrieve_context
+from app.services.rag.user_rag import index_user_dsb, is_indexed, retrieve_context_with_matches
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+PROFILE_REQUIRED_FIELDS = (
+    "work_sphere",
+    "work_satisfaction",
+    "relationship_status",
+    "life_focus",
+    "current_location",
+)
 
 # In-memory sessions: {session_id: {user_id, messages, created_at}}
 _sessions: dict = {}
@@ -43,7 +50,7 @@ class LlmTurnResult:
 
 # ─── System prompts ────────────────────────────────────────────────────────────
 
-SYSTEM_PROMPT = """Ты — лучший друг пользователя. Умный, тёплый, честный.
+BASE_SYSTEM_PROMPT = """Ты — лучший друг пользователя. Умный, тёплый, честный.
 
 Ты глубоко знаешь психологию — в твоей голове живут идеи из 30 ключевых книг: Юнг, Фрейд, Адлер, Франкл, Берн (транзактный анализ), Бек (КПТ), Роджерс, Маслоу, Перлз (гештальт), Сатир (семейные системы), Боуэн, Левин, Дэниел Сигел, Бессел ван дер Колк («Тело помнит всё»), Питер Левин, Ирвин Ялом, Нэнси Мак-Вильямс, Кристоф Андре, Брене Браун, Михай Чиксентмихайи, Мартин Селигман, Роберт Чалдини, Дэниел Канеман, Адам Грант, Виктор Франкл, Эрих Фромм, Карен Хорни, Дональд Уинникотт, Джон Боулби, Хайнц Кохут.
 
@@ -64,6 +71,10 @@ SYSTEM_PROMPT = """Ты — лучший друг пользователя. Ум
 ЛОКАЦИЯ: Ты всегда опираешься на текущую локацию пользователя для астрологических расчётов. Если в ходе диалога пользователь упоминает, что куда-то летит, переезжает или меняет город — обязательно скажи: "Супер, хорошей поездки! Напиши мне, когда прибудешь — обновлю локацию, это критически важно для точности транзитов." Если пользователь прямо говорит "я теперь в [городе]" или просит сменить локацию — вызови функцию update_location.
 
 Отвечай по-русски. Будь живым."""
+
+REGULAR_PROMPT_ADDON = """
+
+РЕЖИМ ОБЩЕНИЯ: Если у тебя уже есть данные о пользователе, опирайся на них как на рабочий контекст и не возвращайся к onboarding-вопросам. Уточняй только то, что действительно нужно для текущего ответа."""
 
 ONBOARDING_ADDON = """
 
@@ -184,31 +195,22 @@ def _build_dynamic_context(profile: dict, local_time: str) -> str:
 
 
 def _build_system(extra: str = "") -> str:
+    system_prompt = BASE_SYSTEM_PROMPT + REGULAR_PROMPT_ADDON
     if not extra:
-        return SYSTEM_PROMPT
-    return f"{SYSTEM_PROMPT}\n\n{extra}"
+        return system_prompt
+    return f"{system_prompt}\n\n{extra}"
 
 
 def _build_onboarding_system() -> str:
-    return SYSTEM_PROMPT + ONBOARDING_ADDON
+    return BASE_SYSTEM_PROMPT + ONBOARDING_ADDON
 
 
-async def _get_portrait_brief(user_id: str) -> str:
-    try:
-        supabase = get_supabase()
-        resp = supabase.table("user_portraits").select(
-            "core_identity,core_archetype,current_dynamic"
-        ).eq("user_id", user_id).execute()
-        if not resp.data:
-            return ""
-        p = resp.data[0]
-        return (
-            f"Краткий контекст о пользователе:\n"
-            f"Суть: {p.get('core_identity', '')}\n"
-            f"Архетип: {p.get('core_archetype', '')} | Сейчас: {p.get('current_dynamic', '')}"
-        )
-    except Exception:
-        return ""
+def _has_profile_context(profile: dict) -> bool:
+    return all(str(profile.get(field) or "").strip() for field in PROFILE_REQUIRED_FIELDS)
+
+
+def _should_run_onboarding(profile: dict) -> bool:
+    return not _has_profile_context(profile)
 
 
 def _usage_attr(obj: Any, name: str, default: int = 0) -> int:
@@ -354,13 +356,13 @@ def _save_generation_trace(
     rag_context: str,
     temperature: float,
     max_completion_tokens: int,
-) -> None:
+) -> str | None:
     db_session_id = _ensure_db_session(user_id, client_session_id, session)
     if not db_session_id:
-        return
+        return None
 
     try:
-        get_supabase().table("assistant_generations").insert({
+        res = get_supabase().table("assistant_generations").insert({
             "user_id": user_id,
             "session_id": db_session_id,
             "client_session_id": client_session_id,
@@ -387,8 +389,46 @@ def _save_generation_trace(
             "response_metadata": {},
         }).execute()
         _touch_db_session(db_session_id)
+        if res.data:
+            return res.data[0]["id"]
     except Exception as e:
         logger.warning(f"assistant generation persistence failed user={user_id}: {e}")
+
+    return None
+
+
+def _save_retrieval_trace(
+    *,
+    user_id: str,
+    client_session_id: int,
+    session: dict,
+    turn_index: int,
+    generation_id: str | None,
+    query_text: str,
+    requested_k: int,
+    threshold: float,
+    matches: list[dict],
+) -> None:
+    db_session_id = _ensure_db_session(user_id, client_session_id, session)
+    if not db_session_id:
+        return
+
+    try:
+        get_supabase().table("assistant_retrievals").insert({
+            "user_id": user_id,
+            "session_id": db_session_id,
+            "generation_id": generation_id,
+            "client_session_id": client_session_id,
+            "turn_index": turn_index,
+            "query_text": query_text,
+            "requested_k": requested_k,
+            "threshold": threshold,
+            "returned_count": len(matches),
+            "matches": matches,
+        }).execute()
+        _touch_db_session(db_session_id)
+    except Exception as e:
+        logger.warning(f"assistant retrieval persistence failed user={user_id}: {e}")
 
 
 # ─── Tool execution ────────────────────────────────────────────────────────────
@@ -562,7 +602,7 @@ async def init_session(user_id: str, background_tasks: BackgroundTasks):
     return {
         "session_id": session_id,
         "is_first_touch": not already_indexed,
-        "chat_onboarding_completed": profile.get("chat_onboarding_completed", False),
+        "chat_onboarding_completed": not _should_run_onboarding(profile),
     }
 
 
@@ -593,7 +633,8 @@ async def chat(req: ChatRequest):
 
     # ── Load user profile & determine mode ────────────────────────────────────
     profile = await _get_user_profile(req.user_id)
-    onboarding_done = profile.get("chat_onboarding_completed", False)
+    session["profile"] = profile
+    needs_onboarding = _should_run_onboarding(profile)
 
     # ── Empty message → generate greeting ────────────────────────────────────
     if not req.message.strip():
@@ -601,12 +642,10 @@ async def chat(req: ChatRequest):
         if last:
             return {"ai_response": last["content"]}
 
-        portrait_context = await _get_portrait_brief(req.user_id)
-
-        if onboarding_done:
+        if not needs_onboarding:
             local_time = await _get_local_time(profile.get("current_location", ""))
             ctx_block = _build_dynamic_context(profile, local_time)
-            system = _build_system("\n\n".join(filter(None, [ctx_block, portrait_context])))
+            system = _build_system(ctx_block)
         else:
             system = _build_onboarding_system()
 
@@ -682,10 +721,18 @@ async def chat(req: ChatRequest):
 
     # Build system prompt based on mode
     rag_context = ""
-    if onboarding_done:
+    retrieval_matches: list[dict] = []
+    retrieval_k = 6
+    retrieval_threshold = 0.3
+    if not needs_onboarding:
         local_time = await _get_local_time(profile.get("current_location", ""))
         ctx_block = _build_dynamic_context(profile, local_time)
-        rag_context = await retrieve_context(req.user_id, req.message, k=6)
+        rag_context, retrieval_matches = await retrieve_context_with_matches(
+            req.user_id,
+            req.message,
+            k=retrieval_k,
+            threshold=retrieval_threshold,
+        )
         extra = "\n\n".join(filter(None, [ctx_block, rag_context]))
         system = _build_system(extra)
         tools = [TOOL_UPDATE_LOCATION]
@@ -720,7 +767,7 @@ async def chat(req: ChatRequest):
         model=result.model,
         metadata={"kind": "chat"},
     )
-    _save_generation_trace(
+    generation_id = _save_generation_trace(
         user_id=req.user_id,
         client_session_id=req.session_id,
         session=session,
@@ -733,6 +780,18 @@ async def chat(req: ChatRequest):
         temperature=0.75,
         max_completion_tokens=600,
     )
+    if not needs_onboarding:
+        _save_retrieval_trace(
+            user_id=req.user_id,
+            client_session_id=req.session_id,
+            session=session,
+            turn_index=turn_index,
+            generation_id=generation_id,
+            query_text=req.message,
+            requested_k=retrieval_k,
+            threshold=retrieval_threshold,
+            matches=retrieval_matches,
+        )
     return {"ai_response": reply}
 
 

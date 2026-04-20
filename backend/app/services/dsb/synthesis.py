@@ -42,7 +42,7 @@ async def generate_portrait_summary(user_id: str, synthesized_data: dict) -> dic
                 top_insights.append({
                     "sphere": item.primary_sphere,
                     "theme": item.core_theme,
-                    "energy": item.energy_description,
+                    "energy": getattr(item, "description", "") or getattr(item, "energy_description", ""),
                 })
 
     prompt = f"""
