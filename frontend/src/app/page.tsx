@@ -130,7 +130,9 @@ export default function HomePage() {
     }
   );
 
-  const isBuilding = status === "ready" && useUserStore.getState().onboardingDone && profile && !profile.onboarding_done;
+  // isBuilding: show spinner when pipeline was launched (pipeline_started=true) but hasn't saved portrait yet (onboarding_done=false)
+  // If pipeline failed, users.onboarding_done is rolled back → pipeline_started=false → isBuilding=false (no stuck spinner)
+  const isBuilding = status === "ready" && profile?.pipeline_started === true && !profile?.onboarding_done;
 
   // 3. Master Hub
   const { data: hub } = useSWR(

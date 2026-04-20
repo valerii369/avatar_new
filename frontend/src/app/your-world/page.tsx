@@ -777,13 +777,58 @@ function PipelineStep({ label, index }: { label: string; index: number }) {
   );
 }
 
-function PipelineLoading() {
+function PipelineLoading({ onRetry }: { onRetry?: () => void }) {
+  const [timedOut, setTimedOut] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setTimedOut(true), 8 * 60 * 1000); // 8 min
+    return () => clearTimeout(t);
+  }, []);
+
   const steps = [
     "Расчёт натальной карты",
     "Анализ 12 сфер жизни",
     "Формирование инсайтов",
     "Сборка архетипного портрета",
   ];
+
+  if (timedOut) {
+    return (
+      <div style={{
+        display: "flex", flexDirection: "column", alignItems: "center",
+        justifyContent: "center", padding: "60px 20px", textAlign: "center",
+      }}>
+        <div style={{
+          width: 52, height: 52, borderRadius: 16, marginBottom: 20,
+          background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 24,
+        }}>
+          ⚠️
+        </div>
+        <p style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
+          Анализ затянулся
+        </p>
+        <p style={{ fontSize: 12, color: "var(--text-muted)", maxWidth: 260, lineHeight: 1.6, marginBottom: 24 }}>
+          Расчёт занял дольше обычного. Попробуй обновить страницу — данные могли уже сохраниться.
+        </p>
+        {onRetry && (
+          <button
+            onClick={onRetry}
+            style={{
+              padding: "12px 28px", borderRadius: 14,
+              background: "var(--violet)", color: "#fff",
+              border: "none", fontSize: 14, fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Обновить
+          </button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div style={{
       display: "flex", flexDirection: "column", alignItems: "center",
@@ -806,7 +851,7 @@ function PipelineLoading() {
         fontSize: 12, color: "var(--text-muted)", maxWidth: 260,
         lineHeight: 1.6, marginBottom: 24,
       }}>
-        12 агентов параллельно анализируют натальную карту — обычно 1–2 минуты
+        Агенты анализируют натальную карту и формируют инсайты — обычно 2–5 минут
       </p>
       <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%", maxWidth: 300 }}>
         {steps.map((s, i) => <PipelineStep key={i} label={s} index={i} />)}
@@ -838,7 +883,7 @@ export default function YourWorldPage() {
     },
     {
       revalidateOnFocus: false,
-      refreshInterval: (data: any) => data?.status === "pending" ? 4000 : 0,
+      refreshInterval: (data: any) => (!data || data?.status === "pending") ? 4000 : 0,
       // Show cached data instantly on re-entry, revalidate in background
       fallbackData: hubData ?? undefined,
       onSuccess: (data) => {
@@ -870,6 +915,8 @@ export default function YourWorldPage() {
   }, [hub]);
 
   const isPending = hub?.status === "pending";
+  // If hub is "pending" but profile says pipeline_started=false → pipeline failed (not running)
+  const pipelineFailed = isPending && userProfile && userProfile.pipeline_started === false;
   const totalCount = insights.length;
   const sphereCount = new Set(insights.map(i => i.primary_sphere)).size;
 
@@ -893,7 +940,7 @@ export default function YourWorldPage() {
         }}>
           Твой мир
         </h1>
-        {hub?.status === "pending" ? (
+        {hub?.status === "pending" && !pipelineFailed ? (
           <motion.span
             animate={{ opacity: [0.3, 0.8, 0.3] }}
             transition={{ duration: 1.6, repeat: Infinity }}
@@ -943,7 +990,22 @@ export default function YourWorldPage() {
       {/* Content — scrollable */}
       <div style={{ flex: 1, padding: "0 20px", overflowY: "auto", paddingBottom: 90, WebkitOverflowScrolling: "touch" }}>
         {hub?.status === "pending" ? (
-          <PipelineLoading />
+          pipelineFailed ? (
+            // Pipeline failed — show error immediately, don't spin forever
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "60px 20px", textAlign: "center" }}>
+              <div style={{ width: 52, height: 52, borderRadius: 16, marginBottom: 20, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>
+                ⚠️
+              </div>
+              <p style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
+                Что-то пошло не так
+              </p>
+              <p style={{ fontSize: 12, color: "var(--text-muted)", maxWidth: 260, lineHeight: 1.6, marginBottom: 24 }}>
+                Расчёт прервался. Пройди онбординг ещё раз — это займёт пару минут.
+              </p>
+            </div>
+          ) : (
+            <PipelineLoading onRetry={() => mutate(["master-hub", userId])} />
+          )
         ) : (
           <AnimatePresence mode="wait">
             <motion.div

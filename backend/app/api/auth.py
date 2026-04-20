@@ -240,15 +240,22 @@ async def get_profile(user_id: str):
         birth_res = supabase.table("user_birth_data").select("*").eq("user_id", user_id).execute()
         birth = birth_res.data[0] if birth_res.data else {}
 
-        # Check onboarding
+        # Check onboarding:
+        # - portrait_done: portrait row exists in DB → pipeline successfully saved data
+        # - pipeline_started: users.onboarding_done = True → /calculate was called (or pipeline completed)
+        #   This flag is set immediately by /calculate and rolled back to False on pipeline failure.
+        #   Used by the frontend to distinguish "pipeline running" from "pipeline failed".
         portrait_res = supabase.table("user_portraits").select("user_id").eq("user_id", user_id).execute()
-        onboarding_done = bool(portrait_res.data)
+        portrait_done = bool(portrait_res.data)
+        pipeline_started = user.get("onboarding_done", False)
+        onboarding_done = portrait_done
 
         xp_fields = _computed_xp_fields(user)
         return {
-            "user_id":        user_id,
-            "first_name":     user.get("first_name", ""),
-            "onboarding_done": onboarding_done,
+            "user_id":          user_id,
+            "first_name":       user.get("first_name", ""),
+            "onboarding_done":  onboarding_done,
+            "pipeline_started": pipeline_started,
             "birth_date":     birth.get("birth_date", ""),
             "birth_place":    birth.get("birth_place", ""),
             "xp":             user.get("xp", 0),

@@ -189,6 +189,7 @@ async def get_portrait(user_id: str):
         portrait_data = portrait_resp.data[0] if portrait_resp.data else None
 
         hub = {
+            "status": "ready",
             "insights": {sys: dict(sph) for sys, sph in spheres.items()},
             "portrait_summary": {
                 "core_identity":   portrait_data.get("core_identity")   if portrait_data else "Инициация...",
