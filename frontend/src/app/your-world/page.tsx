@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { X } from "lucide-react";
 import useSWR, { mutate } from "swr";
 import { useUserStore, useInsightsStore, type Insight } from "@/lib/store";
 import { masterHubAPI, calcAPI, profileAPI } from "@/lib/api";
@@ -616,24 +617,33 @@ function SphereDetailView({ sphereId, name, color, summary, archetype, insights,
         paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined,
       }}
     >
-      {/* Header — non-scrolling */}
+      {/* Header — non-scrolling, matches InsightDetailModal style */}
       <div style={{
-        display: "flex", alignItems: "center", gap: 14,
-        padding: "16px 20px 14px",
-        borderBottom: `1px solid ${color}18`,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "16px 20px 12px",
+        borderBottom: "1px solid var(--border)",
         flexShrink: 0,
       }}>
-        {sphere && (
-          <div style={{ width: 40, height: 40, borderRadius: 12, background: `${color}15`, border: `1px solid ${color}25`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <sphere.icon size={18} style={{ color }} />
-          </div>
-        )}
-        <div style={{ flex: 1 }}>
-          <p style={{ fontSize: 10, fontWeight: 700, color: `${color}70`, margin: 0, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: "white" }}>{name}</span>
+          <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 500 }}>·</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
             Сфера {sphereId}
-          </p>
-          <p style={{ fontSize: 18, fontWeight: 800, color, margin: 0 }}>{name}</p>
+          </span>
         </div>
+        <button
+          onClick={onClose}
+          style={{
+            width: 34, height: 34, borderRadius: 12,
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid var(--border)",
+            cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: "var(--text-muted)",
+          }}
+        >
+          <X size={16} />
+        </button>
       </div>
 
       {/* Body — scrollable */}
