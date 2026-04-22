@@ -20,12 +20,12 @@
 - **Project ID:** `gltglzxcjitbdwhqgyre`
 - **URL:** `https://gltglzxcjitbdwhqgyre.supabase.co`
 - **Dashboard:** `https://supabase.com/dashboard/project/gltglzxcjitbdwhqgyre`
-- **SUPABASE_KEY, DATABASE_URL** — хранятся в `backend/.env` на VPS `/root/avatar-new/backend/.env`
-- ⚠️ Для проверки БД из сессии — нужно добавить `backend/.env` вручную
+- **SUPABASE_KEY, DATABASE_URL, OPENAI_API_KEY** — в `backend/.env` (локально и на VPS)
+- Реальные значения хранятся только в `backend/.env` — не в git
 
 ### Telegram Bot
 - **Бот:** @avatarmatrix_bot
-- **Токен:** в GitHub Secret `TELEGRAM_BOT_TOKEN` и в `backend/.env` на VPS
+- **TELEGRAM_BOT_TOKEN, MINI_APP_URL** — в GitHub Secrets и в `backend/.env` на VPS
 
 ## Быстрый старт (новая машина)
 
