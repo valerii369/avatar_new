@@ -757,7 +757,7 @@ function StatTile({ label, value, color }: { label: string; value: string; color
 
 function ShopModal({ onClose, userId }: { onClose: () => void; userId: string }) {
     const { play } = useAudio();
-    const { data: offers, isLoading } = useSWR("payment_offers", () => paymentsAPI.getOffers().then(res => res.data?.offers ?? res.data));
+    const { data: offers, isLoading, error: offersError } = useSWR("payment_offers", () => paymentsAPI.getOffers().then(res => res.data?.offers ?? res.data));
     const [buyingId, setBuyingId] = useState<string | null>(null);
 
     const handleBuy = async (offerId: string) => {
@@ -805,6 +805,8 @@ function ShopModal({ onClose, userId }: { onClose: () => void; userId: string })
                 <div className="space-y-3">
                     {isLoading ? (
                         <div className="py-10 flex justify-center"><div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" /></div>
+                    ) : offersError ? (
+                        <p className="text-center text-white/40 py-6 text-sm">Не удалось загрузить пакеты. Попробуйте позже.</p>
                     ) : offers?.filter((o: any) => o.id !== "pack_premium").map((offer: any) => (
                         <button
                             key={offer.id}
