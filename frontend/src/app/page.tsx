@@ -307,41 +307,6 @@ export default function HomePage() {
         </p>
       </div>
 
-      {/* Brief identity — full portrait lives in "Твой мир" */}
-      <div style={{ padding: "0 20px" }}>
-        {hub?.portrait_summary ? (
-          <div style={{
-            padding: "16px 18px", borderRadius: 14,
-            background: "linear-gradient(145deg, rgba(139,92,246,0.06), rgba(59,130,246,0.03))",
-            border: "1px solid rgba(139,92,246,0.12)",
-          }}>
-            <p style={{
-              fontSize: 13, fontWeight: 500, color: "var(--text-primary)",
-              lineHeight: 1.6, margin: 0, textAlign: "center",
-            }}>
-              {hub.portrait_summary.core_identity}
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center" style={{ padding: "40px 20px", textAlign: "center" }}>
-            <div style={{
-              width: 48, height: 48, borderRadius: 14,
-              background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.1)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              marginBottom: 12,
-            }}>
-              <div style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--violet)", opacity: 0.4 }} />
-            </div>
-            <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 4 }}>
-              Портрет формируется
-            </p>
-            <p style={{ fontSize: 12, color: "var(--text-muted)", maxWidth: 240, lineHeight: 1.5 }}>
-              Пройди онбординг для создания расчёта
-            </p>
-          </div>
-        )}
-      </div>
-
       <BottomNav />
     </div>
   );
