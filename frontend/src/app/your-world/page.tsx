@@ -960,7 +960,11 @@ export default function YourWorldPage() {
   });
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
   const [selectedSphere, setSelectedSphere] = useState<{ sphereId: number; name: string; color: string; summary: string; archetype: string } | null>(null);
-  const [generatingSphere, setGeneratingSphere] = useState<number | null>(null);
+  const [generatingSphere, setGeneratingSphere] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null;
+    const saved = localStorage.getItem("generating-sphere");
+    return saved ? parseInt(saved) : null;
+  });
 
   const handleGenerateSphere = async (sphereId: number) => {
     if (!userId || generatingSphere) return;
@@ -976,6 +980,25 @@ export default function YourWorldPage() {
     }
   };
 
+  // Sync generatingSphere to localStorage and clear when sphere appears in hub
+  useEffect(() => {
+    if (generatingSphere) {
+      localStorage.setItem("generating-sphere", String(generatingSphere));
+    } else {
+      localStorage.removeItem("generating-sphere");
+    }
+  }, [generatingSphere]);
+
+  // Clear generating state when sphere is actually unlocked
+  useEffect(() => {
+    if (!generatingSphere || !hub) return;
+    const sphereSummaries = hub?.sphere_summaries || {};
+    if (sphereSummaries[String(generatingSphere)]) {
+      // Sphere is now unlocked, clear the generating state
+      setGeneratingSphere(null);
+    }
+  }, [hub, generatingSphere]);
+
   const { data: userProfile } = useSWR(
     userId ? ["profile", userId] : null,
     () => profileAPI.get(userId!).then(res => res.data),
@@ -990,7 +1013,13 @@ export default function YourWorldPage() {
     },
     {
       revalidateOnFocus: false,
-      refreshInterval: (data: any) => (!data || data?.status === "pending") ? 4000 : 0,
+      refreshInterval: (data: any) => {
+        // Poll more frequently if a sphere is generating
+        if (generatingSphere) return 2000;
+        // Normal polling if pending
+        if (!data || data?.status === "pending") return 4000;
+        return 0;
+      },
       // Show cached data instantly on re-entry, revalidate in background
       fallbackData: hubData ?? undefined,
       onSuccess: (data) => {
