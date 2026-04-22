@@ -28,12 +28,12 @@ export default function BottomNav() {
   return (
     <nav style={{
       position: "fixed",
-      bottom: 12, left: 12, right: 12,
+      bottom: 16, left: 12, right: 12,
       background: "rgba(10,14,30,0.92)",
       backdropFilter: "blur(24px)",
       WebkitBackdropFilter: "blur(24px)",
       border: "1px solid rgba(255,255,255,0.07)",
-      borderRadius: 20,
+      borderRadius: 28,
       display: "flex",
       justifyContent: "space-around",
       alignItems: "center",
