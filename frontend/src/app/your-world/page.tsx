@@ -617,7 +617,7 @@ function SphereDetailView({ sphereId, name, color, summary, archetype, insights,
         paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined,
       }}
     >
-      {/* Header — non-scrolling, matches InsightDetailModal style */}
+      {/* Header — matches InsightDetailModal style exactly */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "16px 20px 12px",
@@ -625,7 +625,15 @@ function SphereDetailView({ sphereId, name, color, summary, archetype, insights,
         flexShrink: 0,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: "white" }}>{name}</span>
+          <span style={{
+            padding: "3px 10px", borderRadius: 20,
+            fontSize: 11, fontWeight: 500,
+            color: color,
+            background: `${color}10`,
+            border: `1px solid ${color}`,
+          }}>
+            {name}
+          </span>
           <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 500 }}>·</span>
           <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
             Сфера {sphereId}
@@ -699,11 +707,23 @@ function SphereDetailView({ sphereId, name, color, summary, archetype, insights,
         )}
       </div>
 
-      {/* Footer button — fixed */}
-      <div style={{ padding: "14px 20px 24px", borderTop: "1px solid var(--border)", flexShrink: 0 }}>
+      {/* Footer button — matches InsightDetailModal */}
+      <div style={{
+        position: "fixed",
+        bottom: 0, left: 0, right: 0,
+        padding: "16px 20px 24px",
+        background: "linear-gradient(to top, var(--bg-deep) 60%, transparent)",
+      }}>
         <button
           onClick={onClose}
-          style={{ width: "100%", padding: "14px 0", borderRadius: 14, background: `${color}12`, border: `1px solid ${color}20`, color, fontSize: 15, fontWeight: 600, cursor: "pointer" }}
+          style={{
+            width: "100%", padding: 14,
+            background: "rgba(255,255,255,0.08)",
+            color: "var(--text-primary)",
+            fontWeight: 600, borderRadius: 14,
+            border: "1px solid var(--border)",
+            cursor: "pointer", fontSize: 14,
+          }}
         >
           Вернуться
         </button>
