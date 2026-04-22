@@ -757,7 +757,7 @@ function StatTile({ label, value, color }: { label: string; value: string; color
 
 function ShopModal({ onClose, userId }: { onClose: () => void; userId: string }) {
     const { play } = useAudio();
-    const { data: offers, isLoading } = useSWR("payment_offers", () => paymentsAPI.getOffers().then(res => res.data));
+    const { data: offers, isLoading } = useSWR("payment_offers", () => paymentsAPI.getOffers().then(res => res.data?.offers ?? res.data));
     const [buyingId, setBuyingId] = useState<string | null>(null);
 
     const handleBuy = async (offerId: string) => {
@@ -765,8 +765,14 @@ function ShopModal({ onClose, userId }: { onClose: () => void; userId: string })
         try {
             const res = await paymentsAPI.createInvoice(userId, offerId);
             const { invoice_link } = res.data;
-            if ((window as any).Telegram?.WebApp) {
-                (window as any).Telegram.WebApp.openInvoice(invoice_link, (status: string) => {
+            if (!invoice_link) {
+                alert("Не удалось создать инвойс");
+                setBuyingId(null);
+                return;
+            }
+            const tgApp = (window as any).Telegram?.WebApp;
+            if (tgApp?.openInvoice) {
+                tgApp.openInvoice(invoice_link, (status: string) => {
                     if (status === "paid") {
                         play('success');
                         onClose();
@@ -777,9 +783,10 @@ function ShopModal({ onClose, userId }: { onClose: () => void; userId: string })
                 window.open(invoice_link, "_blank");
                 setBuyingId(null);
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error("Invoice error", e);
-            alert("Ошибка создания инвойса");
+            const msg = e.response?.data?.detail || "Ошибка создания инвойса";
+            alert(msg);
             setBuyingId(null);
         }
     };
@@ -844,8 +851,14 @@ function SubscriptionModal({ onClose, userId }: { onClose: () => void; userId: s
         try {
             const res = await paymentsAPI.createInvoice(userId, "pack_premium");
             const { invoice_link } = res.data;
-            if ((window as any).Telegram?.WebApp) {
-                (window as any).Telegram.WebApp.openInvoice(invoice_link, (status: string) => {
+            if (!invoice_link) {
+                alert("Не удалось создать инвойс");
+                setIsBuying(false);
+                return;
+            }
+            const tgApp = (window as any).Telegram?.WebApp;
+            if (tgApp?.openInvoice) {
+                tgApp.openInvoice(invoice_link, (status: string) => {
                     if (status === "paid") {
                         play('success');
                         onClose();
