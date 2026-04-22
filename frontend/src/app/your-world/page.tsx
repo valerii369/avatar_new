@@ -296,9 +296,14 @@ function PortraitTab({ hub, insights, onSphereClick }: {
                     </p>
                   </>
                 ) : (
-                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.12)", margin: 0, fontStyle: "italic" }}>
-                    Сфера не открыта
-                  </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.12)", margin: 0, fontStyle: "italic" }}>
+                      Сфера не открыта
+                    </p>
+                    <p style={{ fontSize: 9, color: "rgba(255,255,255,0.08)", margin: 0 }}>
+                      Откройте сферу в разборе
+                    </p>
+                  </div>
                 )}
               </motion.div>
             );
@@ -306,66 +311,6 @@ function PortraitTab({ hub, insights, onSphereClick }: {
         </div>
       </div>
 
-      {/* ── ПОЛЯРНОСТИ (strengths + shadows) ── */}
-      {polarities && (polarities.core_strengths?.length > 0 || polarities.shadow_aspects?.length > 0) && (
-        <div style={{ borderRadius: 16, overflow: "hidden", border: "1px solid rgba(255,255,255,0.06)" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
-            {/* Дары */}
-            <div style={{ padding: "14px 16px", background: "rgba(16,185,129,0.04)" }}>
-              <p style={{ fontSize: 9, fontWeight: 700, color: "rgba(16,185,129,0.6)", textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px" }}>
-                ★ Дары
-              </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                {(polarities.core_strengths || []).map((s: string, i: number) => (
-                  <p key={i} style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", margin: 0, lineHeight: 1.4 }}>
-                    {s}
-                  </p>
-                ))}
-              </div>
-            </div>
-            {/* Тени */}
-            <div style={{ padding: "14px 16px", background: "rgba(239,68,68,0.04)", borderLeft: "1px solid rgba(255,255,255,0.04)" }}>
-              <p style={{ fontSize: 9, fontWeight: 700, color: "rgba(239,68,68,0.6)", textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px" }}>
-                ⚠ Тени
-              </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                {(polarities.shadow_aspects || []).map((s: string, i: number) => (
-                  <p key={i} style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", margin: 0, lineHeight: 1.4 }}>
-                    {s}
-                  </p>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── АСТРО-ПРОФИЛЬ ── */}
-      {astroStrip.length > 0 && (
-        <div style={{ padding: "12px 16px", borderRadius: 14, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
-          <p style={{ fontSize: 9, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.12em", margin: "0 0 10px" }}>
-            Астро-профиль
-          </p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {astroStrip.map((p: any) => (
-              <div key={p.key} style={{
-                display: "flex", alignItems: "center", gap: 5,
-                padding: "5px 10px", borderRadius: 20,
-                background: "rgba(139,92,246,0.07)",
-                border: "1px solid rgba(139,92,246,0.14)",
-              }}>
-                <span style={{ fontSize: 12 }}>{PLANET_EMOJI[p.key] || "✦"}</span>
-                <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.75)" }}>
-                  {p.label}
-                </span>
-                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>
-                  {p.position_str.split(",")[0]}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* ── LOCK HINT (если не все сферы открыты) ── */}
       {activeSphereCount < 12 && activeSphereCount > 0 && (
