@@ -471,7 +471,7 @@ function BreakdownTab({
         )}
       </AnimatePresence>
       <div style={{ marginBottom: 16 }}>
-        <SphereFilter activeSphere={activeSphere} onSelect={setActiveSphere} />
+        <SphereFilter activeSphere={activeSphere} onSelect={setActiveSphere} showAll={false} />
       </div>
       {!dataReady ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
