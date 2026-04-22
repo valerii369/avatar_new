@@ -36,6 +36,9 @@ jobs:
 
             venv/bin/pip install -r requirements.txt -q
 
+            # Run DB migrations (idempotent — safe to run on every deploy)
+            venv/bin/python3 migrate.py && echo "✅ DB migrations OK" || echo "⚠️ DB migrations failed"
+
             # Inject bot env vars into .env (append if not present, update if exists)
             ENV_FILE=.env
             set_env() {
