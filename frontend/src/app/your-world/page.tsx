@@ -317,30 +317,34 @@ function PortraitTab({ hub, insights, onSphereClick, userId, onGenerateSphere, g
                       {summary}
                     </p>
                   </>
+                ) : generating === s.id ? (
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
+                    style={{ width: 12, height: 12, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.15)", borderTopColor: "var(--text-muted)" }}
+                  />
                 ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    {generating === s.id ? (
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
-                        style={{ width: 12, height: 12, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.15)", borderTopColor: "var(--text-muted)" }}
-                      />
-                    ) : (
-                      <>
-                        <p style={{
-                          fontSize: 13, fontWeight: 700,
-                          color: "rgba(255,255,255,0.25)",
-                          margin: 0, lineHeight: 1.3,
-                        }}>
-                          Сфера не открыта
-                        </p>
-                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", lineHeight: 1.4 }}>
-                          <p style={{ margin: 0 }}>Открыть · 10 ⚡</p>
-                          <p style={{ margin: 0 }}>Нажми для разблокировки</p>
-                        </div>
-                      </>
-                    )}
-                  </div>
+                  <>
+                    <p style={{
+                      fontSize: 13, fontWeight: 700,
+                      color: "rgba(255,255,255,0.25)",
+                      margin: 0, lineHeight: 1.3,
+                    }}>
+                      Сфера не открыта
+                    </p>
+                    <p style={{
+                      fontSize: 11, color: "rgba(255,255,255,0.4)",
+                      margin: 0, lineHeight: 1.4,
+                    }}>
+                      Открыть · 10 ⚡
+                    </p>
+                    <p style={{
+                      fontSize: 11, color: "rgba(255,255,255,0.4)",
+                      margin: 0, lineHeight: 1.4,
+                    }}>
+                      Нажми для разблокировки
+                    </p>
+                  </>
                 )}
               </motion.div>
             );
