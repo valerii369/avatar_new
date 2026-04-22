@@ -38,6 +38,7 @@ export default function HomePage() {
         const isDev = process.env.NODE_ENV === "development";
         const isDebug = new URLSearchParams(window.location.search).get("debug") === "true";
         const testUserId = parseInt(new URLSearchParams(window.location.search).get("user_id") || "0") || undefined;
+        const ref = new URLSearchParams(window.location.search).get("ref") || undefined;
         const initData = tg?.initData || "";
 
         // Fast path: if we have a cached session, show UI immediately
@@ -45,7 +46,7 @@ export default function HomePage() {
         if (cached.userId && cached.token && cached.onboardingDone) {
           if (!cancelled) setStatus("ready");
           // Refresh in background (non-blocking)
-          authAPI.login(initData, isDev || isDebug, testUserId).then(res => {
+          authAPI.login(initData, isDev || isDebug, testUserId, ref).then(res => {
             if (cancelled) return;
             const d = res.data;
             setUser({
@@ -68,7 +69,7 @@ export default function HomePage() {
           throw new Error("Открой приложение через Telegram бот.");
         }
 
-        const authRes = await authAPI.login(initData, isDev || isDebug, testUserId);
+        const authRes = await authAPI.login(initData, isDev || isDebug, testUserId, ref);
         if (cancelled) return;
         const d = authRes.data;
 
