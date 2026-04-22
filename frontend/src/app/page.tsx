@@ -215,6 +215,32 @@ export default function HomePage() {
   return (
     <div className="flex flex-col" style={{ background: "var(--bg-deep)", height: "100dvh", overflow: "hidden", paddingBottom: 80, paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}>
 
+      {/* TMA Safe Area Energy Display - between Close and Minimize buttons */}
+      {tmaSafeTop > 0 && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: "50%",
+          transform: "translateX(-50%)",
+          height: 32,
+          paddingLeft: 10,
+          paddingRight: 10,
+          borderRadius: 20,
+          background: "linear-gradient(135deg, rgba(245,158,11,0.2), rgba(217,119,6,0.15))",
+          border: "1px solid rgba(245,158,11,0.4)",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          zIndex: 50,
+          marginTop: (tmaSafeTop - 32) / 2,
+        }}>
+          <EnergyIcon size={16} color="#F59E0B" />
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#F59E0B" }}>
+            {energy}
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ padding: "4px 16px 10px" }}>
         <div style={{
