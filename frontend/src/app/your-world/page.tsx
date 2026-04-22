@@ -327,12 +327,17 @@ function PortraitTab({ hub, insights, onSphereClick, userId, onGenerateSphere, g
                       />
                     ) : (
                       <>
-                        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", margin: 0, lineHeight: 1.4 }}>
+                        <p style={{
+                          fontSize: 13, fontWeight: 700,
+                          color: "rgba(255,255,255,0.25)",
+                          margin: 0, lineHeight: 1.3,
+                        }}>
                           Сфера не открыта
                         </p>
-                        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", margin: 0, fontWeight: 600 }}>
-                          Открыть · 10 ⚡
-                        </p>
+                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", lineHeight: 1.4 }}>
+                          <p style={{ margin: 0 }}>Открыть · 10 ⚡</p>
+                          <p style={{ margin: 0 }}>Нажми для разблокировки</p>
+                        </div>
                       </>
                     )}
                   </div>
