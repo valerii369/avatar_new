@@ -10,6 +10,8 @@ from app.services.rag.user_rag import index_user_dsb
 import logging
 import httpx
 import time
+import secrets
+import string
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +30,8 @@ class LoginRequest(BaseModel):
     last_name:  Optional[str] = ""
     username:   Optional[str] = ""
     photo_url:  Optional[str] = ""
+    # Referral tracking
+    ref:        Optional[str] = None
 
 class ProfileRequest(BaseModel):
     user_id:     str
@@ -40,6 +44,18 @@ class GeocodeRequest(BaseModel):
     place: str
 
 # ─── Helpers ───────────────────────────────────────────────────────────────────
+
+def _generate_referral_code(supabase) -> str:
+    """Generate a unique referral code (8 uppercase alphanumeric characters)."""
+    chars = string.ascii_uppercase + string.digits
+    max_attempts = 10
+    for _ in range(max_attempts):
+        code = "".join(secrets.choice(chars) for _ in range(8))
+        existing = supabase.table("users").select("id").eq("referral_code", code).execute()
+        if not existing.data:
+            return code
+    raise Exception("Could not generate unique referral code after max attempts")
+
 
 def _default_user_fields() -> dict:
     """Gameplay / status fields reset to defaults (excludes identity fields like referral_code)."""
@@ -188,8 +204,20 @@ async def login(request: LoginRequest):
                 "last_name":  resolved_last_name,
                 "username":   resolved_username,
                 "photo_url":  resolved_photo_url,
+                "referral_code": _generate_referral_code(supabase),
                 **_default_user_fields(),
             }
+
+            # Handle referral tracking: if ref param provided, find referrer and store their id
+            if request.ref:
+                ref_code = request.ref.strip()
+                referrer_res = supabase.table("users") \
+                    .select("id") \
+                    .eq("referral_code", ref_code) \
+                    .execute()
+                if referrer_res.data:
+                    new_user["referred_by"] = referrer_res.data[0]["id"]
+
             res = supabase.table("users").insert(new_user).execute()
             if not res.data:
                 raise Exception("Insert returned no data")
@@ -599,21 +627,61 @@ async def update_location(request: UpdateLocationRequest):
 
 @router.get("/referrals")
 async def get_referrals(user_id: str):
-    """Returns users who registered via this user's referral_code."""
+    """Returns users who registered via this user's referral_code (referred_by = user_id)."""
     supabase = get_supabase()
     try:
-        # Get current user's referral_code
-        user_res = supabase.table("users").select("referral_code").eq("id", user_id).execute()
-        if not user_res.data or not user_res.data[0].get("referral_code"):
-            return []
+        # Find all users who were referred by this user
+        referrals_res = supabase.table("users") \
+            .select("id,first_name,username,created_at,xp,evolution_level") \
+            .eq("referred_by", user_id) \
+            .order("created_at", desc=True) \
+            .execute()
 
-        ref_code = user_res.data[0]["referral_code"]
-        # Find users who used this referral code (stored in referral_code field as "used:CODE")
-        # For now return empty list — referral tracking will be implemented in a future sprint
-        return []
+        referrals = []
+        for ref_user in referrals_res.data:
+            referrals.append({
+                "user_id": ref_user.get("id"),
+                "first_name": ref_user.get("first_name", ""),
+                "username": ref_user.get("username", ""),
+                "level": ref_user.get("evolution_level", 1),
+                "xp": ref_user.get("xp", 0),
+                "joined_at": ref_user.get("created_at"),
+            })
+
+        return referrals
     except Exception as e:
         logger.error(f"get_referrals failed for user {user_id}: {e}")
         return []
+
+
+# ─── /referral-link ───────────────────────────────────────────────────────────
+
+@router.get("/referral-link")
+async def get_referral_link(user_id: str):
+    """Returns the user's referral code and full referral link."""
+    supabase = get_supabase()
+    try:
+        user_res = supabase.table("users").select("referral_code").eq("id", user_id).execute()
+        if not user_res.data:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        referral_code = user_res.data[0].get("referral_code", "")
+        if not referral_code:
+            raise HTTPException(status_code=400, detail="User has no referral code")
+
+        # Build the referral link with the bot's Mini App URL
+        mini_app_url = settings.MINI_APP_URL
+        referral_link = f"{mini_app_url}?ref={referral_code}"
+
+        return {
+            "referral_code": referral_code,
+            "referral_link": referral_link,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"get_referral_link failed for user {user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get referral link")
 
 
 # ─── /redeem-promo ────────────────────────────────────────────────────────────

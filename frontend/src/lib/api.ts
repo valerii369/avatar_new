@@ -19,8 +19,8 @@ api.interceptors.request.use((config) => {
 });
 
 export const authAPI = {
-  login: (initData: string, isDev: boolean = false, testUserId?: number) =>
-    api.post("/api/auth/login", { init_data: initData, is_dev: isDev, test_user_id: testUserId }),
+  login: (initData: string, isDev: boolean = false, testUserId?: number, ref?: string) =>
+    api.post("/api/auth/login", { init_data: initData, is_dev: isDev, test_user_id: testUserId, ref }),
 };
 
 export const profileAPI = {
@@ -32,6 +32,7 @@ export const profileAPI = {
       tg_id: params.tgId,
       clear_geocode: params.clearGeocode ?? false,
     }),
+  getReferralLink: (userId: string) => api.get(`/api/auth/referral-link?user_id=${userId}`),
   getReferrals: (userId: string) => api.get(`/api/auth/referrals?user_id=${userId}`),
   redeemPromo: (userId: string, code: string) =>
     api.post("/api/auth/redeem-promo", { user_id: userId, code }),

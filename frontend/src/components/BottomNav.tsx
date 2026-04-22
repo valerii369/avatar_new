@@ -6,7 +6,7 @@ import { Home, Globe, MessageCircle, BookOpen, UserCircle } from "lucide-react";
 const navItems = [
   { key: "home",      icon: Home,          label: "Главная",    path: "/" },
   { key: "world",     icon: Globe,         label: "Твой мир",   path: "/your-world" },
-  { key: "assistant", icon: MessageCircle,  label: "Ассистент",  path: "/assistant" },
+  { key: "assistant", icon: MessageCircle,  label: "Помошник",  path: "/assistant" },
   { key: "diary",     icon: BookOpen,      label: "Дневник",    path: "/diary" },
   { key: "profile",   icon: UserCircle,    label: "Профиль",    path: "/profile" },
 ];

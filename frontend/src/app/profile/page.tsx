@@ -37,12 +37,13 @@ export default function ProfilePage() {
                 const initData = tg?.initData || "";
                 const isDev = process.env.NODE_ENV === "development";
                 const isDebug = new URLSearchParams(window.location.search).get("debug") === "true";
+                const ref = new URLSearchParams(window.location.search).get("ref") || undefined;
 
                 if (!initData && !isDev && !isDebug) {
                     throw new Error("Telegram context missing. Please open via the bot or use ?debug=true for testing.");
                 }
 
-                const authRes = await authAPI.login(initData, isDev);
+                const authRes = await authAPI.login(initData, isDev, undefined, ref);
                 const d = authRes.data;
 
                 setUser({
@@ -569,9 +570,12 @@ function SettingsView({ userId, tgId }: { userId: string; tgId: number | null })
 }
 
 function ReferralView({ userId, referralCode }: { userId: string; referralCode: string }) {
-    const botUsername = "avatarmatrixtest_bot";
-    const refLink = `https://t.me/${botUsername}?start=${referralCode}`;
     const { setUser } = useUserStore();
+
+    const { data: refLink } = useSWR(
+        userId ? ["referral-link", userId] : null,
+        () => profileAPI.getReferralLink(userId).then(res => res.data.referral_link)
+    );
 
     const { data: referrals, isLoading } = useSWR(
         userId ? ["referrals", userId] : null,
@@ -584,6 +588,7 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
     const [promoResult, setPromoResult] = useState<{ success: boolean; message: string } | null>(null);
 
     const handleCopy = () => {
+        if (!refLink) return;
         navigator.clipboard.writeText(refLink);
         alert("Ссылка скопирована!");
     };
@@ -636,11 +641,12 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
                     <p className="text-xs font-medium text-white/70 ml-1">Ваша ссылка:</p>
                     <div className="flex gap-2">
                         <div className="flex-1 bg-black/40 border border-white/10 rounded-xl p-3 overflow-hidden text-ellipsis whitespace-nowrap text-xs text-white/60">
-                            {refLink}
+                            {refLink ? refLink : "Загрузка ссылки..."}
                         </div>
                         <button
                             onClick={handleCopy}
-                            className="bg-violet-600 hover:bg-violet-500 text-white px-4 rounded-xl font-bold text-sm transition-colors"
+                            disabled={!refLink}
+                            className="bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-4 rounded-xl font-bold text-sm transition-colors"
                         >
                             Копия
                         </button>

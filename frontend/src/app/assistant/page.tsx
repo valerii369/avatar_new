@@ -239,6 +239,36 @@ export default function AssistantPage() {
         }
     };
 
+    const handleClear = async () => {
+        if (!userId) return;
+        // Clear all messages from state and store
+        setMessages([]);
+        setAssistantMessages([]);
+        setInput("");
+        setIsFinished(false);
+        setDiarySummary(null);
+
+        // Initialize new session
+        try {
+            const res = await assistantAPI.init(userId);
+            const sid = res.data.session_id;
+            setSessionId(sid);
+
+            // Get fresh greeting
+            setLoading(true);
+            const chatRes = await assistantAPI.chat(userId, sid, "");
+            if (chatRes.data.ai_response) {
+                const greeting = { role: "assistant", content: chatRes.data.ai_response };
+                setMessages([greeting]);
+                setAssistantMessages([greeting]);
+            }
+        } catch (err) {
+            console.error("Assistant clear error:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleSaveDiary = async () => {
         if (!sessionId || !userId || isSavingDiary) return;
         setIsSavingDiary(true);
@@ -294,11 +324,11 @@ export default function AssistantPage() {
                     </button>
                     <span style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", letterSpacing: "0.1em", textTransform: "uppercase" }}>☼ Чат с внутренним миром</span>
                     <button
-                        onClick={handleFinish}
-                        disabled={isFinished || loading}
-                        style={{ fontSize: 10, color: "rgba(245,158,11,0.6)", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 8, padding: "4px 8px", opacity: isFinished ? 0.3 : 1 }}
+                        onClick={handleClear}
+                        disabled={loading}
+                        style={{ fontSize: 10, color: "rgba(139,92,246,0.6)", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: 8, padding: "4px 8px", opacity: loading ? 0.5 : 1 }}
                     >
-                        Завершить
+                        Очистить
                     </button>
                 </div>
             </div>
