@@ -14,7 +14,7 @@ import BottomNav from "@/components/BottomNav";
 import { useTmaSafeArea } from "@/lib/useTmaSafeArea";
 import RecommendationsTab from "@/components/RecommendationsTab";
 
-type Tab = "portrait" | "recommendations" | "breakdown" | "sides";
+type Tab = "portrait" | "recommendations" | "breakdown";
 
 // ─── Energy Toast ─────────────────────────────────────────────────────────────
 function Toast({ type, title, message, onClose }: {
@@ -123,7 +123,11 @@ function PortraitLockScreen({ activeSphereCount }: { activeSphereCount: number }
 }
 
 // ─── Portrait Tab ────────────────────────────────────────────────────────────
-function PortraitTab({ hub }: { hub: any }) {
+function PortraitTab({ hub, insights, onSphereClick }: {
+  hub: any;
+  insights: Insight[];
+  onSphereClick: (data: { sphereId: number; name: string; color: string; summary: string; archetype: string }) => void;
+}) {
   const activeSphereCount: number = hub?.active_spheres_count ?? 0;
   const masterPortrait = hub?.master_portrait;
   const portraitSummary = hub?.portrait_summary;
@@ -252,7 +256,7 @@ function PortraitTab({ hub }: { hub: any }) {
               <motion.div
                 key={s.id}
                 whileTap={isActive ? { scale: 0.97 } : {}}
-                onClick={() => isActive && setModal({ type: "sphere", sphereId: s.id, name: s.name, color: s.color, summary, archetype })}
+                onClick={() => isActive && onSphereClick({ sphereId: s.id, name: s.name, color: s.color, summary: summary || "", archetype: archetype || "" })}
                 style={{
                   padding: "12px 14px",
                   background: isActive ? `${s.color}06` : "rgba(10,10,15,0.95)",
@@ -385,43 +389,19 @@ function PortraitTab({ hub }: { hub: any }) {
               onClick={e => e.stopPropagation()}
               style={{ width: "100%", maxWidth: 340, borderRadius: 20, background: "var(--bg-card)", padding: 24, border: `1px solid ${(modal.color || "#8B5CF6")}20` }}
             >
-              {modal.type === "attr" ? (
-                <>
-                  <span style={{ fontSize: 9, fontWeight: 700, color: `${modal.color}70`, textTransform: "uppercase", letterSpacing: "0.12em", display: "block", marginBottom: 8 }}>
-                    {modal.label}
-                  </span>
-                  <p style={{ fontSize: 17, fontWeight: 700, color: modal.color, lineHeight: 1.3, margin: "0 0 12px" }}>
-                    {modal.value}
+              <>
+                <span style={{ fontSize: 9, fontWeight: 700, color: `${modal.color}70`, textTransform: "uppercase", letterSpacing: "0.12em", display: "block", marginBottom: 8 }}>
+                  {modal.label}
+                </span>
+                <p style={{ fontSize: 17, fontWeight: 700, color: modal.color, lineHeight: 1.3, margin: "0 0 12px" }}>
+                  {modal.value}
+                </p>
+                {modal.description && (
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.6, margin: "0 0 16px" }}>
+                    {modal.description}
                   </p>
-                  {modal.description && (
-                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.6, margin: "0 0 16px" }}>
-                      {modal.description}
-                    </p>
-                  )}
-                </>
-              ) : (
-                <>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                    {(() => { const s = SPHERE_BY_ID[modal.sphereId!]; return s ? (
-                      <div style={{ width: 36, height: 36, borderRadius: 10, background: `${modal.color}12`, border: `1px solid ${modal.color}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <s.icon size={16} style={{ color: modal.color }} />
-                      </div>
-                    ) : null; })()}
-                    <div>
-                      <p style={{ fontSize: 9, fontWeight: 700, color: `${modal.color}70`, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>Сфера {modal.sphereId}</p>
-                      <p style={{ fontSize: 14, fontWeight: 700, color: modal.color, margin: 0 }}>{modal.name}</p>
-                    </div>
-                  </div>
-                  {modal.archetype && (
-                    <div style={{ padding: "6px 12px", borderRadius: 8, background: `${modal.color}10`, border: `1px solid ${modal.color}20`, display: "inline-block", marginBottom: 12 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: modal.color }}>{modal.archetype}</span>
-                    </div>
-                  )}
-                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", lineHeight: 1.6, margin: "0 0 16px" }}>
-                    {modal.summary}
-                  </p>
-                </>
-              )}
+                )}
+              </>
               <button
                 onClick={() => setModal(null)}
                 style={{ width: "100%", padding: "10px 0", borderRadius: 12, background: `${(modal.color || "#8B5CF6")}12`, border: "none", color: modal.color || "#8B5CF6", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
@@ -608,6 +588,111 @@ function BreakdownTab({
         </div>
       )}
     </>
+  );
+}
+
+// ─── Sphere Detail View (full-screen, replaces popup) ────────────────────────
+function SphereDetailView({ sphereId, name, color, summary, archetype, insights, onClose }: {
+  sphereId: number; name: string; color: string; summary: string; archetype: string;
+  insights: Insight[]; onClose: () => void;
+}) {
+  const sphere = SPHERE_BY_ID[sphereId];
+  const sphereInsights = insights.filter(i => i.primary_sphere === sphereId);
+  const lights = sphereInsights.map(i => i.light_aspect).filter(Boolean);
+  const shadows = sphereInsights.map(i => i.shadow_aspect).filter(Boolean);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      style={{ position: "fixed", inset: 0, zIndex: 200, background: "var(--bg-deep)", overflowY: "auto" }}
+    >
+      <motion.div
+        initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 60, opacity: 0 }}
+        transition={{ type: "spring", damping: 28, stiffness: 300 }}
+        style={{ minHeight: "100%", display: "flex", flexDirection: "column", paddingBottom: 40 }}
+      >
+        {/* Header */}
+        <div style={{ padding: "20px 20px 16px", display: "flex", alignItems: "center", gap: 14, borderBottom: `1px solid ${color}18` }}>
+          {sphere && (
+            <div style={{ width: 44, height: 44, borderRadius: 14, background: `${color}15`, border: `1px solid ${color}25`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <sphere.icon size={20} style={{ color }} />
+            </div>
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: `${color}70`, margin: 0, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+              Сфера {sphereId}
+            </p>
+            <p style={{ fontSize: 20, fontWeight: 800, color, margin: 0 }}>{name}</p>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, padding: "20px 20px", display: "flex", flexDirection: "column", gap: 20 }}>
+          {/* Archetype badge */}
+          {archetype && (
+            <div style={{ display: "inline-block" }}>
+              <div style={{ padding: "6px 14px", borderRadius: 10, background: `${color}10`, border: `1px solid ${color}20`, display: "inline-block" }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color }}>{archetype}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Summary */}
+          <p style={{ fontSize: 14, color: "rgba(255,255,255,0.8)", lineHeight: 1.65, margin: 0 }}>
+            {summary}
+          </p>
+
+          {/* Стороны */}
+          {(lights.length > 0 || shadows.length > 0) && (
+            <div>
+              <p style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.12em", margin: "0 0 12px" }}>
+                Стороны
+              </p>
+              <div style={{ borderRadius: 14, overflow: "hidden", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
+                  {/* Свет */}
+                  <div style={{ padding: 14, background: "rgba(16,185,129,0.03)", borderRight: "1px solid rgba(255,255,255,0.04)" }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#10B981", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>
+                      Свет
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {lights.map((text, i) => (
+                        <p key={i} style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", lineHeight: 1.4, margin: 0, display: "flex", gap: 6, alignItems: "flex-start" }}>
+                          <span style={{ color: "#10B981", opacity: 0.5, flexShrink: 0 }}>·</span>{text}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Тень */}
+                  <div style={{ padding: 14, background: "rgba(239,68,68,0.02)" }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#EF4444", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>
+                      Тень
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {shadows.map((text, i) => (
+                        <p key={i} style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.4, margin: 0, display: "flex", gap: 6, alignItems: "flex-start" }}>
+                          <span style={{ color: "#EF4444", opacity: 0.4, flexShrink: 0 }}>·</span>{text}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Back button */}
+        <div style={{ padding: "0 20px 20px" }}>
+          <button
+            onClick={onClose}
+            style={{ width: "100%", padding: "14px 0", borderRadius: 14, background: `${color}12`, border: `1px solid ${color}20`, color, fontSize: 15, fontWeight: 600, cursor: "pointer" }}
+          >
+            Вернуться
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -867,6 +952,7 @@ export default function YourWorldPage() {
   const { activeSphere, setActiveSphere } = useInsightsStore();
   const [activeTab, setActiveTab] = useState<Tab>("portrait");
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
+  const [selectedSphere, setSelectedSphere] = useState<{ sphereId: number; name: string; color: string; summary: string; archetype: string } | null>(null);
   const [generatingSphere, setGeneratingSphere] = useState<number | null>(null);
 
   const { data: userProfile } = useSWR(
@@ -924,7 +1010,6 @@ export default function YourWorldPage() {
     { id: "portrait",        label: "Портрет" },
     { id: "recommendations", label: "Прогноз" },
     { id: "breakdown",       label: "Разбор" },
-    { id: "sides",           label: "Стороны" },
   ];
 
   return (
@@ -958,7 +1043,7 @@ export default function YourWorldPage() {
       {/* Tab switcher */}
       <div className="px-4 mb-3">
         <div
-          className="grid grid-cols-4 gap-1 p-1"
+          className="grid grid-cols-3 gap-1 p-1"
           style={{
             background: "rgba(255,255,255,0.04)",
             border: "1px solid var(--border)",
@@ -1015,7 +1100,7 @@ export default function YourWorldPage() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
             >
-              {activeTab === "portrait" && <PortraitTab hub={hub} />}
+              {activeTab === "portrait" && <PortraitTab hub={hub} insights={insights} onSphereClick={setSelectedSphere} />}
               {activeTab === "breakdown" && (
                 <BreakdownTab
                   insights={insights} loading={loading}
@@ -1028,7 +1113,6 @@ export default function YourWorldPage() {
                   dataReady={!!hub && hub.status !== "pending"}
                 />
               )}
-              {activeTab === "sides" && <SidesTab insights={insights} />}
               {activeTab === "recommendations" && userId && (
                 <RecommendationsTab
                   userId={userId}
@@ -1047,6 +1131,16 @@ export default function YourWorldPage() {
             onClose={() => setSelectedInsight(null)}
             natalPositions={hub?.natal_positions ?? []}
             natalAspects={hub?.natal_aspects ?? []}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectedSphere && (
+          <SphereDetailView
+            {...selectedSphere}
+            insights={insights}
+            onClose={() => setSelectedSphere(null)}
           />
         )}
       </AnimatePresence>
