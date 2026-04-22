@@ -1,5 +1,12 @@
 # AVATAR v2.0 — Claude Code Setup
 
+## Git авторизация
+
+GitHub Personal Access Token сохранён локально в `~/.git-credentials` (credential.helper=store).
+При необходимости `git push` работает без дополнительных действий.
+Если токен истёк — создать новый на GitHub → Settings → Developer settings → Personal access tokens,
+сохранить командой: `echo "https://valerii369:<TOKEN>@github.com" >> ~/.git-credentials`
+
 ## Быстрый старт (новая машина)
 
 ### 1. Клонировать репозиторий

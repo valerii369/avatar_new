@@ -207,3 +207,21 @@ $$;
 CREATE TRIGGER users_updated_at
     BEFORE UPDATE ON users
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ─── Migration: Telegram Stars payments ──────────────────────
+-- Run once in Supabase SQL Editor after the base schema is applied.
+
+ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS is_premium         BOOLEAN     NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS premium_expires_at TIMESTAMPTZ;
+
+CREATE TABLE IF NOT EXISTS payments (
+    id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id               TEXT        NOT NULL,
+    offer_id              TEXT        NOT NULL,
+    stars                 INT         NOT NULL,
+    telegram_charge_id    TEXT        NOT NULL DEFAULT '',
+    created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id);
