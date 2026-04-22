@@ -931,7 +931,11 @@ export default function YourWorldPage() {
   const tmaSafeTop = useTmaSafeArea();
   const { userId, hubData, setHubData } = useUserStore();
   const { activeSphere, setActiveSphere } = useInsightsStore();
-  const [activeTab, setActiveTab] = useState<Tab>("portrait");
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    if (typeof window === "undefined") return "portrait";
+    const saved = localStorage.getItem("your-world-tab");
+    return (saved === "portrait" || saved === "recommendations" || saved === "breakdown") ? saved : "portrait";
+  });
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
   const [selectedSphere, setSelectedSphere] = useState<{ sphereId: number; name: string; color: string; summary: string; archetype: string } | null>(null);
   const [generatingSphere, setGeneratingSphere] = useState<number | null>(null);
@@ -1034,7 +1038,7 @@ export default function YourWorldPage() {
           {TABS.map(tab => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => { setActiveTab(tab.id); localStorage.setItem("your-world-tab", tab.id); }}
               style={{
                 padding: "8px 4px",
                 borderRadius: 10,
