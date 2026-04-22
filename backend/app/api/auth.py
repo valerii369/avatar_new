@@ -389,12 +389,12 @@ async def reset_user(request: ResetRequest):
 # ─── DSB Pipeline background task ────────────────────────────────────────────
 
 async def initialize_onboarding_layer(req: ProfileRequest):
-    """Onboarding: chart + 2 free spheres (Личность + Ресурсы) + portrait."""
+    """Onboarding: chart + 2 free spheres (Личность + Деньги) + portrait."""
     logger.info(f"Starting onboarding pipeline for user: {req.user_id}")
     supabase = get_supabase()
     t_total = time.perf_counter()
 
-    FREE_SPHERES = [1, 2]  # Личность + Ресурсы — free on onboarding
+    FREE_SPHERES = [1, 2]  # Личность + Деньги — free on onboarding
 
     try:
         # Save birth data

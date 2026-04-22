@@ -393,7 +393,7 @@ HOUSES_KB: dict = {
         "ruler_meaning": "Управитель Асцендента — главная планета всей карты, показывает базовую жизненную ориентацию",
     },
     "2": {
-        "name": "Ресурсы",
+        "name": "Деньги",
         "natural_sign": "Taurus",
         "type": "succedent",
         "hemisphere": "below_east",
@@ -403,7 +403,7 @@ HOUSES_KB: dict = {
         "ruler_meaning": "Показывает откуда приходят ресурсы и как человек обращается с тем, что имеет",
     },
     "3": {
-        "name": "Мышление",
+        "name": "Окружение",
         "natural_sign": "Gemini",
         "type": "cadent",
         "hemisphere": "below_east",
@@ -423,7 +423,7 @@ HOUSES_KB: dict = {
         "ruler_meaning": "IC — глубочайшая точка карты; показывает базу, из которой растёт человек",
     },
     "5": {
-        "name": "Творчество",
+        "name": "Таланты",
         "natural_sign": "Leo",
         "type": "succedent",
         "hemisphere": "below_west",
@@ -453,7 +453,7 @@ HOUSES_KB: dict = {
         "ruler_meaning": "DSC — показывает тип людей которых человек притягивает и качества которые проецирует на партнёров",
     },
     "8": {
-        "name": "Трансформация",
+        "name": "Риски",
         "natural_sign": "Scorpio",
         "type": "succedent",
         "hemisphere": "above_west",
@@ -463,7 +463,7 @@ HOUSES_KB: dict = {
         "ruler_meaning": "Показывает природу трансформаций; отношение к кризисам, смерти и чужим ресурсам",
     },
     "9": {
-        "name": "Смысл",
+        "name": "Путь жизни",
         "natural_sign": "Sagittarius",
         "type": "cadent",
         "hemisphere": "above_west",
@@ -473,7 +473,7 @@ HOUSES_KB: dict = {
         "ruler_meaning": "Показывает систему убеждений; где человек ищет истину и как расширяет горизонт",
     },
     "10": {
-        "name": "Карьера",
+        "name": "Реализация",
         "natural_sign": "Capricorn",
         "type": "angular",
         "hemisphere": "above_east",
@@ -483,7 +483,7 @@ HOUSES_KB: dict = {
         "ruler_meaning": "MC — вершина карты; показывает призвание и то, как человек хочет быть известен миру",
     },
     "11": {
-        "name": "Социум",
+        "name": "Сообщество",
         "natural_sign": "Aquarius",
         "type": "succedent",
         "hemisphere": "above_east",
@@ -493,7 +493,7 @@ HOUSES_KB: dict = {
         "ruler_meaning": "Показывает тип дружбы и групп которые привлекает человек; его социальные идеалы",
     },
     "12": {
-        "name": "Тень",
+        "name": "Душа",
         "natural_sign": "Pisces",
         "type": "cadent",
         "hemisphere": "above_east",
