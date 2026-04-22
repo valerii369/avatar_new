@@ -226,13 +226,13 @@ export default function HomePage() {
           paddingLeft: 10,
           paddingRight: 10,
           borderRadius: 20,
-          background: "linear-gradient(135deg, rgba(245,158,11,0.2), rgba(217,119,6,0.15))",
-          border: "1px solid rgba(245,158,11,0.4)",
+          background: "transparent",
+          border: "1.5px solid rgba(245,158,11,0.6)",
           display: "flex",
           alignItems: "center",
           gap: 6,
           zIndex: 50,
-          marginTop: (tmaSafeTop - 32) / 2,
+          marginTop: (tmaSafeTop - 32) / 2 + 4,
         }}>
           <EnergyIcon size={16} color="#F59E0B" />
           <span style={{ fontSize: 13, fontWeight: 700, color: "#F59E0B" }}>
