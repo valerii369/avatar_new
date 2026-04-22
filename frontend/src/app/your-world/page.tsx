@@ -268,61 +268,78 @@ function PortraitTab({ hub, insights, onSphereClick, userId, onGenerateSphere, g
                   }
                 }}
                 style={{
-                  padding: "12px 14px",
+                  padding: "10px 12px",
                   background: isActive ? `${s.color}06` : "rgba(10,10,15,0.95)",
                   cursor: "pointer",
-                  display: "flex", flexDirection: "column", gap: 4,
+                  display: "flex", flexDirection: "column", gap: 6,
                   transition: "background 0.2s",
                   gridColumn: isLast && SPHERES.length % 2 !== 0 ? "1 / -1" : undefined,
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                  <div style={{
-                    width: 24, height: 24, borderRadius: 7, flexShrink: 0,
-                    background: isActive ? `${s.color}15` : "rgba(255,255,255,0.04)",
-                    border: `1px solid ${isActive ? `${s.color}25` : "rgba(255,255,255,0.06)"}`,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>
-                    {isActive
-                      ? <s.icon size={11} style={{ color: s.color }} />
-                      : <span style={{ fontSize: 9, color: "rgba(255,255,255,0.15)" }}>🔒</span>
-                    }
-                  </div>
-                  <div style={{ minWidth: 0 }}>
-                    <p style={{ fontSize: 9, fontWeight: 600, color: isActive ? `${s.color}90` : "rgba(255,255,255,0.2)", margin: 0, textTransform: "uppercase", letterSpacing: "0.07em" }}>
-                      {s.id} · {s.name}
-                    </p>
-                  </div>
+                {/* Sphere name capsule */}
+                <div style={{
+                  display: "inline-flex", alignItems: "center",
+                  padding: "4px 10px", borderRadius: 16,
+                  background: isActive ? `${s.color}12` : "rgba(255,255,255,0.05)",
+                  border: `1px solid ${isActive ? `${s.color}30` : "rgba(255,255,255,0.12)"}`,
+                  width: "fit-content",
+                }}>
+                  <span style={{ fontSize: 9, fontWeight: 600, color: isActive ? s.color : "rgba(255,255,255,0.3)" }}>
+                    {s.id} · {s.name}
+                  </span>
                 </div>
 
                 {isActive ? (
                   <>
-                    <p style={{ fontSize: 12, fontWeight: 700, color: s.color, margin: 0, lineHeight: 1.2 }}>
-                      {archetype || "..."}
-                    </p>
-                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", margin: 0, lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                    <div style={{
+                      display: "inline-flex", alignItems: "center",
+                      padding: "4px 10px", borderRadius: 16,
+                      background: `${s.color}12`,
+                      border: `1px solid ${s.color}30`,
+                      width: "fit-content",
+                    }}>
+                      <span style={{ fontSize: 9, fontWeight: 600, color: s.color }}>
+                        {archetype || "..."}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", margin: 0, lineHeight: 1.4 }}>
                       {summary}
                     </p>
                   </>
                 ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     {generating === s.id ? (
                       <>
                         <motion.div
                           animate={{ rotate: 360 }}
                           transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
-                          style={{ width: 14, height: 14, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.2)", borderTopColor: "var(--text-muted)" }}
+                          style={{ width: 12, height: 12, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.15)", borderTopColor: "var(--text-muted)" }}
                         />
-                        <p style={{ fontSize: 9, color: "var(--text-muted)", margin: 0 }}>Анализирую...</p>
                       </>
                     ) : (
                       <>
-                        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.12)", margin: 0, fontStyle: "italic" }}>
-                          Сфера не открыта
-                        </p>
-                        <p style={{ fontSize: 9, fontWeight: 600, color: "var(--text-muted)", margin: 0 }}>
-                          Открыть · 10 ⚡
-                        </p>
+                        <div style={{
+                          display: "inline-flex", alignItems: "center",
+                          padding: "4px 10px", borderRadius: 16,
+                          background: "rgba(255,255,255,0.05)",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          width: "fit-content",
+                        }}>
+                          <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.3)" }}>
+                            1. Сфера не открыта
+                          </span>
+                        </div>
+                        <div style={{
+                          display: "inline-flex", alignItems: "center",
+                          padding: "4px 10px", borderRadius: 16,
+                          background: "rgba(255,255,255,0.05)",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          width: "fit-content",
+                        }}>
+                          <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.3)" }}>
+                            2. Открыть · 10 ⚡
+                          </span>
+                        </div>
                       </>
                     )}
                   </div>
