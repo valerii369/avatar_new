@@ -993,8 +993,8 @@ export default function YourWorldPage() {
 
   const TABS: { id: Tab; label: string }[] = [
     { id: "portrait",        label: "Портрет" },
-    { id: "recommendations", label: "Прогноз" },
     { id: "breakdown",       label: "Разбор" },
+    { id: "recommendations", label: "Прогноз" },
   ];
 
   return (
