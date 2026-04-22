@@ -1089,7 +1089,7 @@ export default function YourWorldPage() {
           </motion.span>
         ) : totalCount > 0 ? (
           <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>
-            {totalCount} · {sphereCount} сфер
+            {totalCount} фактов · {sphereCount} сфер
           </span>
         ) : null}
       </div>
