@@ -514,7 +514,7 @@ function BreakdownTab({
                         opacity: generating ? 0.5 : 1,
                       }}
                     >
-                      Собрать разбор · 10 ⚡
+                      Получить разбор · 10 ⚡
                     </button>
                   )
                 ) : (
