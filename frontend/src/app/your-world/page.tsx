@@ -311,7 +311,7 @@ function PortraitTab({ hub, insights, onSphereClick, userId, onGenerateSphere, g
                     <p style={{
                       fontSize: 11, color: "rgba(255,255,255,0.4)",
                       margin: 0, lineHeight: 1.4,
-                      display: "-webkit-box", WebkitLineClamp: 2,
+                      display: "-webkit-box", WebkitLineClamp: 1,
                       WebkitBoxOrient: "vertical", overflow: "hidden",
                     }}>
                       {summary}
@@ -337,12 +337,6 @@ function PortraitTab({ hub, insights, onSphereClick, userId, onGenerateSphere, g
                       margin: 0, lineHeight: 1.4,
                     }}>
                       Открыть · 10 ⚡
-                    </p>
-                    <p style={{
-                      fontSize: 11, color: "rgba(255,255,255,0.4)",
-                      margin: 0, lineHeight: 1.4,
-                    }}>
-                      Нажми для разблокировки
                     </p>
                   </>
                 )}
