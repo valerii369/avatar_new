@@ -1,5 +1,32 @@
 # AVATAR v2.0 — Claude Code Setup
 
+## Все доступы и токены
+
+### VPS (Timeweb)
+- **IP:** `103.74.92.72`
+- **User:** `root`
+- **Password:** `eCTyD*R.94zTbaeCTyD*R.94zTba`
+- **SSH:** `ssh root@103.74.92.72`
+- **Проект на VPS:** `/root/avatar-new/`
+- **SSH недоступен из облачной сессии** — использовать GitHub Actions или подключаться вручную
+
+### GitHub
+- **Репозиторий:** `https://github.com/valerii369/avatar_new`
+- **PAT токен:** сохранён в `~/.git-credentials` (credential.helper=store)
+- **Если токен истёк:** GitHub → Settings → Developer settings → Personal access tokens → создать новый → `echo "https://valerii369:<TOKEN>@github.com" >> ~/.git-credentials`
+- **GitHub Secrets** (для CI/CD): `TIMEWEB_HOST`, `TIMEWEB_SSH_KEY`, `TELEGRAM_BOT_TOKEN`, `MINI_APP_URL`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
+
+### Supabase
+- **Project ID:** `gltglzxcjitbdwhqgyre`
+- **URL:** `https://gltglzxcjitbdwhqgyre.supabase.co`
+- **Dashboard:** `https://supabase.com/dashboard/project/gltglzxcjitbdwhqgyre`
+- **SUPABASE_KEY, DATABASE_URL, OPENAI_API_KEY** — в `backend/.env` (локально и на VPS)
+- Реальные значения хранятся только в `backend/.env` — не в git
+
+### Telegram Bot
+- **Бот:** @avatarmatrix_bot
+- **TELEGRAM_BOT_TOKEN, MINI_APP_URL** — в GitHub Secrets и в `backend/.env` на VPS
+
 ## Быстрый старт (новая машина)
 
 ### 1. Клонировать репозиторий

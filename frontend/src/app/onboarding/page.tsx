@@ -427,7 +427,7 @@ export default function OnboardingPage() {
                 ))}
             </div>
 
-            <div className="relative z-10 w-full max-w-[340px]" style={{ transform: "translateY(-6vh)" }}>
+            <div className="relative z-10 w-full max-w-[340px]">
                 <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-6">
                     <div style={{ marginBottom: 2 }}><SacredGeometryLogo size={200} progress={0.9} /></div>
                     <h1 className="text-[44px] font-bold tracking-tight" style={{

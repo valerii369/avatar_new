@@ -3,12 +3,46 @@ Stub endpoints for diary, game, and payments.
 Returns minimal valid responses to prevent frontend 404 errors.
 Full implementations are planned for future sprints.
 """
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from typing import Optional
 from app.core.db import get_supabase
+from app.core.config import settings
+import json
 import logging
+import httpx
 
 logger = logging.getLogger(__name__)
+
+OFFERS: dict[str, dict] = {
+    "pack_300": {
+        "id": "pack_300",
+        "name": "Заряд Света",
+        "description": "300 единиц энергии — моментальное пополнение",
+        "energy": 300,
+        "stars": 75,
+    },
+    "pack_500": {
+        "id": "pack_500",
+        "name": "Энергетический Импульс",
+        "description": "500 единиц энергии — популярный выбор",
+        "energy": 500,
+        "stars": 118,
+    },
+    "pack_1000": {
+        "id": "pack_1000",
+        "name": "Квантовый Скачок",
+        "description": "1000 единиц энергии — максимальный заряд",
+        "energy": 1000,
+        "stars": 225,
+    },
+    "pack_premium": {
+        "id": "pack_premium",
+        "name": "AVATAR Premium",
+        "description": "Полный доступ ко всем 12 сферам и приоритетный ИИ",
+        "energy": 0,
+        "stars": 800,
+    },
+}
 
 # ─── Game router ──────────────────────────────────────────────────────────────
 game_router = APIRouter()
@@ -78,16 +112,40 @@ payments_router = APIRouter()
 
 @payments_router.get("/offers")
 async def get_offers():
-    """Returns available subscription offers (stub)."""
-    return {
-        "offers": [
-            {"id": "basic", "name": "AVATAR Basic", "price": 299, "currency": "RUB", "period": "month"},
-            {"id": "pro",   "name": "AVATAR Pro",   "price": 799, "currency": "RUB", "period": "month"},
-        ]
-    }
+    return {"offers": list(OFFERS.values())}
 
 
 @payments_router.post("/invoice")
 async def create_invoice(request: Request):
-    """Creates a payment invoice (stub)."""
-    return {"status": "pending", "invoice_url": None}
+    body = await request.json()
+    user_id = body.get("user_id")
+    offer_id = body.get("offer_id")
+
+    if offer_id not in OFFERS:
+        raise HTTPException(status_code=400, detail=f"Unknown offer: {offer_id}")
+
+    offer = OFFERS[offer_id]
+    payload = json.dumps({"user_id": user_id, "offer_id": offer_id})
+
+    token = settings.TELEGRAM_BOT_TOKEN
+    if not token:
+        raise HTTPException(status_code=500, detail="Bot token not configured")
+
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.post(
+            f"https://api.telegram.org/bot{token}/createInvoiceLink",
+            json={
+                "title": offer["name"],
+                "description": offer["description"],
+                "payload": payload,
+                "currency": "XTR",
+                "prices": [{"label": offer["name"], "amount": offer["stars"]}],
+            },
+        )
+
+    data = resp.json()
+    if not data.get("ok"):
+        logger.error(f"Telegram createInvoiceLink error: {data}")
+        raise HTTPException(status_code=500, detail=data.get("description", "Telegram error"))
+
+    return {"invoice_link": data["result"], "status": "created"}
