@@ -300,55 +300,39 @@ function PortraitTab({ hub, insights, onSphereClick, userId, onGenerateSphere, g
 
                 {isActive ? (
                   <>
-                    <div style={{
-                      display: "inline-flex", alignItems: "center",
-                      padding: "4px 10px", borderRadius: 16,
-                      background: `${s.color}12`,
-                      border: `1px solid ${s.color}30`,
-                      width: "fit-content",
+                    <p style={{
+                      fontSize: 13, fontWeight: 700, color: s.color,
+                      margin: 0, lineHeight: 1.3,
+                      display: "-webkit-box", WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical", overflow: "hidden",
                     }}>
-                      <span style={{ fontSize: 9, fontWeight: 600, color: s.color }}>
-                        {archetype || "..."}
-                      </span>
-                    </div>
-                    <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", margin: 0, lineHeight: 1.4 }}>
+                      {archetype || "..."}
+                    </p>
+                    <p style={{
+                      fontSize: 11, color: "rgba(255,255,255,0.4)",
+                      margin: 0, lineHeight: 1.4,
+                      display: "-webkit-box", WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical", overflow: "hidden",
+                    }}>
                       {summary}
                     </p>
                   </>
                 ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                     {generating === s.id ? (
-                      <>
-                        <motion.div
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
-                          style={{ width: 12, height: 12, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.15)", borderTopColor: "var(--text-muted)" }}
-                        />
-                      </>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
+                        style={{ width: 12, height: 12, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.15)", borderTopColor: "var(--text-muted)" }}
+                      />
                     ) : (
                       <>
-                        <div style={{
-                          display: "inline-flex", alignItems: "center",
-                          padding: "4px 10px", borderRadius: 16,
-                          background: "rgba(255,255,255,0.05)",
-                          border: "1px solid rgba(255,255,255,0.12)",
-                          width: "fit-content",
-                        }}>
-                          <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.3)" }}>
-                            1. Сфера не открыта
-                          </span>
-                        </div>
-                        <div style={{
-                          display: "inline-flex", alignItems: "center",
-                          padding: "4px 10px", borderRadius: 16,
-                          background: "rgba(255,255,255,0.05)",
-                          border: "1px solid rgba(255,255,255,0.12)",
-                          width: "fit-content",
-                        }}>
-                          <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.3)" }}>
-                            2. Открыть · 10 ⚡
-                          </span>
-                        </div>
+                        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", margin: 0, lineHeight: 1.4 }}>
+                          Сфера не открыта
+                        </p>
+                        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", margin: 0, fontWeight: 600 }}>
+                          Открыть · 10 ⚡
+                        </p>
                       </>
                     )}
                   </div>
