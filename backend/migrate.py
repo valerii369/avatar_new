@@ -24,15 +24,36 @@ def run_migrations():
         conn = psycopg2.connect(connection_string)
         conn.autocommit = True
         cur = conn.cursor()
-        
+
+        # Run main schema
         schema_path = os.path.join(os.path.dirname(__file__), "supabase_schema.sql")
         with open(schema_path, "r") as f:
             sql = f.read()
-            
         print("Executing schema migrations...")
         cur.execute(sql)
-        print("Done! All tables and functions created successfully.")
-        
+
+        # Run supplementary migrations
+        for migration_file in ["supabase_promo_migration.sql", "migration_missing.sql"]:
+            migration_path = os.path.join(os.path.dirname(__file__), migration_file)
+            if os.path.exists(migration_path):
+                with open(migration_path, "r") as f:
+                    sql = f.read()
+                print(f"Executing {migration_file}...")
+                cur.execute(sql)
+
+        # Run migrations from migrations/ directory
+        migrations_dir = os.path.join(os.path.dirname(__file__), "migrations")
+        if os.path.exists(migrations_dir):
+            migration_files = sorted([f for f in os.listdir(migrations_dir) if f.endswith(".sql")])
+            for migration_file in migration_files:
+                migration_path = os.path.join(migrations_dir, migration_file)
+                with open(migration_path, "r") as f:
+                    sql = f.read()
+                print(f"Executing {migration_file}...")
+                cur.execute(sql)
+
+        print("Done! All migrations completed successfully.")
+
         cur.close()
         conn.close()
     except Exception as e:
