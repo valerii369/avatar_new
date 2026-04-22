@@ -124,10 +124,13 @@ function PortraitLockScreen({ activeSphereCount }: { activeSphereCount: number }
 }
 
 // ─── Portrait Tab ────────────────────────────────────────────────────────────
-function PortraitTab({ hub, insights, onSphereClick }: {
+function PortraitTab({ hub, insights, onSphereClick, userId, onGenerateSphere, generating }: {
   hub: any;
   insights: Insight[];
   onSphereClick: (data: { sphereId: number; name: string; color: string; summary: string; archetype: string }) => void;
+  userId: string | null;
+  onGenerateSphere: (sphereId: number) => Promise<void>;
+  generating: number | null;
 }) {
   const activeSphereCount: number = hub?.active_spheres_count ?? 0;
   const masterPortrait = hub?.master_portrait;
@@ -256,12 +259,18 @@ function PortraitTab({ hub, insights, onSphereClick }: {
             return (
               <motion.div
                 key={s.id}
-                whileTap={isActive ? { scale: 0.97 } : {}}
-                onClick={() => isActive && onSphereClick({ sphereId: s.id, name: s.name, color: s.color, summary: summary || "", archetype: archetype || "" })}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => {
+                  if (isActive) {
+                    onSphereClick({ sphereId: s.id, name: s.name, color: s.color, summary: summary || "", archetype: archetype || "" });
+                  } else if (userId) {
+                    onGenerateSphere(s.id);
+                  }
+                }}
                 style={{
                   padding: "12px 14px",
                   background: isActive ? `${s.color}06` : "rgba(10,10,15,0.95)",
-                  cursor: isActive ? "pointer" : "default",
+                  cursor: "pointer",
                   display: "flex", flexDirection: "column", gap: 4,
                   transition: "background 0.2s",
                   gridColumn: isLast && SPHERES.length % 2 !== 0 ? "1 / -1" : undefined,
@@ -296,13 +305,26 @@ function PortraitTab({ hub, insights, onSphereClick }: {
                     </p>
                   </>
                 ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.12)", margin: 0, fontStyle: "italic" }}>
-                      Сфера не открыта
-                    </p>
-                    <p style={{ fontSize: 9, color: "rgba(255,255,255,0.08)", margin: 0 }}>
-                      Откройте сферу в разборе
-                    </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
+                    {generating === s.id ? (
+                      <>
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
+                          style={{ width: 14, height: 14, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.2)", borderTopColor: "var(--text-muted)" }}
+                        />
+                        <p style={{ fontSize: 9, color: "var(--text-muted)", margin: 0 }}>Анализирую...</p>
+                      </>
+                    ) : (
+                      <>
+                        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.12)", margin: 0, fontStyle: "italic" }}>
+                          Сфера не открыта
+                        </p>
+                        <p style={{ fontSize: 9, fontWeight: 600, color: "var(--text-muted)", margin: 0 }}>
+                          Открыть · 10 ⚡
+                        </p>
+                      </>
+                    )}
                   </div>
                 )}
               </motion.div>
@@ -940,6 +962,20 @@ export default function YourWorldPage() {
   const [selectedSphere, setSelectedSphere] = useState<{ sphereId: number; name: string; color: string; summary: string; archetype: string } | null>(null);
   const [generatingSphere, setGeneratingSphere] = useState<number | null>(null);
 
+  const handleGenerateSphere = async (sphereId: number) => {
+    if (!userId || generatingSphere) return;
+    setGeneratingSphere(sphereId);
+    try {
+      await calcAPI.generateSphere(userId, sphereId);
+      // Force SWR to refetch fresh data
+      await mutate(["master-hub", userId]);
+    } catch (err: any) {
+      console.error("Generate sphere error", err);
+    } finally {
+      setGeneratingSphere(null);
+    }
+  };
+
   const { data: userProfile } = useSWR(
     userId ? ["profile", userId] : null,
     () => profileAPI.get(userId!).then(res => res.data),
@@ -1085,7 +1121,7 @@ export default function YourWorldPage() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
             >
-              {activeTab === "portrait" && <PortraitTab hub={hub} insights={insights} onSphereClick={setSelectedSphere} />}
+              {activeTab === "portrait" && <PortraitTab hub={hub} insights={insights} onSphereClick={setSelectedSphere} userId={userId} onGenerateSphere={handleGenerateSphere} generating={generatingSphere} />}
               {activeTab === "breakdown" && (
                 <BreakdownTab
                   insights={insights} loading={loading}
