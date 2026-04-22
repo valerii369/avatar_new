@@ -601,97 +601,103 @@ function SphereDetailView({ sphereId, name, color, summary, archetype, insights,
   const lights = sphereInsights.map(i => i.light_aspect).filter(Boolean);
   const shadows = sphereInsights.map(i => i.shadow_aspect).filter(Boolean);
 
+  const tmaSafeTop = useTmaSafeArea();
+
   return (
     <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      style={{ position: "fixed", inset: 0, zIndex: 200, background: "var(--bg-deep)", overflowY: "auto" }}
+      initial={{ opacity: 0, y: 100 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 100 }}
+      transition={{ type: "spring", damping: 25, stiffness: 200 }}
+      style={{
+        position: "fixed", inset: 0, zIndex: 200,
+        background: "var(--bg-deep)",
+        display: "flex", flexDirection: "column",
+        paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined,
+      }}
     >
-      <motion.div
-        initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 60, opacity: 0 }}
-        transition={{ type: "spring", damping: 28, stiffness: 300 }}
-        style={{ minHeight: "100%", display: "flex", flexDirection: "column", paddingBottom: 40 }}
-      >
-        {/* Header */}
-        <div style={{ padding: "20px 20px 16px", display: "flex", alignItems: "center", gap: 14, borderBottom: `1px solid ${color}18` }}>
-          {sphere && (
-            <div style={{ width: 44, height: 44, borderRadius: 14, background: `${color}15`, border: `1px solid ${color}25`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <sphere.icon size={20} style={{ color }} />
-            </div>
-          )}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 10, fontWeight: 700, color: `${color}70`, margin: 0, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-              Сфера {sphereId}
-            </p>
-            <p style={{ fontSize: 20, fontWeight: 800, color, margin: 0 }}>{name}</p>
+      {/* Header — non-scrolling */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 14,
+        padding: "16px 20px 14px",
+        borderBottom: `1px solid ${color}18`,
+        flexShrink: 0,
+      }}>
+        {sphere && (
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: `${color}15`, border: `1px solid ${color}25`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <sphere.icon size={18} style={{ color }} />
           </div>
-        </div>
-
-        {/* Content */}
-        <div style={{ flex: 1, padding: "20px 20px", display: "flex", flexDirection: "column", gap: 20 }}>
-          {/* Archetype badge */}
-          {archetype && (
-            <div style={{ display: "inline-block" }}>
-              <div style={{ padding: "6px 14px", borderRadius: 10, background: `${color}10`, border: `1px solid ${color}20`, display: "inline-block" }}>
-                <span style={{ fontSize: 14, fontWeight: 700, color }}>{archetype}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Summary */}
-          <p style={{ fontSize: 14, color: "rgba(255,255,255,0.8)", lineHeight: 1.65, margin: 0 }}>
-            {summary}
+        )}
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: 10, fontWeight: 700, color: `${color}70`, margin: 0, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+            Сфера {sphereId}
           </p>
+          <p style={{ fontSize: 18, fontWeight: 800, color, margin: 0 }}>{name}</p>
+        </div>
+      </div>
 
-          {/* Стороны */}
-          {(lights.length > 0 || shadows.length > 0) && (
-            <div>
-              <p style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.12em", margin: "0 0 12px" }}>
-                Стороны
-              </p>
-              <div style={{ borderRadius: 14, overflow: "hidden", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
-                  {/* Свет */}
-                  <div style={{ padding: 14, background: "rgba(16,185,129,0.03)", borderRight: "1px solid rgba(255,255,255,0.04)" }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#10B981", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>
-                      Свет
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {lights.map((text, i) => (
-                        <p key={i} style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", lineHeight: 1.4, margin: 0, display: "flex", gap: 6, alignItems: "flex-start" }}>
-                          <span style={{ color: "#10B981", opacity: 0.5, flexShrink: 0 }}>·</span>{text}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                  {/* Тень */}
-                  <div style={{ padding: 14, background: "rgba(239,68,68,0.02)" }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#EF4444", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>
-                      Тень
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {shadows.map((text, i) => (
-                        <p key={i} style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.4, margin: 0, display: "flex", gap: 6, alignItems: "flex-start" }}>
-                          <span style={{ color: "#EF4444", opacity: 0.4, flexShrink: 0 }}>·</span>{text}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
+      {/* Body — scrollable */}
+      <div style={{
+        flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch",
+        padding: "20px 20px 40px",
+        display: "flex", flexDirection: "column", gap: 22,
+      }}>
+        {/* Archetype */}
+        {archetype && (
+          <div style={{ display: "inline-block" }}>
+            <div style={{ padding: "5px 14px", borderRadius: 10, background: `${color}10`, border: `1px solid ${color}20`, display: "inline-block" }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color }}>{archetype}</span>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Back button */}
-        <div style={{ padding: "0 20px 20px" }}>
-          <button
-            onClick={onClose}
-            style={{ width: "100%", padding: "14px 0", borderRadius: 14, background: `${color}12`, border: `1px solid ${color}20`, color, fontSize: 15, fontWeight: 600, cursor: "pointer" }}
-          >
-            Вернуться
-          </button>
-        </div>
-      </motion.div>
+        {/* Summary */}
+        <p style={{ fontSize: 14, color: "rgba(255,255,255,0.75)", lineHeight: 1.65, margin: 0 }}>
+          {summary}
+        </p>
+
+        {/* Тень — red left border, first */}
+        {shadows.length > 0 && (
+          <div style={{ paddingLeft: 16, borderLeft: "2px solid rgba(239,68,68,0.45)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10, color: "#EF4444" }}>
+              <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Тень</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {shadows.map((text, i) => (
+                <p key={i} style={{ fontSize: 14, color: "rgba(255,255,255,0.65)", lineHeight: 1.6, margin: 0 }}>
+                  {text}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Свет — green left border, after */}
+        {lights.length > 0 && (
+          <div style={{ paddingLeft: 16, borderLeft: "2px solid rgba(16,185,129,0.45)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10, color: "#10B981" }}>
+              <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Свет</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {lights.map((text, i) => (
+                <p key={i} style={{ fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 1.6, margin: 0 }}>
+                  {text}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer button — fixed */}
+      <div style={{ padding: "14px 20px 24px", borderTop: "1px solid var(--border)", flexShrink: 0 }}>
+        <button
+          onClick={onClose}
+          style={{ width: "100%", padding: "14px 0", borderRadius: 14, background: `${color}12`, border: `1px solid ${color}20`, color, fontSize: 15, fontWeight: 600, cursor: "pointer" }}
+        >
+          Вернуться
+        </button>
+      </div>
     </motion.div>
   );
 }
