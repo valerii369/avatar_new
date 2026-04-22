@@ -1005,16 +1005,6 @@ export default function YourWorldPage() {
     }
   }, [generatingSphere]);
 
-  // Clear generating state when sphere is actually unlocked
-  useEffect(() => {
-    if (!generatingSphere || !hub) return;
-    const sphereSummaries = hub?.sphere_summaries || {};
-    if (sphereSummaries[String(generatingSphere)]) {
-      // Sphere is now unlocked, clear the generating state
-      setGeneratingSphere(null);
-    }
-  }, [hub, generatingSphere]);
-
   const { data: userProfile } = useSWR(
     userId ? ["profile", userId] : null,
     () => profileAPI.get(userId!).then(res => res.data),
@@ -1043,6 +1033,15 @@ export default function YourWorldPage() {
       },
     }
   );
+
+  // Clear generating state when sphere is actually unlocked
+  useEffect(() => {
+    if (!generatingSphere || !hub) return;
+    const sphereSummaries = hub?.sphere_summaries || {};
+    if (sphereSummaries[String(generatingSphere)]) {
+      setGeneratingSphere(null);
+    }
+  }, [hub, generatingSphere]);
 
   // Derive insights directly from hub — avoids Zustand persistence issues and SWR key collisions
   const insights = useMemo<Insight[]>(() => {
