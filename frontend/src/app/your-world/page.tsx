@@ -249,6 +249,15 @@ function PortraitTab({ hub, insights, onSphereClick, userId, onGenerateSphere, g
           </div>
         </div>
 
+        {/* Lock hint under progress bar */}
+        {activeSphereCount < 12 && activeSphereCount > 0 && (
+          <div style={{ padding: "10px 16px", textAlign: "center" }}>
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", margin: 0, lineHeight: 1.4 }}>
+              Открой все 12 сфер, чтобы разблокировать мастер-портрет Аватара
+            </p>
+          </div>
+        )}
+
         {/* 2-column facet cards */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, background: "rgba(255,255,255,0.04)" }}>
           {SPHERES.map((s, idx) => {
@@ -349,16 +358,6 @@ function PortraitTab({ hub, insights, onSphereClick, userId, onGenerateSphere, g
           })}
         </div>
       </div>
-
-
-      {/* ── LOCK HINT (если не все сферы открыты) ── */}
-      {activeSphereCount < 12 && activeSphereCount > 0 && (
-        <div style={{ padding: "12px 16px", borderRadius: 14, background: "rgba(139,92,246,0.04)", border: "1px dashed rgba(139,92,246,0.18)", textAlign: "center" }}>
-          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", margin: 0 }}>
-            Открой все 12 сфер, чтобы разблокировать мастер-портрет Аватара
-          </p>
-        </div>
-      )}
 
       {/* ── MODAL (attr card or sphere facet) ── */}
       <AnimatePresence>
