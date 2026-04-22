@@ -251,9 +251,9 @@ function PortraitTab({ hub, insights, onSphereClick, userId, onGenerateSphere, g
 
         {/* Lock hint under progress bar */}
         {activeSphereCount < 12 && activeSphereCount > 0 && (
-          <div style={{ padding: "10px 16px", textAlign: "center" }}>
+          <div style={{ padding: "5px 16px", textAlign: "center" }}>
             <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", margin: 0, lineHeight: 1.4 }}>
-              Открой все 12 сфер, чтобы разблокировать мастер-портрет Аватара
+              Открой все 12 сфер, чтобы разблокировать мастер-портрет
             </p>
           </div>
         )}
