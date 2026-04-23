@@ -310,7 +310,7 @@ function PortraitTab({ hub, insights, onSphereClick, userId, onGenerateSphere, g
                 )}
                 {/* Sphere name */}
                 <span style={{
-                  fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+                  fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
                   textTransform: "uppercase",
                   color: isActive ? s.color : "rgba(255,255,255,0.3)",
                 }}>
