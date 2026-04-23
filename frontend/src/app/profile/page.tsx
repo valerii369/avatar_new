@@ -595,10 +595,22 @@ function SettingsView({ userId, tgId }: { userId: string; tgId: number | null })
 function ReferralView({ userId, referralCode }: { userId: string; referralCode: string }) {
     const { setUser } = useUserStore();
 
-    const { data: refLink } = useSWR(
+    const { data: refLink, error: refLinkError } = useSWR(
         userId ? ["referral-link", userId] : null,
-        () => profileAPI.getReferralLink(userId).then(res => res.data.referral_link)
+        async () => {
+            try {
+                const res = await profileAPI.getReferralLink(userId);
+                return res.data?.referral_link || res.data;
+            } catch (err) {
+                console.error("Failed to fetch referral link:", err);
+                return null;
+            }
+        },
+        { revalidateOnFocus: false }
     );
+
+    // Fallback: construct link from referralCode if API fails
+    const generatedLink = refLink || (referralCode ? `https://t.me/avatarmatrix_bot/app?ref=${referralCode}` : null);
 
     const { data: referrals, isLoading } = useSWR(
         userId ? ["referrals", userId] : null,
@@ -611,16 +623,16 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
     const [copied, setCopied] = useState(false);
 
     const handleCopy = () => {
-        if (!refLink) return;
-        navigator.clipboard.writeText(refLink);
+        if (!generatedLink) return;
+        navigator.clipboard.writeText(generatedLink);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
 
     const handleShare = async () => {
-        if (!refLink) return;
+        if (!generatedLink) return;
         if (navigator.share) {
-            await navigator.share({ title: "Avatar", url: refLink });
+            await navigator.share({ title: "Avatar", url: generatedLink });
         } else {
             handleCopy();
         }
@@ -740,13 +752,13 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
                             fontSize: 13, color: "rgba(255,255,255,0.5)",
                             wordBreak: "break-all", lineHeight: 1.4, margin: 0,
                         }}>
-                            {refLink ?? "Загрузка..."}
+                            {generatedLink ?? "Ссылка недоступна"}
                         </p>
                     </div>
                     {divider()}
                     <button
                         onClick={handleCopy}
-                        disabled={!refLink}
+                        disabled={!generatedLink}
                         style={{ ...rowStyle, justifyContent: "center" }}
                     >
                         <span style={{ fontSize: 15, fontWeight: 500, color: copied ? "#34D399" : "#818CF8" }}>
@@ -756,7 +768,7 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
                     {divider()}
                     <button
                         onClick={handleShare}
-                        disabled={!refLink}
+                        disabled={!generatedLink}
                         style={{ ...rowStyle, justifyContent: "center" }}
                     >
                         <span style={{ fontSize: 15, fontWeight: 500, color: "#818CF8" }}>
