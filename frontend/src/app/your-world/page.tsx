@@ -321,7 +321,7 @@ function PortraitTab({ hub, insights, onSphereClick, userId, onGenerateSphere, g
                     <p style={{
                       fontSize: 13, fontWeight: 700, color: s.color,
                       margin: 0, lineHeight: 1.3,
-                      display: "-webkit-box", WebkitLineClamp: 2,
+                      display: "-webkit-box", WebkitLineClamp: 1,
                       WebkitBoxOrient: "vertical", overflow: "hidden",
                     }}>
                       {archetype || "..."}
@@ -344,7 +344,7 @@ function PortraitTab({ hub, insights, onSphereClick, userId, onGenerateSphere, g
                 ) : (
                   <>
                     <p style={{
-                      fontSize: 13, fontWeight: 700,
+                      fontSize: 13, fontWeight: 400,
                       color: "rgba(255,255,255,0.25)",
                       margin: 0, lineHeight: 1.3,
                     }}>
