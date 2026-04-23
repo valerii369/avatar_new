@@ -60,7 +60,7 @@ export default function BottomNav() {
             }}
           >
             <Icon
-              size={24}
+              size={29}
               strokeWidth={isActive ? 2.2 : 1.5}
               style={{
                 color: isActive ? "var(--text-primary)" : "var(--text-muted)",
@@ -68,7 +68,7 @@ export default function BottomNav() {
               }}
             />
             <span style={{
-              fontSize: 9, fontWeight: isActive ? 600 : 500,
+              fontSize: 10, fontWeight: isActive ? 600 : 500,
               color: isActive ? "var(--text-primary)" : "var(--text-muted)",
               letterSpacing: "0.01em",
               transition: "color 0.2s",
