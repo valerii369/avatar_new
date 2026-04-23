@@ -652,20 +652,20 @@ function SphereDetailView({ sphereId, name, color, summary, archetype, insights,
         padding: "20px 20px 40px",
         display: "flex", flexDirection: "column", gap: 22,
       }}>
-        {/* Archetype */}
-        {archetype && (
-          <h2 style={{
-            fontSize: 22, fontWeight: 700, color: "white",
-            letterSpacing: "-0.3px", lineHeight: 1.25, margin: 0,
-          }}>
-            {archetype}
-          </h2>
-        )}
-
-        {/* Summary */}
-        <p style={{ fontSize: 14, color: "rgba(255,255,255,0.75)", lineHeight: 1.65, margin: 0 }}>
-          {summary}
-        </p>
+        {/* Archetype + Summary block */}
+        <div>
+          {archetype && (
+            <h2 style={{
+              fontSize: 22, fontWeight: 700, color: "white",
+              letterSpacing: "-0.3px", lineHeight: 1.25, margin: 0,
+            }}>
+              {archetype}
+            </h2>
+          )}
+          <p style={{ fontSize: 14, color: "rgba(255,255,255,0.75)", lineHeight: 1.65, margin: 0, marginTop: 10 }}>
+            {summary}
+          </p>
+        </div>
 
         {/* Тень — red left border, first */}
         {shadows.length > 0 && (
