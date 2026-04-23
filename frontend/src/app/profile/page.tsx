@@ -112,6 +112,26 @@ export default function ProfilePage() {
             className="flex flex-col"
             style={{ background: "var(--bg-deep)", height: "100dvh", overflow: "hidden", paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}
         >
+            {/* ── Energy capsule (TMA top center) ── */}
+            {tmaSafeTop > 0 && (
+                <div style={{
+                    position: "fixed", top: 0,
+                    left: "50%", transform: "translateX(-50%)",
+                    height: 30, paddingLeft: 10, paddingRight: 10,
+                    borderRadius: 20,
+                    background: "transparent",
+                    border: "1.5px solid rgba(245,158,11,0.6)",
+                    display: "flex", alignItems: "center", gap: 6,
+                    zIndex: 50,
+                    marginTop: (tmaSafeTop - 30) / 2 + 26,
+                }}>
+                    <EnergyIcon size={16} color="#F59E0B" />
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#F59E0B" }}>
+                        {energy}
+                    </span>
+                </div>
+            )}
+
             {/* ── Header ── */}
             <div style={{ padding: "6px 20px 8px" }}>
                 <h1 style={{
