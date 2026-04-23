@@ -23,9 +23,25 @@ export default function ProfilePage() {
     const { userId, tgId, firstName, setUser, referralCode, energy, evolutionLevel, photoUrl } = useUserStore();
     const tmaSafeTop = useTmaSafeArea();
     const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-    const [activeTab, setActiveTab] = useState<"main" | "settings" | "referrals">("main");
+    const [activeTab, setActiveTabState] = useState<"main" | "settings" | "referrals">("main");
     const [showShop, setShowShop] = useState(false);
     const [showSubscription, setShowSubscription] = useState(false);
+
+    // Load activeTab from localStorage on mount
+    useEffect(() => {
+        const saved = typeof window !== "undefined" ? localStorage.getItem("profile-active-tab") : null;
+        if (saved === "main" || saved === "settings" || saved === "referrals") {
+            setActiveTabState(saved);
+        }
+    }, []);
+
+    // Save activeTab to localStorage on change
+    const setActiveTab = (tab: "main" | "settings" | "referrals") => {
+        setActiveTabState(tab);
+        if (typeof window !== "undefined") {
+            localStorage.setItem("profile-active-tab", tab);
+        }
+    };
 
     // 1. Auth & Init
     useEffect(() => {
