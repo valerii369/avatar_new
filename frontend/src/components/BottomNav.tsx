@@ -33,11 +33,11 @@ export default function BottomNav() {
       backdropFilter: "blur(24px)",
       WebkitBackdropFilter: "blur(24px)",
       border: "1px solid rgba(255,255,255,0.07)",
-      borderRadius: 28,
+      borderRadius: 50,
       display: "flex",
       justifyContent: "space-around",
       alignItems: "center",
-      padding: "10px 2px",
+      padding: "2px 2px",
       zIndex: 100,
       boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
     }}>
@@ -52,7 +52,7 @@ export default function BottomNav() {
             style={{
               display: "flex", flexDirection: "column",
               alignItems: "center", gap: 3,
-              padding: "6px 10px", borderRadius: 14,
+              padding: "6px 10px", borderRadius: 50,
               border: "none", cursor: "pointer",
               background: isActive ? "rgba(255,255,255,0.07)" : "transparent",
               transition: "all 0.2s",
