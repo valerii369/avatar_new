@@ -234,18 +234,37 @@ function PortraitTab({ hub, insights, onSphereClick, userId, onGenerateSphere, g
       <div style={{ borderRadius: 16, background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", overflow: "hidden" }}>
         {/* Header + progress */}
         <div style={{ padding: "14px 16px 10px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.12em" }}>
               12 Граней Аватара
             </span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--violet)" }}>{activeSphereCount}/12</span>
+            <span style={{
+              fontSize: 13, fontWeight: 800,
+              background: "linear-gradient(135deg, #a78bfa, #ec4899)",
+              WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+            }}>{activeSphereCount}/12</span>
           </div>
-          <div style={{ height: 3, background: "rgba(255,255,255,0.05)", borderRadius: 2, overflow: "hidden" }}>
+          <div style={{ height: 5, background: "rgba(255,255,255,0.04)", borderRadius: 3, overflow: "hidden", position: "relative" }}>
             <motion.div
               initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              style={{ height: "100%", background: "linear-gradient(90deg, var(--violet), #a78bfa)", borderRadius: 2 }}
-            />
+              transition={{ duration: 1, ease: "easeOut" }}
+              style={{
+                height: "100%",
+                background: "linear-gradient(90deg, #8B5CF6, #a78bfa, #ec4899)",
+                borderRadius: 3,
+                boxShadow: "0 0 12px rgba(139,92,246,0.5)",
+                position: "relative",
+              }}
+            >
+              <motion.div
+                animate={{ x: ["-100%", "300%"] }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: "linear", repeatDelay: 1 }}
+                style={{
+                  position: "absolute", top: 0, left: 0, bottom: 0, width: "40%",
+                  background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)",
+                }}
+              />
+            </motion.div>
           </div>
         </div>
 
@@ -277,14 +296,27 @@ function PortraitTab({ hub, insights, onSphereClick, userId, onGenerateSphere, g
                   }
                 }}
                 style={{
-                  padding: "10px 12px",
-                  background: isActive ? `${s.color}06` : "rgba(10,10,15,0.95)",
+                  padding: "12px 14px",
+                  background: isActive
+                    ? `radial-gradient(circle at top right, ${s.color}15, ${s.color}04 60%, transparent)`
+                    : "rgba(8,10,18,0.95)",
                   cursor: "pointer",
                   display: "flex", flexDirection: "column", gap: 6,
-                  transition: "background 0.2s",
+                  transition: "all 0.25s",
                   gridColumn: isLast && SPHERES.length % 2 !== 0 ? "1 / -1" : undefined,
+                  position: "relative",
+                  overflow: "hidden",
                 }}
               >
+                {/* Subtle glow accent for active cards */}
+                {isActive && (
+                  <div style={{
+                    position: "absolute", top: -20, right: -20,
+                    width: 60, height: 60, borderRadius: "50%",
+                    background: `radial-gradient(circle, ${s.color}25, transparent 70%)`,
+                    pointerEvents: "none",
+                  }} />
+                )}
                 {/* Sphere name capsule */}
                 <div style={{
                   display: "inline-flex", alignItems: "center",
