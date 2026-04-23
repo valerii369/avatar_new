@@ -52,11 +52,10 @@ export default function BottomNav() {
             style={{
               display: "flex", flexDirection: "column",
               alignItems: "center", gap: 3,
-              padding: "6px 16px", borderRadius: 50,
+              padding: "6px 12px", borderRadius: 50,
               border: "none", cursor: "pointer",
               background: isActive ? "rgba(255,255,255,0.07)" : "transparent",
               transition: "all 0.2s",
-              minWidth: 48,
             }}
           >
             <Icon
@@ -72,6 +71,7 @@ export default function BottomNav() {
               color: isActive ? "var(--text-primary)" : "var(--text-muted)",
               letterSpacing: "0.01em",
               transition: "color 0.2s",
+              whiteSpace: "nowrap",
             }}>
               {item.label}
             </span>
