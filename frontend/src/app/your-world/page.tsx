@@ -712,7 +712,7 @@ function SphereDetailView({ sphereId, name, color, summary, archetype, insights,
             width: "100%", padding: 14,
             background: "rgba(255,255,255,0.08)",
             color: "var(--text-primary)",
-            fontWeight: 600, borderRadius: 14,
+            fontWeight: 600, borderRadius: 30,
             border: "1px solid var(--border)",
             cursor: "pointer", fontSize: 14,
           }}
