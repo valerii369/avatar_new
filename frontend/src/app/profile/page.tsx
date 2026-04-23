@@ -458,6 +458,49 @@ function MainProfileView({ userId, game, loadingGame, profile, setShowShop, setS
     );
 }
 
+// ─── Shared iOS-style UI helpers ──────────────────────────────────────────────
+
+const iosSectionLabel = (text: string) => (
+    <p style={{
+        fontSize: 12, fontWeight: 500,
+        color: "rgba(255,255,255,0.35)",
+        textTransform: "uppercase", letterSpacing: "0.05em",
+        padding: "0 32px", marginBottom: 6,
+    }}>{text}</p>
+);
+
+const iosDivider = (indent = 16) => (
+    <div style={{ height: 0.5, background: "rgba(255,255,255,0.07)", marginLeft: indent }} />
+);
+
+const iosGroup: React.CSSProperties = {
+    margin: "0 16px 8px",
+    background: "rgba(255,255,255,0.05)",
+    borderRadius: 14, overflow: "hidden",
+};
+
+const iosRow: React.CSSProperties = {
+    display: "flex", alignItems: "center",
+    padding: "0 16px", height: 44, gap: 12,
+    background: "transparent", border: "none",
+    cursor: "pointer", width: "100%", textAlign: "left",
+};
+
+const iosIconBox = (bg: string, emoji: string) => (
+    <div style={{
+        width: 30, height: 30, borderRadius: 8,
+        background: bg, flexShrink: 0,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 16,
+    }}>{emoji}</div>
+);
+
+const iosChevron = (
+    <svg width="8" height="13" viewBox="0 0 8 13" fill="none" style={{ opacity: 0.3, flexShrink: 0 }}>
+        <path d="M1 1l6 5.5L1 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+);
+
 function IosToggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
     return (
         <button
@@ -488,47 +531,6 @@ function SettingsView({ userId, tgId }: { userId: string; tgId: number | null })
     const [resetting, setResetting] = useState(false);
     const { musicEnabled, sfxEnabled, toggleMusic, toggleSfx } = useAudio();
     const { reset: resetStore, firstName } = useUserStore();
-
-    const sLabel = (text: string) => (
-        <p style={{
-            fontSize: 12, fontWeight: 500,
-            color: "rgba(255,255,255,0.35)",
-            textTransform: "uppercase", letterSpacing: "0.05em",
-            padding: "0 32px", marginBottom: 6,
-        }}>{text}</p>
-    );
-
-    const divider = (indent = 16) => (
-        <div style={{ height: 0.5, background: "rgba(255,255,255,0.07)", marginLeft: indent }} />
-    );
-
-    const group: React.CSSProperties = {
-        margin: "0 16px 8px",
-        background: "rgba(255,255,255,0.05)",
-        borderRadius: 14, overflow: "hidden",
-    };
-
-    const row: React.CSSProperties = {
-        display: "flex", alignItems: "center",
-        padding: "0 16px", height: 44, gap: 12,
-        background: "transparent", border: "none",
-        cursor: "pointer", width: "100%", textAlign: "left",
-    };
-
-    const iconBox = (bg: string, emoji: string) => (
-        <div style={{
-            width: 30, height: 30, borderRadius: 8,
-            background: bg, flexShrink: 0,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 16,
-        }}>{emoji}</div>
-    );
-
-    const chevron = (
-        <svg width="8" height="13" viewBox="0 0 8 13" fill="none" style={{ opacity: 0.3, flexShrink: 0 }}>
-            <path d="M1 1l6 5.5L1 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-    );
 
     const handleReset = async () => {
         if (!confirm("Вы уверены? Это полностью сбросит ваш прогресс, удалит все карточки и сессии.")) return;
@@ -577,16 +579,16 @@ function SettingsView({ userId, tgId }: { userId: string; tgId: number | null })
             </div>
 
             {/* ── Sound ── */}
-            {sLabel("Звук")}
-            <div style={{ ...group, marginBottom: 4 }}>
+            {iosSectionLabel("Звук")}
+            <div style={{ ...iosGroup, marginBottom: 4 }}>
                 <div style={{ display: "flex", alignItems: "center", padding: "0 16px", height: 44, gap: 12 }}>
-                    {iconBox("rgba(255,149,0,0.85)", "🎵")}
+                    {iosIconBox("rgba(255,149,0,0.85)", "🎵")}
                     <span style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", flex: 1 }}>Фоновая музыка</span>
                     <IosToggle enabled={musicEnabled} onToggle={toggleMusic} />
                 </div>
-                {divider(16 + 30 + 12)}
+                {iosDivider(16 + 30 + 12)}
                 <div style={{ display: "flex", alignItems: "center", padding: "0 16px", height: 44, gap: 12 }}>
-                    {iconBox("rgba(52,199,89,0.85)", "🔔")}
+                    {iosIconBox("rgba(52,199,89,0.85)", "🔔")}
                     <span style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", flex: 1 }}>Звуковые эффекты</span>
                     <IosToggle enabled={sfxEnabled} onToggle={toggleSfx} />
                 </div>
@@ -596,38 +598,38 @@ function SettingsView({ userId, tgId }: { userId: string; tgId: number | null })
             </p>
 
             {/* ── Support ── */}
-            {sLabel("Поддержка")}
-            <div style={group}>
+            {iosSectionLabel("Поддержка")}
+            <div style={iosGroup}>
                 <a
                     href="https://t.me/avatar_matrix_support"
                     target="_blank"
                     rel="noreferrer"
-                    style={{ ...row, textDecoration: "none" }}
+                    style={{ ...iosRow, textDecoration: "none" }}
                 >
-                    {iconBox("rgba(0,122,255,0.85)", "💬")}
+                    {iosIconBox("rgba(0,122,255,0.85)", "💬")}
                     <span style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", flex: 1 }}>Написать в поддержку</span>
-                    {chevron}
+                    {iosChevron}
                 </a>
-                {divider(16 + 30 + 12)}
+                {iosDivider(16 + 30 + 12)}
                 <button
-                    style={row}
+                    style={iosRow}
                     onClick={() => alert("Инструкция будет добавлена в AVATAR v2.0")}
                 >
-                    {iconBox("rgba(88,86,214,0.85)", "📖")}
+                    {iosIconBox("rgba(88,86,214,0.85)", "📖")}
                     <span style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", flex: 1 }}>Как это работает?</span>
-                    {chevron}
+                    {iosChevron}
                 </button>
             </div>
 
             {/* ── Account ── */}
             <div style={{ marginTop: 20 }}>
-                {sLabel("Аккаунт")}
-                <div style={group}>
+                {iosSectionLabel("Аккаунт")}
+                <div style={iosGroup}>
                     <div style={{ display: "flex", alignItems: "center", padding: "0 16px", height: 44 }}>
                         <span style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", flex: 1 }}>Пользователь</span>
                         <span style={{ fontSize: 15, color: "rgba(255,255,255,0.4)" }}>{firstName || "—"}</span>
                     </div>
-                    {divider()}
+                    {iosDivider()}
                     <div style={{ display: "flex", alignItems: "center", padding: "0 16px", height: 44 }}>
                         <span style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", flex: 1 }}>Telegram ID</span>
                         <span style={{ fontSize: 15, color: "rgba(255,255,255,0.4)" }}>{tgId ?? "—"}</span>
@@ -637,20 +639,20 @@ function SettingsView({ userId, tgId }: { userId: string; tgId: number | null })
 
             {/* ── Danger ── */}
             <div style={{ marginTop: 20 }}>
-                {sLabel("Данные")}
+                {iosSectionLabel("Данные")}
                 <div style={{ margin: "0 16px 8px", background: "rgba(255,59,48,0.07)", borderRadius: 14, overflow: "hidden" }}>
                     <button
                         onClick={handleReset}
                         disabled={resetting}
-                        style={{ ...row, opacity: resetting ? 0.5 : 1 }}
+                        style={{ ...iosRow, opacity: resetting ? 0.5 : 1 }}
                     >
-                        {iconBox("rgba(255,59,48,0.85)", "🔄")}
+                        {iosIconBox("rgba(255,59,48,0.85)", "🔄")}
                         <div style={{ flex: 1, textAlign: "left" }}>
                             <p style={{ fontSize: 15, fontWeight: 500, color: "#FF3B30", margin: 0 }}>
                                 {resetting ? "Сброс..." : "Перезапуск онбординга"}
                             </p>
                         </div>
-                        {chevron}
+                        {iosChevron}
                     </button>
                 </div>
                 <p style={{ fontSize: 12, color: "rgba(255,59,48,0.5)", padding: "4px 32px 16px", lineHeight: 1.4 }}>
@@ -743,35 +745,6 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
 
     const activeCount = referrals?.filter((r: any) => r.onboarding_done).length ?? 0;
 
-    const sectionLabel = (text: string) => (
-        <p style={{
-            fontSize: 12, fontWeight: 500,
-            color: "rgba(255,255,255,0.35)",
-            textTransform: "uppercase", letterSpacing: "0.05em",
-            padding: "0 32px", marginBottom: 6,
-        }}>
-            {text}
-        </p>
-    );
-
-    const divider = (indent = 16) => (
-        <div style={{ height: 0.5, background: "rgba(255,255,255,0.07)", marginLeft: indent }} />
-    );
-
-    const groupStyle: React.CSSProperties = {
-        margin: "0 16px 8px",
-        background: "rgba(255,255,255,0.05)",
-        borderRadius: 14,
-        overflow: "hidden",
-    };
-
-    const rowStyle: React.CSSProperties = {
-        display: "flex", alignItems: "center",
-        padding: "13px 16px", gap: 12,
-        background: "transparent", border: "none",
-        cursor: "pointer", width: "100%", textAlign: "left",
-    };
-
     return (
         <motion.div
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
@@ -780,7 +753,7 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
             {/* ── Hero stats ── */}
             <div style={{ margin: "0 16px 24px" }}>
                 <div style={{
-                    background: "rgba(255,255,255,0.04)",
+                    background: "rgba(255,255,255,0.05)",
                     border: "1px solid rgba(255,255,255,0.07)",
                     borderRadius: 20,
                     padding: "20px 16px 16px",
@@ -802,7 +775,7 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
                     <div style={{ width: 0.5, background: "rgba(255,255,255,0.08)", margin: "4px 0" }} />
                     <div style={{ flex: 1, textAlign: "center" }}>
                         <p style={{ fontSize: 34, fontWeight: 700, color: "#F59E0B", lineHeight: 1, margin: 0 }}>
-                            {activeCount * 100}
+                            {activeCount * 50}
                         </p>
                         <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 4 }}>⚡ заработано</p>
                     </div>
@@ -810,65 +783,64 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
             </div>
 
             {/* ── Reward info ── */}
-            {sectionLabel("Награды")}
-            <div style={groupStyle}>
-                <div style={{ display: "flex", alignItems: "center", padding: "12px 16px", height: 44 }}>
+            {iosSectionLabel("Награды")}
+            <div style={iosGroup}>
+                <div style={{ display: "flex", alignItems: "center", padding: "0 16px", height: 44, gap: 12 }}>
+                    {iosIconBox("rgba(245,158,11,0.85)", "⚡")}
                     <span style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", flex: 1 }}>Ваш бонус</span>
                     <span style={{ fontSize: 15, fontWeight: 600, color: "#F59E0B" }}>+50 ⚡</span>
                 </div>
-                {divider()}
-                <div style={{ display: "flex", alignItems: "center", padding: "12px 16px", height: 44 }}>
+                {iosDivider(16 + 30 + 12)}
+                <div style={{ display: "flex", alignItems: "center", padding: "0 16px", height: 44, gap: 12 }}>
+                    {iosIconBox("rgba(52,211,153,0.85)", "🎁")}
                     <span style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", flex: 1 }}>Бонус друга</span>
                     <span style={{ fontSize: 15, fontWeight: 600, color: "#34D399" }}>+50 ⚡</span>
                 </div>
-                {divider()}
-                <div style={{ display: "flex", alignItems: "center", padding: "12px 16px", minHeight: 48 }}>
-                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", margin: 0, lineHeight: 1.4 }}>
-                        Бонус начисляется после диагностики
-                    </p>
-                </div>
             </div>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", padding: "4px 32px 16px", lineHeight: 1.4 }}>
+                Бонус начисляется после прохождения диагностики
+            </p>
 
             {/* ── Referral link ── */}
-            <div style={{ marginBottom: 8, marginTop: 20 }}>
-                {sectionLabel("Ваша ссылка")}
-                <div style={groupStyle}>
-                    <div style={{ padding: "12px 16px", minHeight: 60 }}>
+            <div style={{ marginTop: 4 }}>
+                {iosSectionLabel("Ваша ссылка")}
+                <div style={iosGroup}>
+                    <div style={{ display: "flex", alignItems: "center", padding: "0 16px", minHeight: 52, gap: 12 }}>
+                        {iosIconBox("rgba(88,86,214,0.85)", "🔗")}
                         <p style={{
-                            fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.6)",
-                            wordBreak: "break-all", lineHeight: 1.5, margin: 0,
+                            fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.55)",
+                            wordBreak: "break-all", lineHeight: 1.5, margin: 0, flex: 1,
                         }}>
                             {isLoading ? "Загрузка ссылки..." : (generatedLink || "Ошибка загрузки ссылки")}
                         </p>
                     </div>
-                    {divider()}
+                    {iosDivider(16 + 30 + 12)}
                     <button
                         onClick={handleCopy}
                         disabled={!generatedLink}
-                        style={{ ...rowStyle, justifyContent: "center", height: 44, opacity: !generatedLink ? 0.4 : 1 }}
+                        style={{ ...iosRow, justifyContent: "center", opacity: !generatedLink ? 0.4 : 1 }}
                     >
                         <span style={{ fontSize: 15, fontWeight: 500, color: copied ? "#34D399" : "#818CF8" }}>
                             {copied ? "✓ Скопировано" : "Скопировать"}
                         </span>
                     </button>
-                    {divider()}
+                    {iosDivider()}
                     <button
                         onClick={handleShare}
                         disabled={!generatedLink}
-                        style={{ ...rowStyle, justifyContent: "center", height: 44, opacity: !generatedLink ? 0.4 : 1 }}
+                        style={{ ...iosRow, justifyContent: "center", opacity: !generatedLink ? 0.4 : 1 }}
                     >
-                        <span style={{ fontSize: 15, fontWeight: 500, color: "#818CF8" }}>
-                            Поделиться
-                        </span>
+                        <span style={{ fontSize: 15, fontWeight: 500, color: "#818CF8" }}>Поделиться</span>
                     </button>
                 </div>
             </div>
 
             {/* ── Promo code ── */}
             <div style={{ marginTop: 20, marginBottom: 8 }}>
-                {sectionLabel("Промокод")}
-                <div style={groupStyle}>
-                    <div style={{ display: "flex", alignItems: "center", padding: "12px 16px", height: 44 }}>
+                {iosSectionLabel("Промокод")}
+                <div style={iosGroup}>
+                    <div style={{ display: "flex", alignItems: "center", padding: "0 16px", height: 44, gap: 12 }}>
+                        {iosIconBox("rgba(52,199,89,0.85)", "🎟")}
                         <input
                             type="text"
                             value={promoCode}
@@ -877,19 +849,18 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
                             placeholder="Введи промокод"
                             maxLength={32}
                             style={{
-                                width: "100%", background: "transparent", border: "none",
+                                flex: 1, background: "transparent", border: "none",
                                 outline: "none", fontSize: 15, fontWeight: 500,
-                                color: "var(--text-primary)",
-                                padding: 0,
+                                color: "var(--text-primary)", padding: 0,
                                 letterSpacing: promoCode ? "0.05em" : 0,
                             }}
                         />
                     </div>
-                    {divider()}
+                    {iosDivider(16 + 30 + 12)}
                     <button
                         onClick={handleRedeemPromo}
                         disabled={promoLoading || !promoCode.trim()}
-                        style={{ ...rowStyle, justifyContent: "center", height: 44, opacity: (!promoCode.trim() || promoLoading) ? 0.4 : 1 }}
+                        style={{ ...iosRow, justifyContent: "center", opacity: (!promoCode.trim() || promoLoading) ? 0.4 : 1 }}
                     >
                         {promoLoading ? (
                             <div style={{ width: 16, height: 16, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "white", animation: "spin 0.6s linear infinite" }} />
@@ -901,10 +872,7 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
                 {promoResult && (
                     <motion.p
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                        style={{
-                            fontSize: 12, margin: "6px 32px 0",
-                            color: promoResult.success ? "#34D399" : "#F87171",
-                        }}
+                        style={{ fontSize: 12, margin: "6px 32px 0", color: promoResult.success ? "#34D399" : "#F87171" }}
                     >
                         {promoResult.success ? "✓ " : "✗ "}{promoResult.message}
                     </motion.p>
@@ -914,31 +882,31 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
             {/* ── Referrals list ── */}
             {(referralsLoading || (referrals && referrals.length > 0)) && (
                 <div style={{ marginTop: 20 }}>
-                    {sectionLabel("Приглашённые")}
-                    <div style={groupStyle}>
+                    {iosSectionLabel("Приглашённые")}
+                    <div style={iosGroup}>
                         {referralsLoading ? (
                             <div style={{ display: "flex", justifyContent: "center", padding: "24px 0" }}>
                                 <div style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid rgba(139,92,246,0.4)", borderTopColor: "#7C3AED", animation: "spin 0.6s linear infinite" }} />
                             </div>
                         ) : referrals.map((ref: any, i: number) => (
                             <div key={ref.id}>
-                                <div style={{ display: "flex", alignItems: "center", padding: "12px 16px", gap: 12, minHeight: 52 }}>
+                                <div style={{ display: "flex", alignItems: "center", padding: "10px 16px", gap: 12, minHeight: 52 }}>
                                     <div style={{
-                                        width: 40, height: 40, borderRadius: 20,
+                                        width: 36, height: 36, borderRadius: 18,
                                         overflow: "hidden", flexShrink: 0,
                                         background: "rgba(255,255,255,0.08)",
                                         display: "flex", alignItems: "center", justifyContent: "center",
                                     }}>
                                         {ref.photo_url
                                             ? <img src={ref.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                            : <span style={{ fontSize: 20 }}>👤</span>
+                                            : <span style={{ fontSize: 18 }}>👤</span>
                                         }
                                     </div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <p style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", margin: 0, lineHeight: 1.2 }}>
                                             {ref.first_name}
                                         </p>
-                                        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", margin: "3px 0 0", lineHeight: 1 }}>
+                                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: "3px 0 0", lineHeight: 1 }}>
                                             Ур. {ref.evolution_level} · {ref.xp.toLocaleString()} XP
                                         </p>
                                     </div>
@@ -952,7 +920,7 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
                                         {ref.onboarding_done ? "✓ Активен" : "→ В пути"}
                                     </span>
                                 </div>
-                                {i < referrals.length - 1 && divider(16 + 40 + 12)}
+                                {i < referrals.length - 1 && iosDivider(16 + 36 + 12)}
                             </div>
                         ))}
                     </div>
