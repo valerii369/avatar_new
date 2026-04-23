@@ -559,29 +559,6 @@ function SettingsView({ userId, tgId }: { userId: string; tgId: number | null })
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             style={{ paddingBottom: 8 }}
         >
-            {/* ── App info card ── */}
-            <div style={{ margin: "0 16px 24px" }}>
-                <div style={{
-                    background: "rgba(255,255,255,0.05)",
-                    border: "1px solid rgba(255,255,255,0.07)",
-                    borderRadius: 20, padding: "20px 16px",
-                    display: "flex", alignItems: "center", gap: 16,
-                }}>
-                    <div style={{
-                        width: 60, height: 60, borderRadius: 14, flexShrink: 0,
-                        background: "linear-gradient(135deg, #7C3AED, #4F46E5)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 28,
-                    }}>🌌</div>
-                    <div>
-                        <p style={{ fontSize: 17, fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>AVATAR</p>
-                        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", margin: "3px 0 0", lineHeight: 1.4 }}>
-                            Система самопознания на основе астрологии и ИИ
-                        </p>
-                    </div>
-                </div>
-            </div>
-
             {/* ── Sound ── */}
             {iosSectionLabel("Звук")}
             <div style={{ ...iosGroup, marginBottom: 4 }}>
