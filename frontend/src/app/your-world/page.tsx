@@ -973,7 +973,7 @@ function PipelineLoading({ onRetry }: { onRetry?: () => void }) {
 // ─── Main Page ───────────────────────────────────────────────────────────────
 export default function YourWorldPage() {
   const tmaSafeTop = useTmaSafeArea();
-  const { userId, hubData, setHubData, energy } = useUserStore();
+  const { userId, hubData, setHubData, energy, setUser } = useUserStore();
   const { activeSphere, setActiveSphere } = useInsightsStore();
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     if (typeof window === "undefined") return "portrait";
@@ -993,7 +993,10 @@ export default function YourWorldPage() {
     if (!userId || generatingSphere) return;
     setGeneratingSphere(sphereId);
     try {
-      await calcAPI.generateSphere(userId, sphereId);
+      const res = await calcAPI.generateSphere(userId, sphereId);
+      if (typeof res.data?.energy_remaining === "number") {
+        setUser({ energy: res.data.energy_remaining });
+      }
       await mutateHub();
     } catch (err: any) {
       console.error("Generate sphere error", err);
