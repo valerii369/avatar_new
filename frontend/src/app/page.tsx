@@ -222,7 +222,7 @@ export default function HomePage() {
           top: 0,
           left: "50%",
           transform: "translateX(-50%)",
-          height: 32,
+          height: 30,
           paddingLeft: 10,
           paddingRight: 10,
           borderRadius: 20,
@@ -232,7 +232,7 @@ export default function HomePage() {
           alignItems: "center",
           gap: 6,
           zIndex: 50,
-          marginTop: (tmaSafeTop - 32) / 2 + 22,
+          marginTop: (tmaSafeTop - 30) / 2 + 26,
         }}>
           <EnergyIcon size={16} color="#F59E0B" />
           <span style={{ fontSize: 13, fontWeight: 700, color: "#F59E0B" }}>
