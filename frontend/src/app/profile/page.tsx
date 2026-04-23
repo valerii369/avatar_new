@@ -734,29 +734,31 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
                 <div style={{
                     background: "rgba(255,255,255,0.05)",
                     border: "1px solid rgba(255,255,255,0.07)",
-                    borderRadius: 20,
-                    padding: "20px 16px 16px",
+                    borderRadius: 14,
+                    padding: "16px 16px 12px",
                     display: "flex", gap: 0,
                 }}>
                     <div style={{ flex: 1, textAlign: "center" }}>
-                        <p style={{ fontSize: 34, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1, margin: 0 }}>
+                        <p style={{ fontSize: 32, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1, margin: 0 }}>
                             {referrals?.length ?? "—"}
                         </p>
-                        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 4 }}>приглашено</p>
+                        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 3 }}>приглашено</p>
                     </div>
-                    <div style={{ width: 0.5, background: "rgba(255,255,255,0.08)", margin: "4px 0" }} />
+                    <div style={{ width: 0.5, background: "rgba(255,255,255,0.08)", margin: "2px 0" }} />
                     <div style={{ flex: 1, textAlign: "center" }}>
-                        <p style={{ fontSize: 34, fontWeight: 700, color: "#34D399", lineHeight: 1, margin: 0 }}>
+                        <p style={{ fontSize: 32, fontWeight: 700, color: "#34D399", lineHeight: 1, margin: 0 }}>
                             {activeCount}
                         </p>
-                        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 4 }}>активных</p>
+                        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 3 }}>активных</p>
                     </div>
-                    <div style={{ width: 0.5, background: "rgba(255,255,255,0.08)", margin: "4px 0" }} />
+                    <div style={{ width: 0.5, background: "rgba(255,255,255,0.08)", margin: "2px 0" }} />
                     <div style={{ flex: 1, textAlign: "center" }}>
-                        <p style={{ fontSize: 34, fontWeight: 700, color: "#F59E0B", lineHeight: 1, margin: 0 }}>
+                        <p style={{ fontSize: 32, fontWeight: 700, color: "#F59E0B", lineHeight: 1, margin: 0 }}>
                             {activeCount * 50}
                         </p>
-                        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 4 }}>⚡ заработано</p>
+                        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 3, display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}>
+                            <EnergyIcon size={11} color="rgba(255,255,255,0.4)" /> заработано
+                        </p>
                     </div>
                 </div>
             </div>
@@ -767,13 +769,19 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
                 <div style={{ display: "flex", alignItems: "center", padding: "0 16px", height: 44, gap: 12 }}>
                     {iosIconBox("rgba(245,158,11,0.85)", "⚡")}
                     <span style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", flex: 1 }}>Ваш бонус</span>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: "#F59E0B" }}>+50 ⚡</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <EnergyIcon size={16} color="#F59E0B" />
+                        <span style={{ fontSize: 15, fontWeight: 600, color: "#F59E0B" }}>50</span>
+                    </div>
                 </div>
                 {iosDivider(16 + 30 + 12)}
                 <div style={{ display: "flex", alignItems: "center", padding: "0 16px", height: 44, gap: 12 }}>
                     {iosIconBox("rgba(52,211,153,0.85)", "🎁")}
                     <span style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", flex: 1 }}>Бонус друга</span>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: "#34D399" }}>+50 ⚡</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <EnergyIcon size={16} color="#34D399" />
+                        <span style={{ fontSize: 15, fontWeight: 600, color: "#34D399" }}>50</span>
+                    </div>
                 </div>
             </div>
             <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", padding: "4px 32px 16px", lineHeight: 1.4 }}>
