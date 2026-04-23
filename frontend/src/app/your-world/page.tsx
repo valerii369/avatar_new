@@ -233,7 +233,7 @@ function PortraitTab({ hub, insights, onSphereClick, userId, onGenerateSphere, g
       {/* ── 12 ГРАНЕЙ АВАТАРА ── */}
       <div style={{ borderRadius: 16, background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", overflow: "hidden" }}>
         {/* Header + progress */}
-        <div style={{ padding: "14px 16px 10px" }}>
+        <div style={{ padding: "14px 16px 6px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.12em" }}>
               12 Граней Аватара
@@ -244,7 +244,7 @@ function PortraitTab({ hub, insights, onSphereClick, userId, onGenerateSphere, g
               WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
             }}>{activeSphereCount}/12</span>
           </div>
-          <div style={{ height: 5, background: "rgba(255,255,255,0.04)", borderRadius: 3, overflow: "hidden", position: "relative" }}>
+          <div style={{ height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 3, overflow: "hidden" }}>
             <motion.div
               initial={{ width: 0 }} animate={{ width: `${pct}%` }}
               transition={{ duration: 1, ease: "easeOut" }}
@@ -252,25 +252,15 @@ function PortraitTab({ hub, insights, onSphereClick, userId, onGenerateSphere, g
                 height: "100%",
                 background: "linear-gradient(90deg, #8B5CF6, #a78bfa, #ec4899)",
                 borderRadius: 3,
-                boxShadow: "0 0 12px rgba(139,92,246,0.5)",
-                position: "relative",
+                boxShadow: "0 0 10px rgba(139,92,246,0.5)",
               }}
-            >
-              <motion.div
-                animate={{ x: ["-100%", "300%"] }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: "linear", repeatDelay: 1 }}
-                style={{
-                  position: "absolute", top: 0, left: 0, bottom: 0, width: "40%",
-                  background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)",
-                }}
-              />
-            </motion.div>
+            />
           </div>
         </div>
 
         {/* Lock hint under progress bar */}
         {activeSphereCount < 12 && activeSphereCount > 0 && (
-          <div style={{ padding: "5px 16px", textAlign: "center" }}>
+          <div style={{ padding: "3px 16px 14px", textAlign: "center" }}>
             <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", margin: 0, lineHeight: 1.4 }}>
               Открой все 12 сфер, чтобы разблокировать мастер-портрет
             </p>
