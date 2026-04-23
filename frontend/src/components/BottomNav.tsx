@@ -35,7 +35,7 @@ export default function BottomNav() {
       border: "1px solid rgba(255,255,255,0.07)",
       borderRadius: 50,
       display: "flex",
-      justifyContent: "space-evenly",
+      gap: 0,
       alignItems: "center",
       padding: "4px 6px",
       zIndex: 100,
@@ -56,6 +56,7 @@ export default function BottomNav() {
               border: "none", cursor: "pointer",
               background: isActive ? "rgba(255,255,255,0.07)" : "transparent",
               transition: "all 0.2s",
+              flex: 1,
             }}
           >
             <Icon
