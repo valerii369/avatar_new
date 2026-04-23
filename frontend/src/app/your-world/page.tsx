@@ -1163,7 +1163,7 @@ export default function YourWorldPage() {
       {/* Tab switcher */}
       <div className="px-4 mb-3">
         <div
-          className="grid grid-cols-3 gap-1 p-1"
+          className="grid grid-cols-3 gap-1 p-0.5"
           style={{
             background: "rgba(255,255,255,0.04)",
             border: "1px solid var(--border)",
