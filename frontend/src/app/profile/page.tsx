@@ -673,32 +673,7 @@ function SettingsView({ userId, tgId }: { userId: string; tgId: number | null })
 function ReferralView({ userId, referralCode }: { userId: string; referralCode: string }) {
     const { setUser } = useUserStore();
 
-    const { data: refLink, error: refLinkError, isLoading } = useSWR(
-        userId ? ["referral-link", userId] : null,
-        async () => {
-            try {
-                const res = await profileAPI.getReferralLink(userId);
-                const link = res.data?.referral_link || res.data;
-                if (link) {
-                    console.log("✓ Referral link from API:", link);
-                    return link;
-                }
-                throw new Error("No referral_link in response");
-            } catch (err) {
-                console.error("API referral link failed, using fallback:", err);
-                return null;
-            }
-        },
-        { revalidateOnFocus: false }
-    );
-
-    // Fallback: construct Telegram Mini App link from referralCode if API fails
-    const generatedLink = refLink || (referralCode ? `https://t.me/avatarmatrix_bot/app?ref=${referralCode}` : null);
-
-    // Debug logging
-    if (typeof window !== "undefined") {
-        console.log("ReferralView debug:", { userId, referralCode, refLink, isLoading, generatedLink });
-    }
+    const generatedLink = referralCode ? `https://t.me/avatarmatrix_bot/app?ref=${referralCode}` : null;
 
     const { data: referrals, isLoading: referralsLoading } = useSWR(
         userId ? ["referrals", userId] : null,
@@ -811,7 +786,7 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
                             fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.55)",
                             wordBreak: "break-all", lineHeight: 1.5, margin: 0, flex: 1,
                         }}>
-                            {isLoading ? "Загрузка ссылки..." : (generatedLink || "Ошибка загрузки ссылки")}
+                            {generatedLink || "Ссылка недоступна"}
                         </p>
                     </div>
                     {iosDivider(16 + 30 + 12)}
