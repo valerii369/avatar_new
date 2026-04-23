@@ -611,14 +611,19 @@ function SettingsView({ userId, tgId }: { userId: string; tgId: number | null })
 function ReferralView({ userId, referralCode }: { userId: string; referralCode: string }) {
     const { setUser } = useUserStore();
 
-    const { data: refLink, error: refLinkError } = useSWR(
+    const { data: refLink, error: refLinkError, isLoading } = useSWR(
         userId ? ["referral-link", userId] : null,
         async () => {
             try {
                 const res = await profileAPI.getReferralLink(userId);
-                return res.data?.referral_link || res.data;
+                const link = res.data?.referral_link || res.data;
+                if (link) {
+                    console.log("✓ Referral link from API:", link);
+                    return link;
+                }
+                throw new Error("No referral_link in response");
             } catch (err) {
-                console.error("Failed to fetch referral link:", err);
+                console.error("API referral link failed, using fallback:", err);
                 return null;
             }
         },
@@ -628,7 +633,12 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
     // Fallback: construct Telegram Mini App link from referralCode if API fails
     const generatedLink = refLink || (referralCode ? `https://t.me/avatarmatrix_bot/app?ref=${referralCode}` : null);
 
-    const { data: referrals, isLoading } = useSWR(
+    // Debug logging
+    if (typeof window !== "undefined") {
+        console.log("ReferralView debug:", { userId, referralCode, refLink, isLoading, generatedLink });
+    }
+
+    const { data: referrals, isLoading: referralsLoading } = useSWR(
         userId ? ["referrals", userId] : null,
         () => profileAPI.getReferrals(userId).then(res => res.data)
     );
@@ -742,19 +752,19 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
             {/* ── Reward info ── */}
             {sectionLabel("Награды")}
             <div style={groupStyle}>
-                <div style={{ display: "flex", alignItems: "center", padding: "13px 16px" }}>
-                    <span style={{ fontSize: 15, color: "var(--text-primary)", flex: 1 }}>Ваш бонус</span>
+                <div style={{ display: "flex", alignItems: "center", padding: "12px 16px", height: 44 }}>
+                    <span style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", flex: 1 }}>Ваш бонус</span>
                     <span style={{ fontSize: 15, fontWeight: 600, color: "#F59E0B" }}>+50 ⚡</span>
                 </div>
                 {divider()}
-                <div style={{ display: "flex", alignItems: "center", padding: "13px 16px" }}>
-                    <span style={{ fontSize: 15, color: "var(--text-primary)", flex: 1 }}>Бонус друга</span>
+                <div style={{ display: "flex", alignItems: "center", padding: "12px 16px", height: 44 }}>
+                    <span style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", flex: 1 }}>Бонус друга</span>
                     <span style={{ fontSize: 15, fontWeight: 600, color: "#34D399" }}>+50 ⚡</span>
                 </div>
                 {divider()}
-                <div style={{ padding: "10px 16px 12px" }}>
-                    <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: 0, lineHeight: 1.4 }}>
-                        Бонус начисляется после того, как друг пройдёт диагностику
+                <div style={{ display: "flex", alignItems: "center", padding: "12px 16px", minHeight: 48 }}>
+                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", margin: 0, lineHeight: 1.4 }}>
+                        Бонус начисляется после диагностики
                     </p>
                 </div>
             </div>
@@ -763,29 +773,29 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
             <div style={{ marginBottom: 8, marginTop: 20 }}>
                 {sectionLabel("Ваша ссылка")}
                 <div style={groupStyle}>
-                    <div style={{ padding: "12px 16px 10px" }}>
+                    <div style={{ padding: "12px 16px", minHeight: 60 }}>
                         <p style={{
-                            fontSize: 13, color: "rgba(255,255,255,0.5)",
-                            wordBreak: "break-all", lineHeight: 1.4, margin: 0,
+                            fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.6)",
+                            wordBreak: "break-all", lineHeight: 1.5, margin: 0,
                         }}>
-                            {generatedLink ?? "Ссылка недоступна"}
+                            {isLoading ? "Загрузка ссылки..." : (generatedLink || "Ошибка загрузки ссылки")}
                         </p>
                     </div>
                     {divider()}
                     <button
                         onClick={handleCopy}
                         disabled={!generatedLink}
-                        style={{ ...rowStyle, justifyContent: "center" }}
+                        style={{ ...rowStyle, justifyContent: "center", height: 44, opacity: !generatedLink ? 0.4 : 1 }}
                     >
                         <span style={{ fontSize: 15, fontWeight: 500, color: copied ? "#34D399" : "#818CF8" }}>
-                            {copied ? "✓ Скопировано" : "Скопировать ссылку"}
+                            {copied ? "✓ Скопировано" : "Скопировать"}
                         </span>
                     </button>
                     {divider()}
                     <button
                         onClick={handleShare}
                         disabled={!generatedLink}
-                        style={{ ...rowStyle, justifyContent: "center" }}
+                        style={{ ...rowStyle, justifyContent: "center", height: 44, opacity: !generatedLink ? 0.4 : 1 }}
                     >
                         <span style={{ fontSize: 15, fontWeight: 500, color: "#818CF8" }}>
                             Поделиться
@@ -798,7 +808,7 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
             <div style={{ marginTop: 20, marginBottom: 8 }}>
                 {sectionLabel("Промокод")}
                 <div style={groupStyle}>
-                    <div style={{ padding: "4px 16px 4px" }}>
+                    <div style={{ display: "flex", alignItems: "center", padding: "12px 16px", height: 44 }}>
                         <input
                             type="text"
                             value={promoCode}
@@ -808,10 +818,10 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
                             maxLength={32}
                             style={{
                                 width: "100%", background: "transparent", border: "none",
-                                outline: "none", fontSize: 15,
+                                outline: "none", fontSize: 15, fontWeight: 500,
                                 color: "var(--text-primary)",
-                                padding: "9px 0",
-                                letterSpacing: promoCode ? "0.06em" : 0,
+                                padding: 0,
+                                letterSpacing: promoCode ? "0.05em" : 0,
                             }}
                         />
                     </div>
@@ -819,7 +829,7 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
                     <button
                         onClick={handleRedeemPromo}
                         disabled={promoLoading || !promoCode.trim()}
-                        style={{ ...rowStyle, justifyContent: "center", opacity: (!promoCode.trim() || promoLoading) ? 0.4 : 1 }}
+                        style={{ ...rowStyle, justifyContent: "center", height: 44, opacity: (!promoCode.trim() || promoLoading) ? 0.4 : 1 }}
                     >
                         {promoLoading ? (
                             <div style={{ width: 16, height: 16, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "white", animation: "spin 0.6s linear infinite" }} />
@@ -842,46 +852,47 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
             </div>
 
             {/* ── Referrals list ── */}
-            {(isLoading || (referrals && referrals.length > 0)) && (
+            {(referralsLoading || (referrals && referrals.length > 0)) && (
                 <div style={{ marginTop: 20 }}>
                     {sectionLabel("Приглашённые")}
                     <div style={groupStyle}>
-                        {isLoading ? (
+                        {referralsLoading ? (
                             <div style={{ display: "flex", justifyContent: "center", padding: "24px 0" }}>
                                 <div style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid rgba(139,92,246,0.4)", borderTopColor: "#7C3AED", animation: "spin 0.6s linear infinite" }} />
                             </div>
                         ) : referrals.map((ref: any, i: number) => (
                             <div key={ref.id}>
-                                <div style={{ display: "flex", alignItems: "center", padding: "10px 16px", gap: 12 }}>
+                                <div style={{ display: "flex", alignItems: "center", padding: "12px 16px", gap: 12, minHeight: 52 }}>
                                     <div style={{
-                                        width: 38, height: 38, borderRadius: 19,
+                                        width: 40, height: 40, borderRadius: 20,
                                         overflow: "hidden", flexShrink: 0,
                                         background: "rgba(255,255,255,0.08)",
                                         display: "flex", alignItems: "center", justifyContent: "center",
                                     }}>
                                         {ref.photo_url
                                             ? <img src={ref.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                            : <span style={{ fontSize: 18 }}>👤</span>
+                                            : <span style={{ fontSize: 20 }}>👤</span>
                                         }
                                     </div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <p style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", margin: 0, lineHeight: 1.2 }}>
                                             {ref.first_name}
                                         </p>
-                                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: "2px 0 0", lineHeight: 1 }}>
+                                        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", margin: "3px 0 0", lineHeight: 1 }}>
                                             Ур. {ref.evolution_level} · {ref.xp.toLocaleString()} XP
                                         </p>
                                     </div>
                                     <span style={{
-                                        fontSize: 11, fontWeight: 600, letterSpacing: "0.02em",
-                                        padding: "3px 8px", borderRadius: 20,
+                                        fontSize: 12, fontWeight: 600, letterSpacing: "0.02em",
+                                        padding: "4px 10px", borderRadius: 12,
                                         background: ref.onboarding_done ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.07)",
                                         color: ref.onboarding_done ? "#34D399" : "rgba(255,255,255,0.3)",
+                                        whiteSpace: "nowrap",
                                     }}>
-                                        {ref.onboarding_done ? "Активен" : "В пути"}
+                                        {ref.onboarding_done ? "✓ Активен" : "→ В пути"}
                                     </span>
                                 </div>
-                                {i < referrals.length - 1 && divider(16 + 38 + 12)}
+                                {i < referrals.length - 1 && divider(16 + 40 + 12)}
                             </div>
                         ))}
                     </div>
