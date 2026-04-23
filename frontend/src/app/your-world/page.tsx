@@ -425,6 +425,7 @@ function BreakdownTab({
   dataReady: boolean;
 }) {
   const [toast, setToast] = useState<{ type: "energy" | "error"; title: string; message: string } | null>(null);
+  const { setUser } = useUserStore();
 
   const insightsBySphere = useMemo(() => {
     const map: Record<number, Insight[]> = {};
@@ -448,8 +449,10 @@ function BreakdownTab({
     if (!userId || generating) return;
     setGenerating(sphereId);
     try {
-      await calcAPI.generateSphere(userId, sphereId);
-      // Force SWR to refetch fresh data
+      const res = await calcAPI.generateSphere(userId, sphereId);
+      if (typeof res.data?.energy_remaining === "number") {
+        setUser({ energy: res.data.energy_remaining });
+      }
       await onRefresh();
     } catch (err: any) {
       const status = err.response?.status;
