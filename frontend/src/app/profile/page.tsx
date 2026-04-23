@@ -605,15 +605,25 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
         () => profileAPI.getReferrals(userId).then(res => res.data)
     );
 
-    // Promo code state
     const [promoCode, setPromoCode] = useState("");
     const [promoLoading, setPromoLoading] = useState(false);
     const [promoResult, setPromoResult] = useState<{ success: boolean; message: string } | null>(null);
+    const [copied, setCopied] = useState(false);
 
     const handleCopy = () => {
         if (!refLink) return;
         navigator.clipboard.writeText(refLink);
-        alert("Ссылка скопирована!");
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleShare = async () => {
+        if (!refLink) return;
+        if (navigator.share) {
+            await navigator.share({ title: "Avatar", url: refLink });
+        } else {
+            handleCopy();
+        }
     };
 
     const handleRedeemPromo = async () => {
@@ -624,10 +634,7 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
             const res = await profileAPI.redeemPromo(userId, promoCode.trim());
             setPromoResult({ success: true, message: res.data.message });
             setPromoCode("");
-            // Update energy in store
-            if (res.data.new_energy !== undefined) {
-                setUser({ energy: res.data.new_energy });
-            }
+            if (res.data.new_energy !== undefined) setUser({ energy: res.data.new_energy });
         } catch (err: any) {
             const msg = err.response?.data?.detail || "Ошибка активации промокода";
             setPromoResult({ success: false, message: msg });
@@ -636,127 +643,222 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
         }
     };
 
+    const activeCount = referrals?.filter((r: any) => r.onboarding_done).length ?? 0;
+
+    const sectionLabel = (text: string) => (
+        <p style={{
+            fontSize: 12, fontWeight: 500,
+            color: "rgba(255,255,255,0.35)",
+            textTransform: "uppercase", letterSpacing: "0.05em",
+            padding: "0 32px", marginBottom: 6,
+        }}>
+            {text}
+        </p>
+    );
+
+    const divider = (indent = 16) => (
+        <div style={{ height: 0.5, background: "rgba(255,255,255,0.07)", marginLeft: indent }} />
+    );
+
+    const groupStyle: React.CSSProperties = {
+        margin: "0 16px 8px",
+        background: "rgba(255,255,255,0.05)",
+        borderRadius: 14,
+        overflow: "hidden",
+    };
+
+    const rowStyle: React.CSSProperties = {
+        display: "flex", alignItems: "center",
+        padding: "13px 16px", gap: 12,
+        background: "transparent", border: "none",
+        cursor: "pointer", width: "100%", textAlign: "left",
+    };
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            className="px-4 space-y-4"
+            style={{ paddingBottom: 8 }}
         >
-            <div className="glass p-5 space-y-4">
-                <div className="text-center">
-                    <h3 className="text-lg font-bold text-white mb-1">Реферальная программа</h3>
-                    <p className="text-xs text-white/60 mb-4">
-                        Приглашайте друзей и получайте ✦ Энергию после того, как они пройдут диагностику (Onboarding)
-                    </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 mb-2">
-                    <div className="bg-white/5 rounded-2xl p-3 border border-white/10 text-center">
-                        <p className="text-[10px] text-white/40 uppercase font-bold tracking-wider mb-1">Ваш бонус</p>
-                        <p className="text-lg font-bold text-amber-400">+100 ✦</p>
+            {/* ── Hero stats ── */}
+            <div style={{ margin: "0 16px 24px" }}>
+                <div style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.07)",
+                    borderRadius: 20,
+                    padding: "20px 16px 16px",
+                    display: "flex", gap: 0,
+                }}>
+                    <div style={{ flex: 1, textAlign: "center" }}>
+                        <p style={{ fontSize: 34, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1, margin: 0 }}>
+                            {referrals?.length ?? "—"}
+                        </p>
+                        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 4 }}>приглашено</p>
                     </div>
-                    <div className="bg-white/5 rounded-2xl p-3 border border-white/10 text-center">
-                        <p className="text-[10px] text-white/40 uppercase font-bold tracking-wider mb-1">Их бонус</p>
-                        <p className="text-lg font-bold text-emerald-400">+200 ✦</p>
+                    <div style={{ width: 0.5, background: "rgba(255,255,255,0.08)", margin: "4px 0" }} />
+                    <div style={{ flex: 1, textAlign: "center" }}>
+                        <p style={{ fontSize: 34, fontWeight: 700, color: "#34D399", lineHeight: 1, margin: 0 }}>
+                            {activeCount}
+                        </p>
+                        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 4 }}>активных</p>
                     </div>
-                </div>
-
-                <div className="space-y-2">
-                    <p className="text-xs font-medium text-white/70 ml-1">Ваша ссылка:</p>
-                    <div className="flex gap-2">
-                        <div className="flex-1 bg-black/40 border border-white/10 rounded-xl p-3 overflow-hidden text-ellipsis whitespace-nowrap text-xs text-white/60">
-                            {refLink ? refLink : "Загрузка ссылки..."}
-                        </div>
-                        <button
-                            onClick={handleCopy}
-                            disabled={!refLink}
-                            className="bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-4 rounded-xl font-bold text-sm transition-colors"
-                        >
-                            Копия
-                        </button>
+                    <div style={{ width: 0.5, background: "rgba(255,255,255,0.08)", margin: "4px 0" }} />
+                    <div style={{ flex: 1, textAlign: "center" }}>
+                        <p style={{ fontSize: 34, fontWeight: 700, color: "#F59E0B", lineHeight: 1, margin: 0 }}>
+                            {activeCount * 100}
+                        </p>
+                        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 4 }}>⚡ заработано</p>
                     </div>
                 </div>
             </div>
 
-            {/* Promo code block */}
-            <div className="glass p-5 space-y-3">
-                <div>
-                    <h4 className="text-sm font-bold text-white mb-0.5">Промокод</h4>
-                    <p className="text-xs text-white/40">Введи промокод, чтобы получить бонус ✦ Энергии</p>
+            {/* ── Reward info ── */}
+            {sectionLabel("Награды")}
+            <div style={groupStyle}>
+                <div style={{ display: "flex", alignItems: "center", padding: "13px 16px" }}>
+                    <span style={{ fontSize: 15, color: "var(--text-primary)", flex: 1 }}>Ваш бонус</span>
+                    <span style={{ fontSize: 15, fontWeight: 600, color: "#F59E0B" }}>+100 ⚡</span>
                 </div>
-                <div className="flex gap-2">
-                    <input
-                        type="text"
-                        value={promoCode}
-                        onChange={e => setPromoCode(e.target.value.toUpperCase())}
-                        onKeyDown={e => e.key === "Enter" && handleRedeemPromo()}
-                        placeholder="ВВЕДИ ПРОМОКОД"
-                        maxLength={32}
-                        className="flex-1 bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/20 uppercase tracking-widest outline-none focus:border-violet-500/60 transition-colors"
-                    />
+                {divider()}
+                <div style={{ display: "flex", alignItems: "center", padding: "13px 16px" }}>
+                    <span style={{ fontSize: 15, color: "var(--text-primary)", flex: 1 }}>Бонус друга</span>
+                    <span style={{ fontSize: 15, fontWeight: 600, color: "#34D399" }}>+200 ⚡</span>
+                </div>
+                {divider()}
+                <div style={{ padding: "10px 16px 12px" }}>
+                    <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: 0, lineHeight: 1.4 }}>
+                        Бонус начисляется после того, как друг пройдёт диагностику
+                    </p>
+                </div>
+            </div>
+
+            {/* ── Referral link ── */}
+            <div style={{ marginBottom: 8, marginTop: 20 }}>
+                {sectionLabel("Ваша ссылка")}
+                <div style={groupStyle}>
+                    <div style={{ padding: "12px 16px 10px" }}>
+                        <p style={{
+                            fontSize: 13, color: "rgba(255,255,255,0.5)",
+                            wordBreak: "break-all", lineHeight: 1.4, margin: 0,
+                        }}>
+                            {refLink ?? "Загрузка..."}
+                        </p>
+                    </div>
+                    {divider()}
+                    <button
+                        onClick={handleCopy}
+                        disabled={!refLink}
+                        style={{ ...rowStyle, justifyContent: "center" }}
+                    >
+                        <span style={{ fontSize: 15, fontWeight: 500, color: copied ? "#34D399" : "#818CF8" }}>
+                            {copied ? "✓ Скопировано" : "Скопировать ссылку"}
+                        </span>
+                    </button>
+                    {divider()}
+                    <button
+                        onClick={handleShare}
+                        disabled={!refLink}
+                        style={{ ...rowStyle, justifyContent: "center" }}
+                    >
+                        <span style={{ fontSize: 15, fontWeight: 500, color: "#818CF8" }}>
+                            Поделиться
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+            {/* ── Promo code ── */}
+            <div style={{ marginTop: 20, marginBottom: 8 }}>
+                {sectionLabel("Промокод")}
+                <div style={groupStyle}>
+                    <div style={{ padding: "4px 16px 4px" }}>
+                        <input
+                            type="text"
+                            value={promoCode}
+                            onChange={e => setPromoCode(e.target.value.toUpperCase())}
+                            onKeyDown={e => e.key === "Enter" && handleRedeemPromo()}
+                            placeholder="Введи промокод"
+                            maxLength={32}
+                            style={{
+                                width: "100%", background: "transparent", border: "none",
+                                outline: "none", fontSize: 15,
+                                color: "var(--text-primary)",
+                                padding: "9px 0",
+                                letterSpacing: promoCode ? "0.06em" : 0,
+                            }}
+                        />
+                    </div>
+                    {divider()}
                     <button
                         onClick={handleRedeemPromo}
                         disabled={promoLoading || !promoCode.trim()}
-                        className="bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-4 rounded-xl font-bold text-sm transition-colors flex items-center gap-1.5"
+                        style={{ ...rowStyle, justifyContent: "center", opacity: (!promoCode.trim() || promoLoading) ? 0.4 : 1 }}
                     >
                         {promoLoading ? (
-                            <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                        ) : "Активировать"}
+                            <div style={{ width: 16, height: 16, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "white", animation: "spin 0.6s linear infinite" }} />
+                        ) : (
+                            <span style={{ fontSize: 15, fontWeight: 500, color: "#818CF8" }}>Активировать</span>
+                        )}
                     </button>
                 </div>
                 {promoResult && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className={`text-xs font-medium px-3 py-2 rounded-xl border ${
-                            promoResult.success
-                                ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                                : "bg-red-500/10 border-red-500/20 text-red-400"
-                        }`}
+                    <motion.p
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                        style={{
+                            fontSize: 12, margin: "6px 32px 0",
+                            color: promoResult.success ? "#34D399" : "#F87171",
+                        }}
                     >
                         {promoResult.success ? "✓ " : "✗ "}{promoResult.message}
-                    </motion.div>
+                    </motion.p>
                 )}
             </div>
 
-            <div className="glass p-4">
-                <h4 className="text-xs font-bold text-white/40 uppercase tracking-widest mb-3">Ваши рефералы</h4>
-
-                {isLoading ? (
-                    <div className="flex justify-center py-6">
-                        <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
-                    </div>
-                ) : referrals && referrals.length > 0 ? (
-                    <div className="space-y-3">
-                        {referrals.map((ref: any) => (
-                            <div key={ref.id} className="flex items-center gap-3 p-3 bg-white/5 rounded-2xl border border-white/5">
-                                <div className="w-10 h-10 rounded-full bg-white/10 overflow-hidden flex-shrink-0 border border-white/10">
-                                    {ref.photo_url ? (
-                                        <img src={ref.photo_url} alt="" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-lg">👤</div>
-                                    )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex justify-between items-start">
-                                        <p className="text-sm font-bold text-white truncate">{ref.first_name}</p>
-                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${ref.onboarding_done ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/10 text-white/40'}`}>
-                                            {ref.onboarding_done ? 'Активен' : 'В пути'}
-                                        </span>
+            {/* ── Referrals list ── */}
+            {(isLoading || (referrals && referrals.length > 0)) && (
+                <div style={{ marginTop: 20 }}>
+                    {sectionLabel("Приглашённые")}
+                    <div style={groupStyle}>
+                        {isLoading ? (
+                            <div style={{ display: "flex", justifyContent: "center", padding: "24px 0" }}>
+                                <div style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid rgba(139,92,246,0.4)", borderTopColor: "#7C3AED", animation: "spin 0.6s linear infinite" }} />
+                            </div>
+                        ) : referrals.map((ref: any, i: number) => (
+                            <div key={ref.id}>
+                                <div style={{ display: "flex", alignItems: "center", padding: "10px 16px", gap: 12 }}>
+                                    <div style={{
+                                        width: 38, height: 38, borderRadius: 19,
+                                        overflow: "hidden", flexShrink: 0,
+                                        background: "rgba(255,255,255,0.08)",
+                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                    }}>
+                                        {ref.photo_url
+                                            ? <img src={ref.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                            : <span style={{ fontSize: 18 }}>👤</span>
+                                        }
                                     </div>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <span className="text-[11px] text-amber-400 font-bold">Lvl {ref.evolution_level}</span>
-                                        <span className="text-[10px] text-white/30">{ref.xp.toLocaleString()} XP</span>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <p style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", margin: 0, lineHeight: 1.2 }}>
+                                            {ref.first_name}
+                                        </p>
+                                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: "2px 0 0", lineHeight: 1 }}>
+                                            Ур. {ref.evolution_level} · {ref.xp.toLocaleString()} XP
+                                        </p>
                                     </div>
+                                    <span style={{
+                                        fontSize: 11, fontWeight: 600, letterSpacing: "0.02em",
+                                        padding: "3px 8px", borderRadius: 20,
+                                        background: ref.onboarding_done ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.07)",
+                                        color: ref.onboarding_done ? "#34D399" : "rgba(255,255,255,0.3)",
+                                    }}>
+                                        {ref.onboarding_done ? "Активен" : "В пути"}
+                                    </span>
                                 </div>
+                                {i < referrals.length - 1 && divider(16 + 38 + 12)}
                             </div>
                         ))}
                     </div>
-                ) : (
-                    <div className="text-center py-6">
-                        <p className="text-sm text-white/30 italic">Список пока пуст...</p>
-                    </div>
-                )}
-            </div>
+                </div>
+            )}
         </motion.div>
     );
 }
