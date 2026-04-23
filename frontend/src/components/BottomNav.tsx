@@ -35,9 +35,9 @@ export default function BottomNav() {
       border: "1px solid rgba(255,255,255,0.07)",
       borderRadius: 50,
       display: "flex",
-      justifyContent: "space-around",
+      justifyContent: "space-evenly",
       alignItems: "center",
-      padding: "4px 2px",
+      padding: "4px 6px",
       zIndex: 100,
       boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
     }}>
@@ -52,7 +52,7 @@ export default function BottomNav() {
             style={{
               display: "flex", flexDirection: "column",
               alignItems: "center", gap: 3,
-              padding: "6px 18px", borderRadius: 50,
+              padding: "6px 12px", borderRadius: 50,
               border: "none", cursor: "pointer",
               background: isActive ? "rgba(255,255,255,0.07)" : "transparent",
               transition: "all 0.2s",
