@@ -669,9 +669,8 @@ async def get_referral_link(user_id: str):
         if not referral_code:
             raise HTTPException(status_code=400, detail="User has no referral code")
 
-        # Build the referral link with the bot's Mini App URL
-        mini_app_url = settings.MINI_APP_URL
-        referral_link = f"{mini_app_url}?ref={referral_code}"
+        # Build the referral link as Telegram Mini App link (only accessible via Telegram)
+        referral_link = f"https://t.me/avatarmatrix_bot/app?ref={referral_code}"
 
         return {
             "referral_code": referral_code,

@@ -625,8 +625,8 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
         { revalidateOnFocus: false }
     );
 
-    // Fallback: construct link from referralCode if API fails (use Vercel URL)
-    const generatedLink = refLink || (referralCode ? `https://avatar-new-jade.vercel.app?ref=${referralCode}` : null);
+    // Fallback: construct Telegram Mini App link from referralCode if API fails
+    const generatedLink = refLink || (referralCode ? `https://t.me/avatarmatrix_bot/app?ref=${referralCode}` : null);
 
     const { data: referrals, isLoading } = useSWR(
         userId ? ["referrals", userId] : null,
@@ -744,12 +744,12 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
             <div style={groupStyle}>
                 <div style={{ display: "flex", alignItems: "center", padding: "13px 16px" }}>
                     <span style={{ fontSize: 15, color: "var(--text-primary)", flex: 1 }}>Ваш бонус</span>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: "#F59E0B" }}>+100 ⚡</span>
+                    <span style={{ fontSize: 15, fontWeight: 600, color: "#F59E0B" }}>+50 ⚡</span>
                 </div>
                 {divider()}
                 <div style={{ display: "flex", alignItems: "center", padding: "13px 16px" }}>
                     <span style={{ fontSize: 15, color: "var(--text-primary)", flex: 1 }}>Бонус друга</span>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: "#34D399" }}>+200 ⚡</span>
+                    <span style={{ fontSize: 15, fontWeight: 600, color: "#34D399" }}>+50 ⚡</span>
                 </div>
                 {divider()}
                 <div style={{ padding: "10px 16px 12px" }}>
