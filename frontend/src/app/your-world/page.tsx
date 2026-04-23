@@ -1167,7 +1167,7 @@ export default function YourWorldPage() {
           style={{
             background: "rgba(255,255,255,0.04)",
             border: "1px solid var(--border)",
-            borderRadius: 14,
+            borderRadius: 50,
           }}
         >
           {TABS.map(tab => (
@@ -1176,7 +1176,7 @@ export default function YourWorldPage() {
               onClick={() => { setActiveTab(tab.id); localStorage.setItem("your-world-tab", tab.id); }}
               style={{
                 padding: "8px 4px",
-                borderRadius: 10,
+                borderRadius: 50,
                 fontSize: 11,
                 fontWeight: 500,
                 transition: "all 0.2s",
