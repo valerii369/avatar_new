@@ -191,12 +191,18 @@ async def login(request: LoginRequest):
 
         if existing.data:
             user = existing.data[0]
-            supabase.table("users").update({
+            update_fields = {
                 "first_name": resolved_first_name,
                 "last_name":  resolved_last_name,
                 "username":   resolved_username,
                 "photo_url":  resolved_photo_url,
-            }).eq("tg_id", resolved_tg_id).execute()
+            }
+            # Generate referral_code for existing users who don't have one
+            if not user.get("referral_code"):
+                update_fields["referral_code"] = _generate_referral_code(supabase)
+            supabase.table("users").update(update_fields).eq("tg_id", resolved_tg_id).execute()
+            # Refresh user data to get generated referral_code
+            user = supabase.table("users").select("*").eq("tg_id", resolved_tg_id).execute().data[0]
         else:
             new_user = {
                 "tg_id":      resolved_tg_id,
