@@ -479,10 +479,39 @@ async def initialize_onboarding_layer(req: ProfileRequest):
         except Exception as reindex_err:
             logger.warning(f"Post-onboarding reindex failed for {req.user_id}: {reindex_err}")
 
-        # Mark onboarding done
+        # Mark onboarding done + award referral bonuses
         t_done = time.perf_counter()
-        supabase.table("users").update({"onboarding_done": True})\
-            .eq("id", req.user_id).execute()
+        user_update = supabase.table("users").select("referred_by, energy").eq("id", req.user_id).execute()
+
+        if user_update.data:
+            user_data = user_update.data[0]
+            referrer_id = user_data.get("referred_by")
+            current_energy = user_data.get("energy", 0)
+
+            # Award 50 energy to the invitee for completing onboarding
+            new_energy = current_energy + 50
+            supabase.table("users").update({"onboarding_done": True, "energy": new_energy})\
+                .eq("id", req.user_id).execute()
+
+            # Award 50 energy to the referrer if they exist
+            if referrer_id:
+                try:
+                    referrer = supabase.table("users").select("energy").eq("id", referrer_id).execute()
+                    if referrer.data:
+                        referrer_energy = referrer.data[0].get("energy", 0)
+                        new_referrer_energy = referrer_energy + 50
+                        supabase.table("users").update({"energy": new_referrer_energy})\
+                            .eq("id", referrer_id).execute()
+                        logger.info(f"Awarded 50 energy to referrer {referrer_id} for user {req.user_id}")
+                except Exception as ref_err:
+                    logger.warning(f"Failed to award referral bonus to referrer {referrer_id}: {ref_err}")
+
+            logger.info(f"Awarded 50 energy to user {req.user_id} for completing onboarding. New energy: {new_energy}")
+        else:
+            # Fallback if user not found (shouldn't happen)
+            supabase.table("users").update({"onboarding_done": True})\
+                .eq("id", req.user_id).execute()
+
         logger.info(f"[TIMING] onboarding.mark_done={time.perf_counter() - t_done:.2f}s user={req.user_id}")
 
         logger.info(f"DSB Pipeline completed for user: {req.user_id}")
