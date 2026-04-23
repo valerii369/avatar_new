@@ -320,7 +320,7 @@ function PortraitTab({ hub, insights, onSphereClick, userId, onGenerateSphere, g
                 {isActive ? (
                   <>
                     <p style={{
-                      fontSize: 13, fontWeight: 700, color: s.color,
+                      fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.65)",
                       margin: 0, lineHeight: 1.3,
                       display: "-webkit-box", WebkitLineClamp: 1,
                       WebkitBoxOrient: "vertical", overflow: "hidden",
