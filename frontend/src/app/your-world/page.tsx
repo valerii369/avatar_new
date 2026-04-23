@@ -317,18 +317,14 @@ function PortraitTab({ hub, insights, onSphereClick, userId, onGenerateSphere, g
                     pointerEvents: "none",
                   }} />
                 )}
-                {/* Sphere name capsule */}
-                <div style={{
-                  display: "inline-flex", alignItems: "center",
-                  padding: "4px 10px", borderRadius: 16,
-                  background: isActive ? `${s.color}12` : "rgba(255,255,255,0.05)",
-                  border: `1px solid ${isActive ? `${s.color}30` : "rgba(255,255,255,0.12)"}`,
-                  width: "fit-content",
+                {/* Sphere name */}
+                <span style={{
+                  fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: isActive ? s.color : "rgba(255,255,255,0.3)",
                 }}>
-                  <span style={{ fontSize: 9, fontWeight: 600, color: isActive ? s.color : "rgba(255,255,255,0.3)" }}>
-                    {s.id} · {s.name}
-                  </span>
-                </div>
+                  {s.id} · {s.name}
+                </span>
 
                 {isActive ? (
                   <>
