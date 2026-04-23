@@ -16,6 +16,17 @@
 - **Если токен истёк:** GitHub → Settings → Developer settings → Personal access tokens → создать новый → `echo "https://valerii369:<TOKEN>@github.com" >> ~/.git-credentials`
 - **GitHub Secrets** (для CI/CD): `TIMEWEB_HOST`, `TIMEWEB_SSH_KEY`, `TELEGRAM_BOT_TOKEN`, `MINI_APP_URL`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
 
+### Git Configuration
+⚠️ **ВАЖНО:** Локальный proxy на `127.0.0.1:*` может возвращать 403 при push/pull. **Решение:**
+```bash
+# ✅ ПРАВИЛЬНО: использовать прямое подключение к GitHub с PAT токеном
+git remote set-url origin https://valerii369:<PAT_TOKEN>@github.com/valerii369/avatar_new.git
+
+# ❌ НЕПРАВИЛЬНО: не использовать локальный proxy
+# git remote set-url origin http://local_proxy@127.0.0.1:PORT/git/valerii369/avatar_new
+```
+Если `git push` падает с 403, проверь URL: `git remote -v` должен быть `https://github.com/...`, не `http://127.0.0.1:...`
+
 ### Supabase
 - **Project ID:** `gltglzxcjitbdwhqgyre`
 - **URL:** `https://gltglzxcjitbdwhqgyre.supabase.co`

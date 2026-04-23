@@ -138,6 +138,7 @@ async def create_invoice(request: Request):
                 "title": offer["name"],
                 "description": offer["description"],
                 "payload": payload,
+                "provider_token": "",
                 "currency": "XTR",
                 "prices": [{"label": offer["name"], "amount": offer["stars"]}],
             },

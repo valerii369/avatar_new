@@ -124,9 +124,10 @@ async def successful_payment_handler(update: Update, context: ContextTypes.DEFAU
         logger.error(f"Unknown offer in payment payload: {payload}")
         return
 
+    msg = "✅ Оплата получена! Начисление произойдёт в ближайшее время."
+
     try:
         supabase = get_supabase()
-
         if offer_id == "pack_premium":
             expires_at = (datetime.utcnow() + timedelta(days=30)).isoformat()
             supabase.table("users").update({
@@ -141,18 +142,19 @@ async def successful_payment_handler(update: Update, context: ContextTypes.DEFAU
             new_energy = min(current + energy_gain, 9999)
             supabase.table("users").update({"energy": new_energy}).eq("id", user_id).execute()
             msg = f"⚡ {OFFER_NAMES[offer_id]} зачислен! Энергия: {new_energy}"
+    except Exception as e:
+        logger.error(f"User update error for user {user_id}, offer {offer_id}: {e}")
 
-        # Log the transaction
+    try:
+        supabase = get_supabase()
         supabase.table("payments").insert({
             "user_id": user_id,
             "offer_id": offer_id,
             "stars": payment.total_amount,
             "telegram_charge_id": payment.telegram_payment_charge_id,
         }).execute()
-
     except Exception as e:
-        logger.error(f"Payment processing error for user {user_id}, offer {offer_id}: {e}")
-        msg = "✅ Оплата получена! Начисление произойдёт в ближайшее время."
+        logger.error(f"Payment log error for user {user_id}: {e}")
 
     await update.message.reply_text(msg)
 

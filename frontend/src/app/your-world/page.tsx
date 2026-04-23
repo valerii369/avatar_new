@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { X } from "lucide-react";
 import useSWR, { mutate } from "swr";
 import { useUserStore, useInsightsStore, type Insight } from "@/lib/store";
 import { masterHubAPI, calcAPI, profileAPI } from "@/lib/api";
@@ -12,9 +13,10 @@ import InsightDetailModal from "@/components/InsightDetailModal";
 import { SkeletonCard } from "@/components/Skeleton";
 import BottomNav from "@/components/BottomNav";
 import { useTmaSafeArea } from "@/lib/useTmaSafeArea";
+import { EnergyIcon } from "@/components/EnergyIcon";
 import RecommendationsTab from "@/components/RecommendationsTab";
 
-type Tab = "portrait" | "recommendations" | "breakdown" | "sides";
+type Tab = "portrait" | "recommendations" | "breakdown";
 
 // ─── Energy Toast ─────────────────────────────────────────────────────────────
 function Toast({ type, title, message, onClose }: {
@@ -123,7 +125,14 @@ function PortraitLockScreen({ activeSphereCount }: { activeSphereCount: number }
 }
 
 // ─── Portrait Tab ────────────────────────────────────────────────────────────
-function PortraitTab({ hub }: { hub: any }) {
+function PortraitTab({ hub, insights, onSphereClick, userId, onGenerateSphere, generating }: {
+  hub: any;
+  insights: Insight[];
+  onSphereClick: (data: { sphereId: number; name: string; color: string; summary: string; archetype: string }) => void;
+  userId: string | null;
+  onGenerateSphere: (sphereId: number) => Promise<void>;
+  generating: number | null;
+}) {
   const activeSphereCount: number = hub?.active_spheres_count ?? 0;
   const masterPortrait = hub?.master_portrait;
   const portraitSummary = hub?.portrait_summary;
@@ -225,21 +234,39 @@ function PortraitTab({ hub }: { hub: any }) {
       {/* ── 12 ГРАНЕЙ АВАТАРА ── */}
       <div style={{ borderRadius: 16, background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", overflow: "hidden" }}>
         {/* Header + progress */}
-        <div style={{ padding: "14px 16px 10px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <div style={{ padding: "14px 16px 6px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.12em" }}>
               12 Граней Аватара
             </span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--violet)" }}>{activeSphereCount}/12</span>
+            <span style={{
+              fontSize: 13, fontWeight: 800,
+              background: "linear-gradient(135deg, #a78bfa, #ec4899)",
+              WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+            }}>{activeSphereCount}/12</span>
           </div>
-          <div style={{ height: 3, background: "rgba(255,255,255,0.05)", borderRadius: 2, overflow: "hidden" }}>
+          <div style={{ height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 3, overflow: "hidden" }}>
             <motion.div
               initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              style={{ height: "100%", background: "linear-gradient(90deg, var(--violet), #a78bfa)", borderRadius: 2 }}
+              transition={{ duration: 1, ease: "easeOut" }}
+              style={{
+                height: "100%",
+                background: "linear-gradient(90deg, #8B5CF6, #a78bfa, #ec4899)",
+                borderRadius: 3,
+                boxShadow: "0 0 10px rgba(139,92,246,0.5)",
+              }}
             />
           </div>
         </div>
+
+        {/* Lock hint under progress bar */}
+        {activeSphereCount < 12 && activeSphereCount > 0 && (
+          <div style={{ padding: "3px 16px 14px", textAlign: "center" }}>
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", margin: 0, lineHeight: 1.4 }}>
+              Открой все 12 сфер, чтобы разблокировать мастер-портрет
+            </p>
+          </div>
+        )}
 
         {/* 2-column facet cards */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, background: "rgba(255,255,255,0.04)" }}>
@@ -251,125 +278,92 @@ function PortraitTab({ hub }: { hub: any }) {
             return (
               <motion.div
                 key={s.id}
-                whileTap={isActive ? { scale: 0.97 } : {}}
-                onClick={() => isActive && setModal({ type: "sphere", sphereId: s.id, name: s.name, color: s.color, summary, archetype })}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => {
+                  if (isActive) {
+                    onSphereClick({ sphereId: s.id, name: s.name, color: s.color, summary: summary || "", archetype: archetype || "" });
+                  } else if (userId) {
+                    onGenerateSphere(s.id);
+                  }
+                }}
                 style={{
                   padding: "12px 14px",
-                  background: isActive ? `${s.color}06` : "rgba(10,10,15,0.95)",
-                  cursor: isActive ? "pointer" : "default",
-                  display: "flex", flexDirection: "column", gap: 4,
-                  transition: "background 0.2s",
+                  background: isActive
+                    ? `radial-gradient(circle at top right, ${s.color}15, ${s.color}04 60%, transparent)`
+                    : "rgba(8,10,18,0.95)",
+                  cursor: "pointer",
+                  display: "flex", flexDirection: "column", gap: 6,
+                  transition: "all 0.25s",
                   gridColumn: isLast && SPHERES.length % 2 !== 0 ? "1 / -1" : undefined,
+                  position: "relative",
+                  overflow: "hidden",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                {/* Subtle glow accent for active cards */}
+                {isActive && (
                   <div style={{
-                    width: 24, height: 24, borderRadius: 7, flexShrink: 0,
-                    background: isActive ? `${s.color}15` : "rgba(255,255,255,0.04)",
-                    border: `1px solid ${isActive ? `${s.color}25` : "rgba(255,255,255,0.06)"}`,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>
-                    {isActive
-                      ? <s.icon size={11} style={{ color: s.color }} />
-                      : <span style={{ fontSize: 9, color: "rgba(255,255,255,0.15)" }}>🔒</span>
-                    }
-                  </div>
-                  <div style={{ minWidth: 0 }}>
-                    <p style={{ fontSize: 9, fontWeight: 600, color: isActive ? `${s.color}90` : "rgba(255,255,255,0.2)", margin: 0, textTransform: "uppercase", letterSpacing: "0.07em" }}>
-                      {s.id} · {s.name}
-                    </p>
-                  </div>
-                </div>
+                    position: "absolute", top: -20, right: -20,
+                    width: 60, height: 60, borderRadius: "50%",
+                    background: `radial-gradient(circle, ${s.color}25, transparent 70%)`,
+                    pointerEvents: "none",
+                  }} />
+                )}
+                {/* Sphere name */}
+                <span style={{
+                  fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: isActive ? s.color : "rgba(255,255,255,0.3)",
+                }}>
+                  {s.id} · {s.name}
+                </span>
 
                 {isActive ? (
                   <>
-                    <p style={{ fontSize: 12, fontWeight: 700, color: s.color, margin: 0, lineHeight: 1.2 }}>
+                    <p style={{
+                      fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.65)",
+                      margin: 0, lineHeight: 1.3,
+                      display: "-webkit-box", WebkitLineClamp: 1,
+                      WebkitBoxOrient: "vertical", overflow: "hidden",
+                    }}>
                       {archetype || "..."}
                     </p>
-                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", margin: 0, lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                    <p style={{
+                      fontSize: 11, color: "rgba(255,255,255,0.4)",
+                      margin: 0, lineHeight: 1.4,
+                      display: "-webkit-box", WebkitLineClamp: 1,
+                      WebkitBoxOrient: "vertical", overflow: "hidden",
+                    }}>
                       {summary}
                     </p>
                   </>
+                ) : generating === s.id ? (
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
+                    style={{ width: 12, height: 12, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.15)", borderTopColor: "var(--text-muted)" }}
+                  />
                 ) : (
-                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.12)", margin: 0, fontStyle: "italic" }}>
-                    Сфера не открыта
-                  </p>
+                  <>
+                    <p style={{
+                      fontSize: 13, fontWeight: 400,
+                      color: "rgba(255,255,255,0.25)",
+                      margin: 0, lineHeight: 1.3,
+                    }}>
+                      Сфера не открыта
+                    </p>
+                    <p style={{
+                      fontSize: 11, color: "rgba(255,255,255,0.4)",
+                      margin: 0, lineHeight: 1.4,
+                    }}>
+                      Открыть · 10 ⚡
+                    </p>
+                  </>
                 )}
               </motion.div>
             );
           })}
         </div>
       </div>
-
-      {/* ── ПОЛЯРНОСТИ (strengths + shadows) ── */}
-      {polarities && (polarities.core_strengths?.length > 0 || polarities.shadow_aspects?.length > 0) && (
-        <div style={{ borderRadius: 16, overflow: "hidden", border: "1px solid rgba(255,255,255,0.06)" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
-            {/* Дары */}
-            <div style={{ padding: "14px 16px", background: "rgba(16,185,129,0.04)" }}>
-              <p style={{ fontSize: 9, fontWeight: 700, color: "rgba(16,185,129,0.6)", textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px" }}>
-                ★ Дары
-              </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                {(polarities.core_strengths || []).map((s: string, i: number) => (
-                  <p key={i} style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", margin: 0, lineHeight: 1.4 }}>
-                    {s}
-                  </p>
-                ))}
-              </div>
-            </div>
-            {/* Тени */}
-            <div style={{ padding: "14px 16px", background: "rgba(239,68,68,0.04)", borderLeft: "1px solid rgba(255,255,255,0.04)" }}>
-              <p style={{ fontSize: 9, fontWeight: 700, color: "rgba(239,68,68,0.6)", textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px" }}>
-                ⚠ Тени
-              </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                {(polarities.shadow_aspects || []).map((s: string, i: number) => (
-                  <p key={i} style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", margin: 0, lineHeight: 1.4 }}>
-                    {s}
-                  </p>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── АСТРО-ПРОФИЛЬ ── */}
-      {astroStrip.length > 0 && (
-        <div style={{ padding: "12px 16px", borderRadius: 14, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
-          <p style={{ fontSize: 9, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.12em", margin: "0 0 10px" }}>
-            Астро-профиль
-          </p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {astroStrip.map((p: any) => (
-              <div key={p.key} style={{
-                display: "flex", alignItems: "center", gap: 5,
-                padding: "5px 10px", borderRadius: 20,
-                background: "rgba(139,92,246,0.07)",
-                border: "1px solid rgba(139,92,246,0.14)",
-              }}>
-                <span style={{ fontSize: 12 }}>{PLANET_EMOJI[p.key] || "✦"}</span>
-                <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.75)" }}>
-                  {p.label}
-                </span>
-                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>
-                  {p.position_str.split(",")[0]}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── LOCK HINT (если не все сферы открыты) ── */}
-      {activeSphereCount < 12 && activeSphereCount > 0 && (
-        <div style={{ padding: "12px 16px", borderRadius: 14, background: "rgba(139,92,246,0.04)", border: "1px dashed rgba(139,92,246,0.18)", textAlign: "center" }}>
-          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", margin: 0 }}>
-            Открой все 12 сфер, чтобы разблокировать мастер-портрет Аватара
-          </p>
-        </div>
-      )}
 
       {/* ── MODAL (attr card or sphere facet) ── */}
       <AnimatePresence>
@@ -385,43 +379,19 @@ function PortraitTab({ hub }: { hub: any }) {
               onClick={e => e.stopPropagation()}
               style={{ width: "100%", maxWidth: 340, borderRadius: 20, background: "var(--bg-card)", padding: 24, border: `1px solid ${(modal.color || "#8B5CF6")}20` }}
             >
-              {modal.type === "attr" ? (
-                <>
-                  <span style={{ fontSize: 9, fontWeight: 700, color: `${modal.color}70`, textTransform: "uppercase", letterSpacing: "0.12em", display: "block", marginBottom: 8 }}>
-                    {modal.label}
-                  </span>
-                  <p style={{ fontSize: 17, fontWeight: 700, color: modal.color, lineHeight: 1.3, margin: "0 0 12px" }}>
-                    {modal.value}
+              <>
+                <span style={{ fontSize: 9, fontWeight: 700, color: `${modal.color}70`, textTransform: "uppercase", letterSpacing: "0.12em", display: "block", marginBottom: 8 }}>
+                  {modal.label}
+                </span>
+                <p style={{ fontSize: 17, fontWeight: 700, color: modal.color, lineHeight: 1.3, margin: "0 0 12px" }}>
+                  {modal.value}
+                </p>
+                {modal.description && (
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.6, margin: "0 0 16px" }}>
+                    {modal.description}
                   </p>
-                  {modal.description && (
-                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.6, margin: "0 0 16px" }}>
-                      {modal.description}
-                    </p>
-                  )}
-                </>
-              ) : (
-                <>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                    {(() => { const s = SPHERE_BY_ID[modal.sphereId!]; return s ? (
-                      <div style={{ width: 36, height: 36, borderRadius: 10, background: `${modal.color}12`, border: `1px solid ${modal.color}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <s.icon size={16} style={{ color: modal.color }} />
-                      </div>
-                    ) : null; })()}
-                    <div>
-                      <p style={{ fontSize: 9, fontWeight: 700, color: `${modal.color}70`, margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>Сфера {modal.sphereId}</p>
-                      <p style={{ fontSize: 14, fontWeight: 700, color: modal.color, margin: 0 }}>{modal.name}</p>
-                    </div>
-                  </div>
-                  {modal.archetype && (
-                    <div style={{ padding: "6px 12px", borderRadius: 8, background: `${modal.color}10`, border: `1px solid ${modal.color}20`, display: "inline-block", marginBottom: 12 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: modal.color }}>{modal.archetype}</span>
-                    </div>
-                  )}
-                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", lineHeight: 1.6, margin: "0 0 16px" }}>
-                    {modal.summary}
-                  </p>
-                </>
-              )}
+                )}
+              </>
               <button
                 onClick={() => setModal(null)}
                 style={{ width: "100%", padding: "10px 0", borderRadius: 12, background: `${(modal.color || "#8B5CF6")}12`, border: "none", color: modal.color || "#8B5CF6", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
@@ -455,6 +425,7 @@ function BreakdownTab({
   dataReady: boolean;
 }) {
   const [toast, setToast] = useState<{ type: "energy" | "error"; title: string; message: string } | null>(null);
+  const { setUser } = useUserStore();
 
   const insightsBySphere = useMemo(() => {
     const map: Record<number, Insight[]> = {};
@@ -478,8 +449,10 @@ function BreakdownTab({
     if (!userId || generating) return;
     setGenerating(sphereId);
     try {
-      await calcAPI.generateSphere(userId, sphereId);
-      // Force SWR to refetch fresh data
+      const res = await calcAPI.generateSphere(userId, sphereId);
+      if (typeof res.data?.energy_remaining === "number") {
+        setUser({ energy: res.data.energy_remaining });
+      }
       await onRefresh();
     } catch (err: any) {
       const status = err.response?.status;
@@ -507,7 +480,7 @@ function BreakdownTab({
         )}
       </AnimatePresence>
       <div style={{ marginBottom: 16 }}>
-        <SphereFilter activeSphere={activeSphere} onSelect={setActiveSphere} />
+        <SphereFilter activeSphere={activeSphere} onSelect={setActiveSphere} showAll={false} />
       </div>
       {!dataReady ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -588,7 +561,7 @@ function BreakdownTab({
                         opacity: generating ? 0.5 : 1,
                       }}
                     >
-                      Собрать разбор · 10 ⚡
+                      Получить разбор · 10 ⚡
                     </button>
                   )
                 ) : (
@@ -608,6 +581,147 @@ function BreakdownTab({
         </div>
       )}
     </>
+  );
+}
+
+// ─── Sphere Detail View (full-screen, replaces popup) ────────────────────────
+function SphereDetailView({ sphereId, name, color, summary, archetype, insights, onClose }: {
+  sphereId: number; name: string; color: string; summary: string; archetype: string;
+  insights: Insight[]; onClose: () => void;
+}) {
+  const sphere = SPHERE_BY_ID[sphereId];
+  const sphereInsights = insights.filter(i => i.primary_sphere === sphereId);
+  const lights = sphereInsights.map(i => i.light_aspect).filter(Boolean);
+  const shadows = sphereInsights.map(i => i.shadow_aspect).filter(Boolean);
+
+  const tmaSafeTop = useTmaSafeArea();
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 100 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 100 }}
+      transition={{ type: "spring", damping: 25, stiffness: 200 }}
+      style={{
+        position: "fixed", inset: 0, zIndex: 200,
+        background: "var(--bg-deep)",
+        display: "flex", flexDirection: "column",
+        paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined,
+      }}
+    >
+      {/* Header — matches InsightDetailModal style exactly */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "16px 20px 12px",
+        borderBottom: "1px solid var(--border)",
+        flexShrink: 0,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{
+            padding: "3px 10px", borderRadius: 20,
+            fontSize: 11, fontWeight: 500,
+            color: color,
+            background: `${color}10`,
+            border: `1px solid ${color}`,
+          }}>
+            {name}
+          </span>
+          <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 500 }}>·</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            Сфера {sphereId}
+          </span>
+        </div>
+        <button
+          onClick={onClose}
+          style={{
+            width: 34, height: 34, borderRadius: 12,
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid var(--border)",
+            cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: "var(--text-muted)",
+          }}
+        >
+          <X size={16} />
+        </button>
+      </div>
+
+      {/* Body — scrollable */}
+      <div style={{
+        flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch",
+        padding: "20px 20px 40px",
+        display: "flex", flexDirection: "column", gap: 22,
+      }}>
+        {/* Archetype + Summary block */}
+        <div>
+          {archetype && (
+            <h2 style={{
+              fontSize: 22, fontWeight: 700, color: "white",
+              letterSpacing: "-0.3px", lineHeight: 1.25, margin: 0,
+            }}>
+              {archetype}
+            </h2>
+          )}
+          <p style={{ fontSize: 14, color: "rgba(255,255,255,0.75)", lineHeight: 1.65, margin: 0, marginTop: 10 }}>
+            {summary}
+          </p>
+        </div>
+
+        {/* Тень — red left border, first */}
+        {shadows.length > 0 && (
+          <div style={{ paddingLeft: 16, borderLeft: "2px solid rgba(239,68,68,0.45)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10, color: "#EF4444" }}>
+              <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Тень</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {shadows.map((text, i) => (
+                <p key={i} style={{ fontSize: 14, color: "rgba(255,255,255,0.65)", lineHeight: 1.6, margin: 0 }}>
+                  {text}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Свет — green left border, after */}
+        {lights.length > 0 && (
+          <div style={{ paddingLeft: 16, borderLeft: "2px solid rgba(16,185,129,0.45)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10, color: "#10B981" }}>
+              <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Свет</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {lights.map((text, i) => (
+                <p key={i} style={{ fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 1.6, margin: 0 }}>
+                  {text}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer button — matches InsightDetailModal */}
+      <div style={{
+        position: "fixed",
+        bottom: 0, left: 0, right: 0,
+        padding: "16px 20px 24px",
+        background: "linear-gradient(to top, var(--bg-deep) 60%, transparent)",
+      }}>
+        <button
+          onClick={onClose}
+          style={{
+            width: "100%", padding: 14,
+            background: "rgba(255,255,255,0.08)",
+            color: "var(--text-primary)",
+            fontWeight: 600, borderRadius: 30,
+            border: "1px solid var(--border)",
+            cursor: "pointer", fontSize: 14,
+          }}
+        >
+          Вернуться
+        </button>
+      </div>
+    </motion.div>
   );
 }
 
@@ -863,11 +977,52 @@ function PipelineLoading({ onRetry }: { onRetry?: () => void }) {
 // ─── Main Page ───────────────────────────────────────────────────────────────
 export default function YourWorldPage() {
   const tmaSafeTop = useTmaSafeArea();
-  const { userId, hubData, setHubData } = useUserStore();
+  const { userId, hubData, setHubData, energy, setUser } = useUserStore();
   const { activeSphere, setActiveSphere } = useInsightsStore();
-  const [activeTab, setActiveTab] = useState<Tab>("portrait");
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    if (typeof window === "undefined") return "portrait";
+    const saved = localStorage.getItem("your-world-tab");
+    return (saved === "portrait" || saved === "recommendations" || saved === "breakdown") ? saved : "portrait";
+  });
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
-  const [generatingSphere, setGeneratingSphere] = useState<number | null>(null);
+  const [selectedSphere, setSelectedSphere] = useState<{ sphereId: number; name: string; color: string; summary: string; archetype: string } | null>(null);
+  const [generatingSphere, setGeneratingSphere] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null;
+    const saved = localStorage.getItem("generating-sphere");
+    return saved ? parseInt(saved) : null;
+  });
+  const [sphereGenToast, setSphereGenToast] = useState<{ type: "energy" | "error"; title: string; message: string } | null>(null);
+
+  const handleGenerateSphere = async (sphereId: number) => {
+    if (!userId || generatingSphere) return;
+    setGeneratingSphere(sphereId);
+    try {
+      const res = await calcAPI.generateSphere(userId, sphereId);
+      if (typeof res.data?.energy_remaining === "number") {
+        setUser({ energy: res.data.energy_remaining });
+      }
+      await mutateHub();
+    } catch (err: any) {
+      console.error("Generate sphere error", err);
+      const status = err?.response?.status;
+      if (status === 402) {
+        setSphereGenToast({ type: "energy", title: "Не хватает энергии", message: "Нужно 10 ⚡ — пополни через промокод или реферальную программу" });
+      } else {
+        setSphereGenToast({ type: "error", title: "Ошибка генерации", message: "Попробуй ещё раз — сервер временно недоступен" });
+      }
+    } finally {
+      setGeneratingSphere(null);
+    }
+  };
+
+  // Sync generatingSphere to localStorage and clear when sphere appears in hub
+  useEffect(() => {
+    if (generatingSphere) {
+      localStorage.setItem("generating-sphere", String(generatingSphere));
+    } else {
+      localStorage.removeItem("generating-sphere");
+    }
+  }, [generatingSphere]);
 
   const { data: userProfile } = useSWR(
     userId ? ["profile", userId] : null,
@@ -875,7 +1030,7 @@ export default function YourWorldPage() {
     { revalidateOnFocus: false }
   );
 
-  const { data: hub, isValidating: loading } = useSWR(
+  const { data: hub, isValidating: loading, mutate: mutateHub } = useSWR(
     userId ? ["master-hub", userId] : null,
     async () => {
       const res = await masterHubAPI.get(userId!);
@@ -883,7 +1038,13 @@ export default function YourWorldPage() {
     },
     {
       revalidateOnFocus: false,
-      refreshInterval: (data: any) => (!data || data?.status === "pending") ? 4000 : 0,
+      refreshInterval: (data: any) => {
+        // Poll more frequently if a sphere is generating
+        if (generatingSphere) return 2000;
+        // Normal polling if pending
+        if (!data || data?.status === "pending") return 4000;
+        return 0;
+      },
       // Show cached data instantly on re-entry, revalidate in background
       fallbackData: hubData ?? undefined,
       onSuccess: (data) => {
@@ -891,6 +1052,15 @@ export default function YourWorldPage() {
       },
     }
   );
+
+  // Clear generating state when sphere is actually unlocked
+  useEffect(() => {
+    if (!generatingSphere || !hub) return;
+    const sphereSummaries = hub?.sphere_summaries || {};
+    if (sphereSummaries[String(generatingSphere)]) {
+      setGeneratingSphere(null);
+    }
+  }, [hub, generatingSphere]);
 
   // Derive insights directly from hub — avoids Zustand persistence issues and SWR key collisions
   const insights = useMemo<Insight[]>(() => {
@@ -922,13 +1092,48 @@ export default function YourWorldPage() {
 
   const TABS: { id: Tab; label: string }[] = [
     { id: "portrait",        label: "Портрет" },
-    { id: "recommendations", label: "Прогноз" },
     { id: "breakdown",       label: "Разбор" },
-    { id: "sides",           label: "Стороны" },
+    { id: "recommendations", label: "Прогноз" },
   ];
 
   return (
     <div className="flex flex-col" style={{ background: "var(--bg-deep)", height: "100dvh", overflow: "hidden", paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}>
+      {tmaSafeTop > 0 && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: "50%",
+          transform: "translateX(-50%)",
+          height: 30,
+          paddingLeft: 10,
+          paddingRight: 10,
+          borderRadius: 20,
+          background: "transparent",
+          border: "1.5px solid rgba(245,158,11,0.6)",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          zIndex: 50,
+          marginTop: (tmaSafeTop - 30) / 2 + 26,
+        }}>
+          <EnergyIcon size={16} color="#F59E0B" />
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#F59E0B" }}>
+            {energy}
+          </span>
+        </div>
+      )}
+
+      {/* Sphere gen error toast */}
+      <AnimatePresence>
+        {sphereGenToast && (
+          <Toast
+            type={sphereGenToast.type}
+            title={sphereGenToast.title}
+            message={sphereGenToast.message}
+            onClose={() => setSphereGenToast(null)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Header */}
       <div style={{ padding: "6px 20px 8px", display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
@@ -950,7 +1155,7 @@ export default function YourWorldPage() {
           </motion.span>
         ) : totalCount > 0 ? (
           <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>
-            {totalCount} · {sphereCount} сфер
+            {totalCount} фактов · {sphereCount} сфер
           </span>
         ) : null}
       </div>
@@ -958,21 +1163,21 @@ export default function YourWorldPage() {
       {/* Tab switcher */}
       <div className="px-4 mb-3">
         <div
-          className="grid grid-cols-4 gap-1 p-1"
+          className="grid grid-cols-3 gap-1 p-0.5"
           style={{
             background: "rgba(255,255,255,0.04)",
             border: "1px solid var(--border)",
-            borderRadius: 14,
+            borderRadius: 50,
           }}
         >
           {TABS.map(tab => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => { setActiveTab(tab.id); localStorage.setItem("your-world-tab", tab.id); }}
               style={{
                 padding: "8px 4px",
-                borderRadius: 10,
-                fontSize: 11,
+                borderRadius: 50,
+                fontSize: 13,
                 fontWeight: 500,
                 transition: "all 0.2s",
                 background: activeTab === tab.id ? "rgba(255,255,255,0.1)" : "transparent",
@@ -1004,7 +1209,7 @@ export default function YourWorldPage() {
               </p>
             </div>
           ) : (
-            <PipelineLoading onRetry={() => mutate(["master-hub", userId])} />
+            <PipelineLoading onRetry={() => mutateHub()} />
           )
         ) : (
           <AnimatePresence mode="wait">
@@ -1015,7 +1220,7 @@ export default function YourWorldPage() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
             >
-              {activeTab === "portrait" && <PortraitTab hub={hub} />}
+              {activeTab === "portrait" && <PortraitTab hub={hub} insights={insights} onSphereClick={setSelectedSphere} userId={userId} onGenerateSphere={handleGenerateSphere} generating={generatingSphere} />}
               {activeTab === "breakdown" && (
                 <BreakdownTab
                   insights={insights} loading={loading}
@@ -1028,7 +1233,6 @@ export default function YourWorldPage() {
                   dataReady={!!hub && hub.status !== "pending"}
                 />
               )}
-              {activeTab === "sides" && <SidesTab insights={insights} />}
               {activeTab === "recommendations" && userId && (
                 <RecommendationsTab
                   userId={userId}
@@ -1047,6 +1251,16 @@ export default function YourWorldPage() {
             onClose={() => setSelectedInsight(null)}
             natalPositions={hub?.natal_positions ?? []}
             natalAspects={hub?.natal_aspects ?? []}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectedSphere && (
+          <SphereDetailView
+            {...selectedSphere}
+            insights={insights}
+            onClose={() => setSelectedSphere(null)}
           />
         )}
       </AnimatePresence>

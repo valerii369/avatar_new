@@ -537,7 +537,7 @@ export default function RecommendationsTab({
           Персональный прогноз
         </h2>
         <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0, lineHeight: 1.5 }}>
-          Транзитные аспекты к твоей натальной карте — история по периодам.
+          Транзитные аспекты к твоей натальной карте.
         </p>
       </div>
 
