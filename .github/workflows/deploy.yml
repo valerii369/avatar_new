@@ -118,9 +118,8 @@ jobs:
           fi
 
       - name: Deploy to Vercel
+        working-directory: frontend
         run: |
-          # Deploy both main and develop as production
-          # (develop is our active branch, main is reserved for later)
           vercel --token ${{ secrets.VERCEL_TOKEN }} --prod --yes
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
