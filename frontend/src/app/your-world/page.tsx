@@ -13,6 +13,7 @@ import InsightDetailModal from "@/components/InsightDetailModal";
 import { SkeletonCard } from "@/components/Skeleton";
 import BottomNav from "@/components/BottomNav";
 import { useTmaSafeArea } from "@/lib/useTmaSafeArea";
+import { EnergyIcon } from "@/components/EnergyIcon";
 import RecommendationsTab from "@/components/RecommendationsTab";
 
 type Tab = "portrait" | "recommendations" | "breakdown";
@@ -972,7 +973,7 @@ function PipelineLoading({ onRetry }: { onRetry?: () => void }) {
 // ─── Main Page ───────────────────────────────────────────────────────────────
 export default function YourWorldPage() {
   const tmaSafeTop = useTmaSafeArea();
-  const { userId, hubData, setHubData } = useUserStore();
+  const { userId, hubData, setHubData, energy } = useUserStore();
   const { activeSphere, setActiveSphere } = useInsightsStore();
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     if (typeof window === "undefined") return "portrait";
@@ -1084,6 +1085,30 @@ export default function YourWorldPage() {
 
   return (
     <div className="flex flex-col" style={{ background: "var(--bg-deep)", height: "100dvh", overflow: "hidden", paddingTop: tmaSafeTop > 0 ? tmaSafeTop : undefined }}>
+      {tmaSafeTop > 0 && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: "50%",
+          transform: "translateX(-50%)",
+          height: 30,
+          paddingLeft: 10,
+          paddingRight: 10,
+          borderRadius: 20,
+          background: "transparent",
+          border: "1.5px solid rgba(245,158,11,0.6)",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          zIndex: 50,
+          marginTop: (tmaSafeTop - 30) / 2 + 30,
+        }}>
+          <EnergyIcon size={16} color="#F59E0B" />
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#F59E0B" }}>
+            {energy}
+          </span>
+        </div>
+      )}
 
       {/* Header */}
       <div style={{ padding: "6px 20px 8px", display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
