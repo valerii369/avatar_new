@@ -37,7 +37,7 @@ export default function BottomNav() {
       display: "flex",
       gap: 0,
       alignItems: "center",
-      padding: "4px 6px",
+      padding: "4px 5px",
       zIndex: 100,
       boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
     }}>
