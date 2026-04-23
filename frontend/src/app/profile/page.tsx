@@ -274,37 +274,28 @@ function LocationSection({
     };
 
     return (
-        <div className="px-4 mb-4">
-            <div className="glass p-4 space-y-3">
-                <h3 className="text-sm font-bold text-white/40 uppercase tracking-widest">
-                    Текущее местоположение
-                </h3>
-
+        <div style={{ marginTop: 4, marginBottom: 16 }}>
+            {iosSectionLabel("Местоположение")}
+            <div style={iosGroup}>
                 {!editing ? (
-                    <div className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/10">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-xl flex-shrink-0">
-                                📍
-                            </div>
-                            <div>
-                                <p className="text-sm font-semibold text-white">
-                                    {currentLocation || "Не указано"}
-                                </p>
-                                <p className="text-[10px] text-white/30">
-                                    Влияет на точность транзитов
-                                </p>
-                            </div>
+                    <button
+                        onClick={() => { setEditing(true); setGeoResult(null); setError(""); }}
+                        style={{ ...iosRow, justifyContent: "space-between" }}
+                    >
+                        {iosIconBox("rgba(34,197,94,0.85)", "📍")}
+                        <div style={{ flex: 1, textAlign: "left" }}>
+                            <p style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", margin: 0 }}>
+                                {currentLocation || "Не указано"}
+                            </p>
+                            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: "3px 0 0", lineHeight: 1 }}>
+                                Влияет на точность транзитов
+                            </p>
                         </div>
-                        <button
-                            onClick={() => { setEditing(true); setGeoResult(null); setError(""); }}
-                            className="px-3 py-1.5 bg-white/10 rounded-xl text-xs font-bold text-violet-300 border border-violet-500/20 flex-shrink-0"
-                        >
-                            {currentLocation ? "Изменить" : "Указать"}
-                        </button>
-                    </div>
+                        {iosChevron}
+                    </button>
                 ) : (
-                    <div className="space-y-3">
-                        <div className="flex gap-2">
+                    <div style={{ padding: "12px 16px", gap: 8, display: "flex", flexDirection: "column" }}>
+                        <div style={{ display: "flex", gap: 8 }}>
                             <input
                                 type="text"
                                 value={input}
@@ -312,68 +303,69 @@ function LocationSection({
                                 onKeyDown={e => e.key === "Enter" && handleSearch()}
                                 placeholder="Москва, Россия"
                                 autoFocus
-                                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20 outline-none focus:border-emerald-500/50 transition-all"
+                                style={{
+                                    flex: 1, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)",
+                                    borderRadius: 10, padding: "8px 12px", fontSize: 15, color: "var(--text-primary)",
+                                    outline: "none"
+                                }}
                             />
                             <button
                                 onClick={handleSearch}
                                 disabled={loading || !input.trim()}
-                                className="px-4 py-2.5 bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-sm font-bold text-emerald-400 disabled:opacity-40 flex-shrink-0"
+                                style={{
+                                    padding: "8px 16px", background: "rgba(34,197,94,0.2)", border: "1px solid rgba(34,197,94,0.3)",
+                                    borderRadius: 10, fontSize: 13, fontWeight: 600, color: "#22c55e", cursor: "pointer",
+                                    opacity: (!input.trim() || loading) ? 0.4 : 1
+                                }}
                             >
                                 {loading && !geoResult ? "..." : "Найти"}
                             </button>
                         </div>
-
-                        {error && <p className="text-xs text-rose-400 px-1">{error}</p>}
-
+                        {error && <p style={{ fontSize: 12, color: "#f87171", margin: 0 }}>{error}</p>}
                         {geoResult && (
-                            <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-2xl p-4 text-center">
-                                <div className="flex flex-col items-center mb-3">
-                                    <div className="w-9 h-9 rounded-full bg-emerald-500/20 flex items-center justify-center mb-2">
-                                        <span className="text-emerald-400">📍</span>
+                            <div style={{ padding: "12px", background: "rgba(34,197,94,0.08)", borderRadius: 10, textAlign: "center" }}>
+                                <p style={{ fontSize: 15, fontWeight: 600, color: "#22c55e", margin: "0 0 8px" }}>
+                                    ✓ {geoResult.place}
+                                </p>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 12 }}>
+                                    <div>
+                                        <p style={{ margin: 0, fontSize: 10 }}>ШИР.</p>
+                                        <p style={{ fontWeight: 600, color: "var(--text-primary)", margin: "2px 0 0" }}>
+                                            {geoResult.lat?.toFixed(4)}°
+                                        </p>
                                     </div>
-                                    <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">
-                                        Место определено
-                                    </p>
-                                    <p className="text-base font-bold text-white leading-tight">{geoResult.place}</p>
-                                </div>
-                                <div className="grid grid-cols-3 gap-2 py-3 border-t border-emerald-500/10 text-[10px] text-white/40 font-mono mb-3">
-                                    <div className="flex flex-col">
-                                        <span className="mb-0.5">ШИРОТА</span>
-                                        <span className="text-white/80 font-bold">
-                                            {geoResult.lat != null ? geoResult.lat.toFixed(4) : "—"}°
-                                        </span>
+                                    <div>
+                                        <p style={{ margin: 0, fontSize: 10 }}>ДОЛ.</p>
+                                        <p style={{ fontWeight: 600, color: "var(--text-primary)", margin: "2px 0 0" }}>
+                                            {geoResult.lon?.toFixed(4)}°
+                                        </p>
                                     </div>
-                                    <div className="flex flex-col">
-                                        <span className="mb-0.5">ДОЛГОТА</span>
-                                        <span className="text-white/80 font-bold">
-                                            {geoResult.lon != null ? geoResult.lon.toFixed(4) : "—"}°
-                                        </span>
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="mb-0.5">ЗОНА</span>
-                                        <span className="text-white/80 font-bold truncate">
-                                            {geoResult.tz_name?.split("/").pop() || "—"}
-                                        </span>
+                                    <div>
+                                        <p style={{ margin: 0, fontSize: 10 }}>ЗОНА</p>
+                                        <p style={{ fontWeight: 600, color: "var(--text-primary)", margin: "2px 0 0" }}>
+                                            {geoResult.tz_name?.split("/").pop()}
+                                        </p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={handleSave}
                                     disabled={loading}
-                                    className="w-full py-2.5 bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-sm font-bold text-emerald-400 disabled:opacity-40 transition-all"
+                                    style={{
+                                        width: "100%", padding: "8px", background: "rgba(34,197,94,0.2)", border: "1px solid rgba(34,197,94,0.3)",
+                                        borderRadius: 10, fontSize: 13, fontWeight: 600, color: "#22c55e", cursor: "pointer",
+                                        opacity: loading ? 0.4 : 1
+                                    }}
                                 >
-                                    {loading ? "Сохранение..." : "✓ Сохранить местоположение"}
+                                    {loading ? "Сохранение..." : "Сохранить"}
                                 </button>
                             </div>
                         )}
-
-                        {!geoResult && currentLocation && (
-                            <button
-                                onClick={() => { setEditing(false); setError(""); setInput(currentLocation); }}
-                                className="w-full text-[10px] font-bold text-white/20 uppercase tracking-widest"
-                            >
-                                Отмена
-                            </button>
-                        )}
+                        <button
+                            onClick={() => { setEditing(false); setError(""); setInput(currentLocation || ""); }}
+                            style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", border: "none", background: "transparent", padding: "4px 0", cursor: "pointer" }}
+                        >
+                            Отмена
+                        </button>
                     </div>
                 )}
             </div>
@@ -404,7 +396,6 @@ function MainProfileView({ userId, game, loadingGame, profile, setShowShop, setS
                 </div>
             </div>
 
-
             {/* Location section */}
             <LocationSection
                 userId={userId}
@@ -412,48 +403,41 @@ function MainProfileView({ userId, game, loadingGame, profile, setShowShop, setS
                 onSaved={onLocationSaved}
             />
 
-            {/* Payments section redesigned as settings-style block */}
-            <div className="px-4 mb-6">
-                <div className="glass p-4 space-y-2">
-                    <h3 className="text-sm font-bold text-white/40 uppercase tracking-widest mb-1">Магазин и пополнение</h3>
-
+            {/* Payments section iOS style */}
+            <div style={{ marginTop: 4 }}>
+                {iosSectionLabel("Магазин и пополнение")}
+                <div style={iosGroup}>
                     <button
                         onClick={() => {
                             play('click');
                             setShowShop(true);
                         }}
-                        className="w-full flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/10 active:scale-[0.98] transition-all text-left group"
+                        style={{ ...iosRow, justifyContent: "space-between" }}
                     >
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-xl">⚡</div>
-                            <div>
-                                <p className="text-sm font-semibold text-white">Пополнить Энергию</p>
-                                <p className="text-[10px] text-white/30">Магазин энергии</p>
-                            </div>
+                        {iosIconBox("rgba(245,158,11,0.85)", "⚡")}
+                        <div style={{ flex: 1, textAlign: "left" }}>
+                            <p style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", margin: 0 }}>Пополнить Энергию</p>
+                            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: "3px 0 0", lineHeight: 1 }}>Магазин энергии</p>
                         </div>
-                        <span className="text-white/20 group-hover:translate-x-1 transition-transform">→</span>
+                        {iosChevron}
                     </button>
-
+                    {iosDivider(16 + 30 + 12)}
                     <button
                         onClick={() => {
                             play('click');
                             setShowSubscription(true);
                         }}
-                        className="w-full flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/10 active:scale-[0.98] transition-all text-left group"
+                        style={{ ...iosRow, justifyContent: "space-between" }}
                     >
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center text-xl">💎</div>
-                            <div>
-                                <p className="text-sm font-semibold text-white">Купить Пакет (Подписка)</p>
-                                <p className="text-[10px] text-white/30">Доступ ко всем сферам</p>
-                            </div>
+                        {iosIconBox("rgba(139,92,246,0.85)", "💎")}
+                        <div style={{ flex: 1, textAlign: "left" }}>
+                            <p style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", margin: 0 }}>AVATAR Premium</p>
+                            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: "3px 0 0", lineHeight: 1 }}>Доступ ко всем сферам</p>
                         </div>
-                        <span className="text-white/20 group-hover:translate-x-1 transition-transform">→</span>
+                        {iosChevron}
                     </button>
                 </div>
             </div>
-
-
         </motion.div>
     );
 }
