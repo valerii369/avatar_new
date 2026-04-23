@@ -1177,7 +1177,7 @@ export default function YourWorldPage() {
               style={{
                 padding: "8px 4px",
                 borderRadius: 50,
-                fontSize: 11,
+                fontSize: 13,
                 fontWeight: 500,
                 transition: "all 0.2s",
                 background: activeTab === tab.id ? "rgba(255,255,255,0.1)" : "transparent",
