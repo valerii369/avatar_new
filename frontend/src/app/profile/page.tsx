@@ -307,9 +307,6 @@ function LocationSection({
                             <p style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", margin: 0 }}>
                                 {currentLocation || "Не указано"}
                             </p>
-                            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: "3px 0 0", lineHeight: 1 }}>
-                                Влияет на точность транзитов
-                            </p>
                         </div>
                         {iosChevron}
                     </button>
@@ -389,6 +386,9 @@ function LocationSection({
                     </div>
                 )}
             </div>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", padding: "4px 32px 16px", lineHeight: 1.4 }}>
+                Влияет на точность транзитов
+            </p>
         </div>
     );
 }
@@ -425,38 +425,23 @@ function MainProfileView({ userId, game, loadingGame, profile, setShowShop, setS
 
             {/* Payments section iOS style */}
             <div style={{ marginTop: 4 }}>
-                {iosSectionLabel("Магазин и пополнение")}
+                {iosSectionLabel("Пополнение энергии")}
                 <div style={iosGroup}>
                     <button
                         onClick={() => {
                             play('click');
                             setShowShop(true);
                         }}
-                        style={{ ...iosRow, justifyContent: "space-between" }}
+                        style={iosRow}
                     >
                         {iosIconBox("rgba(245,158,11,0.85)", "⚡")}
-                        <div style={{ flex: 1, textAlign: "left" }}>
-                            <p style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", margin: 0 }}>Пополнить Энергию</p>
-                            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: "3px 0 0", lineHeight: 1 }}>Магазин энергии</p>
-                        </div>
-                        {iosChevron}
-                    </button>
-                    {iosDivider(16 + 30 + 12)}
-                    <button
-                        onClick={() => {
-                            play('click');
-                            setShowSubscription(true);
-                        }}
-                        style={{ ...iosRow, justifyContent: "space-between" }}
-                    >
-                        {iosIconBox("rgba(139,92,246,0.85)", "💎")}
-                        <div style={{ flex: 1, textAlign: "left" }}>
-                            <p style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", margin: 0 }}>AVATAR Premium</p>
-                            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: "3px 0 0", lineHeight: 1 }}>Доступ ко всем сферам</p>
-                        </div>
+                        <span style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", flex: 1 }}>Пополнить Энергию</span>
                         {iosChevron}
                     </button>
                 </div>
+                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", padding: "4px 32px 16px", lineHeight: 1.4 }}>
+                    Начислится моментально в игру
+                </p>
             </div>
         </motion.div>
     );
