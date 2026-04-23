@@ -654,11 +654,12 @@ function SphereDetailView({ sphereId, name, color, summary, archetype, insights,
       }}>
         {/* Archetype */}
         {archetype && (
-          <div style={{ display: "inline-block" }}>
-            <div style={{ padding: "5px 14px", borderRadius: 10, background: `${color}10`, border: `1px solid ${color}20`, display: "inline-block" }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color }}>{archetype}</span>
-            </div>
-          </div>
+          <h2 style={{
+            fontSize: 22, fontWeight: 700, color: "white",
+            letterSpacing: "-0.3px", lineHeight: 1.25, margin: 0,
+          }}>
+            {archetype}
+          </h2>
         )}
 
         {/* Summary */}
