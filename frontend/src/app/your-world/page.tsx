@@ -987,16 +987,22 @@ export default function YourWorldPage() {
     const saved = localStorage.getItem("generating-sphere");
     return saved ? parseInt(saved) : null;
   });
+  const [sphereGenToast, setSphereGenToast] = useState<{ type: "energy" | "error"; title: string; message: string } | null>(null);
 
   const handleGenerateSphere = async (sphereId: number) => {
     if (!userId || generatingSphere) return;
     setGeneratingSphere(sphereId);
     try {
       await calcAPI.generateSphere(userId, sphereId);
-      // Force SWR to refetch fresh data
-      await mutate(["master-hub", userId]);
+      await mutateHub();
     } catch (err: any) {
       console.error("Generate sphere error", err);
+      const status = err?.response?.status;
+      if (status === 402) {
+        setSphereGenToast({ type: "energy", title: "Не хватает энергии", message: "Нужно 10 ⚡ — пополни через промокод или реферальную программу" });
+      } else {
+        setSphereGenToast({ type: "error", title: "Ошибка генерации", message: "Попробуй ещё раз — сервер временно недоступен" });
+      }
     } finally {
       setGeneratingSphere(null);
     }
@@ -1017,7 +1023,7 @@ export default function YourWorldPage() {
     { revalidateOnFocus: false }
   );
 
-  const { data: hub, isValidating: loading } = useSWR(
+  const { data: hub, isValidating: loading, mutate: mutateHub } = useSWR(
     userId ? ["master-hub", userId] : null,
     async () => {
       const res = await masterHubAPI.get(userId!);
@@ -1110,6 +1116,18 @@ export default function YourWorldPage() {
         </div>
       )}
 
+      {/* Sphere gen error toast */}
+      <AnimatePresence>
+        {sphereGenToast && (
+          <Toast
+            type={sphereGenToast.type}
+            title={sphereGenToast.title}
+            message={sphereGenToast.message}
+            onClose={() => setSphereGenToast(null)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <div style={{ padding: "6px 20px 8px", display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
         <h1 style={{
@@ -1184,7 +1202,7 @@ export default function YourWorldPage() {
               </p>
             </div>
           ) : (
-            <PipelineLoading onRetry={() => mutate(["master-hub", userId])} />
+            <PipelineLoading onRetry={() => mutateHub()} />
           )
         ) : (
           <AnimatePresence mode="wait">
