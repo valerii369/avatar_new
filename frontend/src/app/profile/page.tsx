@@ -109,41 +109,56 @@ export default function ProfilePage() {
             </div>
 
             {/* ── Menu (Tabs) ── */}
-            <div className="px-4 mb-3 flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                <button
-                    onClick={() => setActiveTab("main")}
-                    className="flex-1 py-2.5 px-4 rounded-[16px] flex flex-col items-center justify-center gap-1 min-w-[30%] transition-all"
+            <div className="px-4 mb-3">
+                <div
+                    className="grid grid-cols-3 gap-1 p-0.5"
                     style={{
-                        background: activeTab === "main" ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.05)",
-                        border: activeTab === "main" ? "1px solid rgba(255,255,255,0.2)" : "1px solid var(--border)"
+                        background: "rgba(255,255,255,0.04)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 50,
                     }}
                 >
-                    <span className="text-xl">🌟</span>
-                    <span className={`text-[11px] font-medium ${activeTab === "main" ? "text-white" : "text-white/70"}`}>Основное</span>
-                </button>
-                <button
-                    onClick={() => setActiveTab("settings")}
-                    className="flex-1 py-2.5 px-4 rounded-[16px] flex flex-col items-center justify-center gap-1 min-w-[30%] transition-all"
-                    style={{
-                        background: activeTab === "settings" ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.05)",
-                        border: activeTab === "settings" ? "1px solid rgba(255,255,255,0.2)" : "1px solid var(--border)"
-                    }}
-                >
-                    <span className="text-xl">⚙️</span>
-                    <span className={`text-[11px] font-medium ${activeTab === "settings" ? "text-white" : "text-white/70"}`}>Настройки</span>
-                </button>
-                <button
-                    onClick={() => setActiveTab("referrals")}
-                    className="flex-1 py-2.5 px-4 rounded-[16px] flex flex-col items-center justify-center gap-1 min-w-[30%] relative overflow-hidden transition-all"
-                    style={{
-                        background: activeTab === "referrals" ? "linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(236, 72, 153, 0.25))" : "linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.1))",
-                        border: activeTab === "referrals" ? "1px solid rgba(139, 92, 246, 0.5)" : "1px solid rgba(139, 92, 246, 0.2)"
-                    }}
-                >
-                    {activeTab === "referrals" && <div className="absolute inset-0 bg-gradient-to-tr from-violet-500/20 to-transparent" />}
-                    <span className="text-xl">🤝</span>
-                    <span className={`text-[11px] font-medium ${activeTab === "referrals" ? "text-violet-100" : "text-violet-200/70"}`}>Рефералы</span>
-                </button>
+                    <button
+                        onClick={() => setActiveTab("main")}
+                        className="py-2.5 px-4 flex flex-col items-center justify-center gap-1 transition-all"
+                        style={{
+                            borderRadius: 50,
+                            background: activeTab === "main" ? "rgba(255,255,255,0.1)" : "transparent",
+                            border: "none",
+                            cursor: "pointer",
+                        }}
+                    >
+                        <span className="text-xl">🌟</span>
+                        <span className={`text-[13px] font-medium ${activeTab === "main" ? "text-white" : "text-white/70"}`}>Основное</span>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("settings")}
+                        className="py-2.5 px-4 flex flex-col items-center justify-center gap-1 transition-all"
+                        style={{
+                            borderRadius: 50,
+                            background: activeTab === "settings" ? "rgba(255,255,255,0.1)" : "transparent",
+                            border: "none",
+                            cursor: "pointer",
+                        }}
+                    >
+                        <span className="text-xl">⚙️</span>
+                        <span className={`text-[13px] font-medium ${activeTab === "settings" ? "text-white" : "text-white/70"}`}>Настройки</span>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("referrals")}
+                        className="py-2.5 px-4 flex flex-col items-center justify-center gap-1 transition-all relative overflow-hidden"
+                        style={{
+                            borderRadius: 50,
+                            background: activeTab === "referrals" ? "rgba(255,255,255,0.1)" : "transparent",
+                            border: "none",
+                            cursor: "pointer",
+                        }}
+                    >
+                        {activeTab === "referrals" && <div className="absolute inset-0 bg-gradient-to-tr from-violet-500/20 to-transparent" />}
+                        <span className="text-xl relative z-10">🤝</span>
+                        <span className={`text-[13px] font-medium relative z-10 ${activeTab === "referrals" ? "text-violet-100" : "text-violet-200/70"}`}>Рефералы</span>
+                    </button>
+                </div>
             </div>
 
             {/* ── Tab Content (scrollable) ── */}
