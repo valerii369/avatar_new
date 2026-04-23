@@ -458,151 +458,211 @@ function MainProfileView({ userId, game, loadingGame, profile, setShowShop, setS
     );
 }
 
-function SettingsView({ userId, tgId }: { userId: string; tgId: number | null }) {
-    const [lang, setLang] = useState("RU");
-    const [resetting, setResetting] = useState(false);
-    const { musicEnabled, sfxEnabled, toggleMusic, toggleSfx, play } = useAudio();
-    const { reset: resetStore } = useUserStore();
+function IosToggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
+    return (
+        <button
+            onClick={onToggle}
+            style={{
+                width: 51, height: 31, borderRadius: 16,
+                background: enabled ? "#34C759" : "rgba(255,255,255,0.15)",
+                border: "none", cursor: "pointer", padding: 0,
+                position: "relative", flexShrink: 0,
+                transition: "background 0.25s",
+            }}
+        >
+            <motion.div
+                animate={{ x: enabled ? 22 : 2 }}
+                transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                style={{
+                    position: "absolute", top: 2,
+                    width: 27, height: 27, borderRadius: 14,
+                    background: "white",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
+                }}
+            />
+        </button>
+    );
+}
 
-    const toggleLang = () => {
-        play('click');
-        setLang(l => l === "RU" ? "EN" : "RU");
+function SettingsView({ userId, tgId }: { userId: string; tgId: number | null }) {
+    const [resetting, setResetting] = useState(false);
+    const { musicEnabled, sfxEnabled, toggleMusic, toggleSfx } = useAudio();
+    const { reset: resetStore, firstName } = useUserStore();
+
+    const sLabel = (text: string) => (
+        <p style={{
+            fontSize: 12, fontWeight: 500,
+            color: "rgba(255,255,255,0.35)",
+            textTransform: "uppercase", letterSpacing: "0.05em",
+            padding: "0 32px", marginBottom: 6,
+        }}>{text}</p>
+    );
+
+    const divider = (indent = 16) => (
+        <div style={{ height: 0.5, background: "rgba(255,255,255,0.07)", marginLeft: indent }} />
+    );
+
+    const group: React.CSSProperties = {
+        margin: "0 16px 8px",
+        background: "rgba(255,255,255,0.05)",
+        borderRadius: 14, overflow: "hidden",
+    };
+
+    const row: React.CSSProperties = {
+        display: "flex", alignItems: "center",
+        padding: "0 16px", height: 44, gap: 12,
+        background: "transparent", border: "none",
+        cursor: "pointer", width: "100%", textAlign: "left",
+    };
+
+    const iconBox = (bg: string, emoji: string) => (
+        <div style={{
+            width: 30, height: 30, borderRadius: 8,
+            background: bg, flexShrink: 0,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 16,
+        }}>{emoji}</div>
+    );
+
+    const chevron = (
+        <svg width="8" height="13" viewBox="0 0 8 13" fill="none" style={{ opacity: 0.3, flexShrink: 0 }}>
+            <path d="M1 1l6 5.5L1 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+    );
+
+    const handleReset = async () => {
+        if (!confirm("Вы уверены? Это полностью сбросит ваш прогресс, удалит все карточки и сессии.")) return;
+        try {
+            setResetting(true);
+            const tg = (window as any).Telegram?.WebApp;
+            const resolvedTgId = tgId ?? tg?.initDataUnsafe?.user?.id ?? 999999999;
+            await profileAPI.resetOnboardingData({ userId, tgId: Number(resolvedTgId), clearGeocode: true });
+            resetStore();
+            localStorage.removeItem("avatar_token");
+            window.location.href = "/";
+        } catch (e) {
+            const msg = (e as any)?.response?.data?.detail || "Ошибка при сбросе профиля";
+            alert(msg);
+        } finally {
+            setResetting(false);
+        }
     };
 
     return (
         <motion.div
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            className="px-4 space-y-4"
+            style={{ paddingBottom: 8 }}
         >
-            <div className="glass p-4 space-y-2">
-                <h3 className="text-sm font-bold text-white/40 uppercase tracking-widest mb-1">Основные</h3>
-
-                <div className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/10">
-                    <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-white">Язык приложения</span>
-                        <span className="text-[10px] text-white/30">Выберите удобный интерфейс</span>
+            {/* ── App info card ── */}
+            <div style={{ margin: "0 16px 24px" }}>
+                <div style={{
+                    background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(255,255,255,0.07)",
+                    borderRadius: 20, padding: "20px 16px",
+                    display: "flex", alignItems: "center", gap: 16,
+                }}>
+                    <div style={{
+                        width: 60, height: 60, borderRadius: 14, flexShrink: 0,
+                        background: "linear-gradient(135deg, #7C3AED, #4F46E5)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 28,
+                    }}>🌌</div>
+                    <div>
+                        <p style={{ fontSize: 17, fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>AVATAR</p>
+                        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", margin: "3px 0 0", lineHeight: 1.4 }}>
+                            Система самопознания на основе астрологии и ИИ
+                        </p>
                     </div>
-                    <button
-                        onClick={toggleLang}
-                        className="px-4 py-2 bg-white/10 rounded-xl text-xs font-bold text-violet-300 border border-violet-500/20"
-                    >
-                        {lang}
-                    </button>
-                </div>
-
-                <div className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/10">
-                    <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-white">Фоновая музыка</span>
-                        <span className="text-[10px] text-white/30">Пространственное звучание</span>
-                    </div>
-                    <button
-                        onClick={toggleMusic}
-                        className={`w-12 h-6 rounded-full relative transition-colors ${musicEnabled ? 'bg-emerald-500/40' : 'bg-white/10'}`}
-                    >
-                        <motion.div
-                            animate={{ x: musicEnabled ? 26 : 4 }}
-                            className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm"
-                        />
-                    </button>
-                </div>
-
-                <div className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/10">
-                    <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-white">Звуковые эффекты</span>
-                        <span className="text-[10px] text-white/30">Обратная связь в интерфейсе</span>
-                    </div>
-                    <button
-                        onClick={toggleSfx}
-                        className={`w-12 h-6 rounded-full relative transition-colors ${sfxEnabled ? 'bg-emerald-500/40' : 'bg-white/10'}`}
-                    >
-                        <motion.div
-                            animate={{ x: sfxEnabled ? 26 : 4 }}
-                            className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm"
-                        />
-                    </button>
                 </div>
             </div>
 
-            <div className="glass p-4 space-y-2">
-                <h3 className="text-sm font-bold text-white/40 uppercase tracking-widest mb-1">Обучение и поддержка</h3>
+            {/* ── Sound ── */}
+            {sLabel("Звук")}
+            <div style={{ ...group, marginBottom: 4 }}>
+                <div style={{ display: "flex", alignItems: "center", padding: "0 16px", height: 44, gap: 12 }}>
+                    {iconBox("rgba(255,149,0,0.85)", "🎵")}
+                    <span style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", flex: 1 }}>Фоновая музыка</span>
+                    <IosToggle enabled={musicEnabled} onToggle={toggleMusic} />
+                </div>
+                {divider(16 + 30 + 12)}
+                <div style={{ display: "flex", alignItems: "center", padding: "0 16px", height: 44, gap: 12 }}>
+                    {iconBox("rgba(52,199,89,0.85)", "🔔")}
+                    <span style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", flex: 1 }}>Звуковые эффекты</span>
+                    <IosToggle enabled={sfxEnabled} onToggle={toggleSfx} />
+                </div>
+            </div>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", padding: "4px 32px 16px", lineHeight: 1.4 }}>
+                Звуки воспроизводятся при взаимодействии с интерфейсом
+            </p>
 
+            {/* ── Support ── */}
+            {sLabel("Поддержка")}
+            <div style={group}>
                 <a
                     href="https://t.me/avatar_matrix_support"
                     target="_blank"
-                    className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/10 no-underline"
+                    rel="noreferrer"
+                    style={{ ...row, textDecoration: "none" }}
                 >
-                    <div className="flex items-center gap-3">
-                        <span className="text-lg">💬</span>
-                        <span className="text-sm font-semibold text-white">Связаться с поддержкой</span>
-                    </div>
-                    <span className="text-white/20">→</span>
+                    {iconBox("rgba(0,122,255,0.85)", "💬")}
+                    <span style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", flex: 1 }}>Написать в поддержку</span>
+                    {chevron}
                 </a>
-
+                {divider(16 + 30 + 12)}
                 <button
-                    onClick={() => alert("Инструкция будет добавлена в AVATAR v1.2")}
-                    className="w-full flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/10"
+                    style={row}
+                    onClick={() => alert("Инструкция будет добавлена в AVATAR v2.0")}
                 >
-                    <div className="flex items-center gap-3">
-                        <span className="text-lg">📖</span>
-                        <span className="text-sm font-semibold text-white">Как это работает?</span>
-                    </div>
-                    <span className="text-white/20">→</span>
+                    {iconBox("rgba(88,86,214,0.85)", "📖")}
+                    <span style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", flex: 1 }}>Как это работает?</span>
+                    {chevron}
                 </button>
             </div>
 
-            <div className="glass p-4 space-y-2">
-                <h3 className="text-sm font-bold text-white/40 uppercase tracking-widest mb-1">Опасная зона</h3>
-                
-                <button
-                    onClick={async () => {
-                        if (!confirm("Вы уверены? Это полностью сбросит ваш прогресс, удалит все карточки и сессии.")) {
-                            return;
-                        }
-                        try {
-                            setResetting(true);
-                            const tg = (window as any).Telegram?.WebApp;
-                            const resolvedTgId =
-                                tgId ??
-                                tg?.initDataUnsafe?.user?.id ??
-                                999999999;
+            {/* ── Account ── */}
+            <div style={{ marginTop: 20 }}>
+                {sLabel("Аккаунт")}
+                <div style={group}>
+                    <div style={{ display: "flex", alignItems: "center", padding: "0 16px", height: 44 }}>
+                        <span style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", flex: 1 }}>Пользователь</span>
+                        <span style={{ fontSize: 15, color: "rgba(255,255,255,0.4)" }}>{firstName || "—"}</span>
+                    </div>
+                    {divider()}
+                    <div style={{ display: "flex", alignItems: "center", padding: "0 16px", height: 44 }}>
+                        <span style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", flex: 1 }}>Telegram ID</span>
+                        <span style={{ fontSize: 15, color: "rgba(255,255,255,0.4)" }}>{tgId ?? "—"}</span>
+                    </div>
+                </div>
+            </div>
 
-                            if (!resolvedTgId) {
-                                throw new Error("Telegram ID not found");
-                            }
-
-                            await profileAPI.resetOnboardingData({
-                                userId,
-                                tgId: Number(resolvedTgId),
-                                clearGeocode: true,
-                            });
-                            resetStore();
-                            localStorage.removeItem("avatar_token");
-                            window.location.href = "/";
-                        } catch (e) {
-                            console.error("Reset error", e);
-                            const msg = (e as any)?.response?.data?.detail || "Ошибка при сбросе профиля";
-                            alert(msg);
-                        } finally {
-                            setResetting(false);
-                        }
-                    }}
-                    disabled={resetting}
-                    className="w-full flex items-center justify-between p-3 bg-rose-500/10 rounded-2xl border border-rose-500/20 active:scale-[0.98] transition-all text-left group"
-                >
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-xl">⚠️</div>
-                        <div>
-                            <p className="text-sm font-semibold text-rose-400">
-                                {resetting ? "Перезапуск..." : "Перезапуск онбординга"}
+            {/* ── Danger ── */}
+            <div style={{ marginTop: 20 }}>
+                {sLabel("Данные")}
+                <div style={{ margin: "0 16px 8px", background: "rgba(255,59,48,0.07)", borderRadius: 14, overflow: "hidden" }}>
+                    <button
+                        onClick={handleReset}
+                        disabled={resetting}
+                        style={{ ...row, opacity: resetting ? 0.5 : 1 }}
+                    >
+                        {iconBox("rgba(255,59,48,0.85)", "🔄")}
+                        <div style={{ flex: 1, textAlign: "left" }}>
+                            <p style={{ fontSize: 15, fontWeight: 500, color: "#FF3B30", margin: 0 }}>
+                                {resetting ? "Сброс..." : "Перезапуск онбординга"}
                             </p>
-                            <p className="text-[10px] text-rose-500/40">Сброс по Telegram ID и новый старт</p>
                         </div>
-                    </div>
-                </button>
+                        {chevron}
+                    </button>
+                </div>
+                <p style={{ fontSize: 12, color: "rgba(255,59,48,0.5)", padding: "4px 32px 16px", lineHeight: 1.4 }}>
+                    Сбрасывает прогресс и все данные. Действие необратимо.
+                </p>
             </div>
 
-            <div className="text-center py-4">
-                <p className="text-[10px] text-white/20 font-bold uppercase tracking-widest">AVATAR v1.1.2 — 2026</p>
+            {/* ── Version ── */}
+            <div style={{ textAlign: "center", padding: "8px 0 4px" }}>
+                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", letterSpacing: "0.04em" }}>
+                    AVATAR v1.4.2 · 2026
+                </p>
             </div>
         </motion.div>
     );
