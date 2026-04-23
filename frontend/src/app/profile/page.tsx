@@ -625,8 +625,8 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
         { revalidateOnFocus: false }
     );
 
-    // Fallback: construct link from referralCode if API fails
-    const generatedLink = refLink || (referralCode ? `https://t.me/avatarmatrix_bot/app?ref=${referralCode}` : null);
+    // Fallback: construct link from referralCode if API fails (use Vercel URL)
+    const generatedLink = refLink || (referralCode ? `https://avatar-new-jade.vercel.app?ref=${referralCode}` : null);
 
     const { data: referrals, isLoading } = useSWR(
         userId ? ["referrals", userId] : null,
