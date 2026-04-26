@@ -397,23 +397,42 @@ function MainProfileView({ userId, game, loadingGame, profile, setShowShop, setS
     const { play } = useAudio();
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            {/* Stats grid */}
-            <div className="px-4 mb-5">
-                <div className="grid grid-cols-3 gap-2">
-                    {loadingGame && !game ? (
-                        <>
-                            <Skeleton className="h-16 rounded-2xl" />
-                            <Skeleton className="h-16 rounded-2xl" />
-                            <Skeleton className="h-16 rounded-2xl" />
-                        </>
-                    ) : (
-                        <>
-                            <StatTile label="Энергия" value={String(game?.energy || 0)} color="#F59E0B" />
-                            <StatTile label="Серия" value={`${game?.streak || 0} дн`} color="#10B981" />
-                            <StatTile label="Опыт" value={String(game?.xp || 0)} color="#60A5FA" />
-                        </>
-                    )}
-                </div>
+            {/* Hero stats block */}
+            <div style={{ margin: "0 16px 24px" }}>
+                {loadingGame && !game ? (
+                    <Skeleton className="h-24 rounded-2xl" />
+                ) : (
+                    <div style={{
+                        background: "rgba(255,255,255,0.05)",
+                        border: "1px solid rgba(255,255,255,0.07)",
+                        borderRadius: 14,
+                        padding: "16px 16px 12px",
+                        display: "flex", gap: 0,
+                    }}>
+                        <div style={{ flex: 1, textAlign: "center" }}>
+                            <p style={{ fontSize: 32, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1, margin: 0 }}>
+                                {game?.energy || "—"}
+                            </p>
+                            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 3 }}>энергия</p>
+                        </div>
+                        <div style={{ width: 0.5, background: "rgba(255,255,255,0.08)", margin: "2px 0" }} />
+                        <div style={{ flex: 1, textAlign: "center" }}>
+                            <p style={{ fontSize: 32, fontWeight: 700, color: "#10B981", lineHeight: 1, margin: 0 }}>
+                                {game?.streak || "—"}
+                            </p>
+                            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 3 }}>серия дн</p>
+                        </div>
+                        <div style={{ width: 0.5, background: "rgba(255,255,255,0.08)", margin: "2px 0" }} />
+                        <div style={{ flex: 1, textAlign: "center" }}>
+                            <p style={{ fontSize: 32, fontWeight: 700, color: "#F59E0B", lineHeight: 1, margin: 0 }}>
+                                {game?.xp || "—"}
+                            </p>
+                            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 3, display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}>
+                                <EnergyIcon size={11} color="rgba(255,255,255,0.4)" /> опыт
+                            </p>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Location section */}
