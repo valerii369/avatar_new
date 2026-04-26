@@ -171,22 +171,6 @@ export default function ProfilePage() {
                         Основное
                     </button>
                     <button
-                        onClick={() => setActiveTab("settings")}
-                        style={{
-                            padding: "8px 4px",
-                            borderRadius: 50,
-                            fontSize: 13,
-                            fontWeight: 500,
-                            transition: "all 0.2s",
-                            background: activeTab === "settings" ? "rgba(255,255,255,0.1)" : "transparent",
-                            color: activeTab === "settings" ? "var(--text-primary)" : "var(--text-muted)",
-                            border: "none",
-                            cursor: "pointer",
-                        }}
-                    >
-                        Настройки
-                    </button>
-                    <button
                         onClick={() => setActiveTab("referrals")}
                         style={{
                             padding: "8px 4px",
@@ -201,6 +185,22 @@ export default function ProfilePage() {
                         }}
                     >
                         Рефералы
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("settings")}
+                        style={{
+                            padding: "8px 4px",
+                            borderRadius: 50,
+                            fontSize: 13,
+                            fontWeight: 500,
+                            transition: "all 0.2s",
+                            background: activeTab === "settings" ? "rgba(255,255,255,0.1)" : "transparent",
+                            color: activeTab === "settings" ? "var(--text-primary)" : "var(--text-muted)",
+                            border: "none",
+                            cursor: "pointer",
+                        }}
+                    >
+                        Настройки
                     </button>
                 </div>
             </div>
@@ -218,11 +218,11 @@ export default function ProfilePage() {
                         onLocationSaved={() => mutate(["profile", userId])}
                     />
                 )}
-                {activeTab === "settings" && (
-                    <SettingsView userId={userId!} tgId={tgId} />
-                )}
                 {activeTab === "referrals" && (
                     <ReferralView userId={userId!} referralCode={referralCode} />
+                )}
+                {activeTab === "settings" && (
+                    <SettingsView userId={userId!} tgId={tgId} />
                 )}
             </div>
 
