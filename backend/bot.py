@@ -55,10 +55,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
         return
 
+    # Get ref parameter if provided: /start ref_code
+    ref_code = None
+    if context.args and len(context.args) > 0:
+        ref_code = context.args[0]
+
+    # Build Mini App URL with ref as startParam
+    app_url = mini_app_url
+    if ref_code:
+        # Telegram Mini App startParam gets passed in ?startapp=ref_code to the app
+        app_url = f"{mini_app_url}?ref={ref_code}"
+
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton(
             text="AVATAR",
-            web_app=WebAppInfo(url=mini_app_url),
+            web_app=WebAppInfo(url=app_url),
         )]
     ])
 
