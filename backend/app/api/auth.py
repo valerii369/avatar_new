@@ -200,10 +200,25 @@ async def login(request: LoginRequest):
             # Generate referral_code for existing users who don't have one
             if not user.get("referral_code"):
                 update_fields["referral_code"] = _generate_referral_code(supabase)
+            # Update streak based on last_login_date
+            from datetime import date, timedelta
+            today = date.today()
+            last_login = user.get("last_login_date")
+            if last_login:
+                if isinstance(last_login, str):
+                    last_login = date.fromisoformat(last_login[:10])
+                if last_login == today - timedelta(days=1):
+                    update_fields["streak"] = user.get("streak", 0) + 1
+                elif last_login < today - timedelta(days=1):
+                    update_fields["streak"] = 1
+            else:
+                update_fields["streak"] = max(user.get("streak", 0), 1)
+            update_fields["last_login_date"] = today.isoformat()
             supabase.table("users").update(update_fields).eq("tg_id", resolved_tg_id).execute()
             # Refresh user data to get generated referral_code
             user = supabase.table("users").select("*").eq("tg_id", resolved_tg_id).execute().data[0]
         else:
+            from datetime import date as _date
             new_user = {
                 "tg_id":      resolved_tg_id,
                 "first_name": resolved_first_name,
@@ -211,7 +226,9 @@ async def login(request: LoginRequest):
                 "username":   resolved_username,
                 "photo_url":  resolved_photo_url,
                 "referral_code": _generate_referral_code(supabase),
+                "last_login_date": _date.today().isoformat(),
                 **_default_user_fields(),
+                "streak": 1,
             }
 
             # Handle referral tracking: if ref param provided, find referrer and store their id

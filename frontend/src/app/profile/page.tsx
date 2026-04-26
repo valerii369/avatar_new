@@ -411,25 +411,25 @@ function MainProfileView({ userId, game, loadingGame, profile, setShowShop, setS
                     }}>
                         <div style={{ flex: 1, textAlign: "center" }}>
                             <p style={{ fontSize: 32, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1, margin: 0 }}>
-                                {game?.energy || "—"}
+                                {game?.xp ?? "—"}
                             </p>
-                            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 3 }}>энергия</p>
+                            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 3, display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}>
+                                <EnergyIcon size={11} color="rgba(255,255,255,0.4)" /> опыт
+                            </p>
                         </div>
                         <div style={{ width: 0.5, background: "rgba(255,255,255,0.08)", margin: "2px 0" }} />
                         <div style={{ flex: 1, textAlign: "center" }}>
                             <p style={{ fontSize: 32, fontWeight: 700, color: "#10B981", lineHeight: 1, margin: 0 }}>
-                                {game?.streak || "—"}
+                                {game?.streak ?? "—"}
                             </p>
                             <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 3 }}>серия дн</p>
                         </div>
                         <div style={{ width: 0.5, background: "rgba(255,255,255,0.08)", margin: "2px 0" }} />
                         <div style={{ flex: 1, textAlign: "center" }}>
                             <p style={{ fontSize: 32, fontWeight: 700, color: "#F59E0B", lineHeight: 1, margin: 0 }}>
-                                {game?.xp || "—"}
+                                {game?.energy ?? "—"}
                             </p>
-                            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 3, display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}>
-                                <EnergyIcon size={11} color="rgba(255,255,255,0.4)" /> опыт
-                            </p>
+                            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 3 }}>энергия</p>
                         </div>
                     </div>
                 )}
