@@ -1,9 +1,6 @@
 {
-  "rootDirectory": ".",
   "buildCommand": "npm run build --prefix frontend",
   "outputDirectory": "frontend/.next",
-  "installCommand": "npm install --prefix frontend",
-  "git": {
-    "deploymentEnabled": false
-  }
+  "installCommand": "npm install --prefix frontend"
 }
+
