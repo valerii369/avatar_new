@@ -47,7 +47,12 @@ WELCOME_TEXT = (
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle /start — send welcome message with Mini App button."""
+    """Handle /start — send welcome message with Mini App button.
+
+    Usage:
+    - /start                    — open without referral
+    - /start REF_CODE          — open with referral code (e.g., /start 3KEQ8WOU)
+    """
     mini_app_url = settings.MINI_APP_URL
     if not mini_app_url:
         await update.message.reply_text(
@@ -60,10 +65,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if context.args and len(context.args) > 0:
         ref_code = context.args[0]
 
-    # Build Mini App URL with ref as startParam
+    # Build Mini App URL with ref parameter
     app_url = mini_app_url
     if ref_code:
-        # Telegram Mini App startParam gets passed in ?startapp=ref_code to the app
         app_url = f"{mini_app_url}?ref={ref_code}"
 
     keyboard = InlineKeyboardMarkup([

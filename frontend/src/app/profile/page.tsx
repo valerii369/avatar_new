@@ -658,12 +658,15 @@ function SettingsView({ userId, tgId }: { userId: string; tgId: number | null })
 function ReferralView({ userId, referralCode }: { userId: string; referralCode: string }) {
     const { setUser } = useUserStore();
 
-    const generatedLink = referralCode ? `https://t.me/avatarmatrix_bot/app?ref=${referralCode}` : null;
+    const generatedLink = referralCode ? `https://t.me/avatarmatrix_bot?start=${referralCode}` : null;
 
-    const { data: referrals, isLoading: referralsLoading } = useSWR(
+    const { data: referralData, isLoading: referralsLoading } = useSWR(
         userId ? ["referrals", userId] : null,
         () => profileAPI.getReferrals(userId).then(res => res.data)
     );
+
+    const invited = referralData?.invited ?? [];
+    const active = referralData?.active ?? [];
 
     const [promoCode, setPromoCode] = useState("");
     const [promoLoading, setPromoLoading] = useState(false);
@@ -703,8 +706,6 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
         }
     };
 
-    const activeCount = referrals?.filter((r: any) => r.onboarding_done).length ?? 0;
-
     return (
         <motion.div
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
@@ -721,21 +722,21 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
                 }}>
                     <div style={{ flex: 1, textAlign: "center" }}>
                         <p style={{ fontSize: 32, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1, margin: 0 }}>
-                            {referrals?.length ?? "—"}
+                            {invited.length}
                         </p>
                         <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 3 }}>приглашено</p>
                     </div>
                     <div style={{ width: 0.5, background: "rgba(255,255,255,0.08)", margin: "2px 0" }} />
                     <div style={{ flex: 1, textAlign: "center" }}>
                         <p style={{ fontSize: 32, fontWeight: 700, color: "#34D399", lineHeight: 1, margin: 0 }}>
-                            {activeCount}
+                            {active.length}
                         </p>
                         <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 3 }}>активных</p>
                     </div>
                     <div style={{ width: 0.5, background: "rgba(255,255,255,0.08)", margin: "2px 0" }} />
                     <div style={{ flex: 1, textAlign: "center" }}>
                         <p style={{ fontSize: 32, fontWeight: 700, color: "#F59E0B", lineHeight: 1, margin: 0 }}>
-                            {activeCount * 50}
+                            {active.length * 50}
                         </p>
                         <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 3, display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}>
                             <EnergyIcon size={11} color="rgba(255,255,255,0.4)" /> заработано
@@ -848,7 +849,7 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
             </div>
 
             {/* ── Referrals list ── */}
-            {(referralsLoading || (referrals && referrals.length > 0)) && (
+            {(referralsLoading || invited.length > 0) && (
                 <div style={{ marginTop: 20 }}>
                     {iosSectionLabel("Приглашённые")}
                     <div style={iosGroup}>
@@ -856,7 +857,7 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
                             <div style={{ display: "flex", justifyContent: "center", padding: "24px 0" }}>
                                 <div style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid rgba(139,92,246,0.4)", borderTopColor: "#7C3AED", animation: "spin 0.6s linear infinite" }} />
                             </div>
-                        ) : referrals.map((ref: any, i: number) => (
+                        ) : invited.map((ref: any, i: number) => (
                             <div key={ref.id}>
                                 <div style={{ display: "flex", alignItems: "center", padding: "10px 16px", gap: 12, minHeight: 52 }}>
                                     <div style={{
@@ -888,7 +889,7 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
                                         {ref.onboarding_done ? "✓ Активен" : "→ В пути"}
                                     </span>
                                 </div>
-                                {i < referrals.length - 1 && iosDivider(16 + 36 + 12)}
+                                {i < invited.length - 1 && iosDivider(16 + 36 + 12)}
                             </div>
                         ))}
                     </div>
