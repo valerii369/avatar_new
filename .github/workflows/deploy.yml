@@ -119,13 +119,7 @@ jobs:
 
       - name: Deploy to Vercel
         run: |
-          set +e
-          OUTPUT=$(vercel --cwd frontend --token ${{ secrets.VERCEL_TOKEN }} --prod --yes 2>&1)
-          EXIT_CODE=$?
-          echo "=== VERCEL OUTPUT ==="
-          echo "$OUTPUT"
-          echo "=== EXIT CODE: $EXIT_CODE ==="
-          exit $EXIT_CODE
+          vercel --token ${{ secrets.VERCEL_TOKEN }} --prod --yes
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
