@@ -47,7 +47,12 @@ WELCOME_TEXT = (
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle /start — send welcome message with Mini App button."""
+    """Handle /start — send welcome message with Mini App button.
+
+    Usage:
+    - /start                    — open without referral
+    - /start REF_CODE          — open with referral code (e.g., /start 3KEQ8WOU)
+    """
     mini_app_url = settings.MINI_APP_URL
     if not mini_app_url:
         await update.message.reply_text(
@@ -55,10 +60,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
         return
 
+    # Get ref parameter if provided: /start ref_code
+    ref_code = None
+    if context.args and len(context.args) > 0:
+        ref_code = context.args[0]
+
+    # Build Mini App URL with ref parameter
+    app_url = mini_app_url
+    if ref_code:
+        app_url = f"{mini_app_url}?ref={ref_code}"
+
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton(
             text="AVATAR",
-            web_app=WebAppInfo(url=mini_app_url),
+            web_app=WebAppInfo(url=app_url),
         )]
     ])
 

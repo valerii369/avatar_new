@@ -27,6 +27,8 @@ MIGRATIONS = [
         created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )""",
     "CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id)",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_date DATE",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by TEXT",
 ]
 
 try:

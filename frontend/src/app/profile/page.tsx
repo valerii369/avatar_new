@@ -171,22 +171,6 @@ export default function ProfilePage() {
                         Основное
                     </button>
                     <button
-                        onClick={() => setActiveTab("settings")}
-                        style={{
-                            padding: "8px 4px",
-                            borderRadius: 50,
-                            fontSize: 13,
-                            fontWeight: 500,
-                            transition: "all 0.2s",
-                            background: activeTab === "settings" ? "rgba(255,255,255,0.1)" : "transparent",
-                            color: activeTab === "settings" ? "var(--text-primary)" : "var(--text-muted)",
-                            border: "none",
-                            cursor: "pointer",
-                        }}
-                    >
-                        Настройки
-                    </button>
-                    <button
                         onClick={() => setActiveTab("referrals")}
                         style={{
                             padding: "8px 4px",
@@ -201,6 +185,22 @@ export default function ProfilePage() {
                         }}
                     >
                         Рефералы
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("settings")}
+                        style={{
+                            padding: "8px 4px",
+                            borderRadius: 50,
+                            fontSize: 13,
+                            fontWeight: 500,
+                            transition: "all 0.2s",
+                            background: activeTab === "settings" ? "rgba(255,255,255,0.1)" : "transparent",
+                            color: activeTab === "settings" ? "var(--text-primary)" : "var(--text-muted)",
+                            border: "none",
+                            cursor: "pointer",
+                        }}
+                    >
+                        Настройки
                     </button>
                 </div>
             </div>
@@ -218,11 +218,11 @@ export default function ProfilePage() {
                         onLocationSaved={() => mutate(["profile", userId])}
                     />
                 )}
-                {activeTab === "settings" && (
-                    <SettingsView userId={userId!} tgId={tgId} />
-                )}
                 {activeTab === "referrals" && (
                     <ReferralView userId={userId!} referralCode={referralCode} />
+                )}
+                {activeTab === "settings" && (
+                    <SettingsView userId={userId!} tgId={tgId} />
                 )}
             </div>
 
@@ -397,23 +397,42 @@ function MainProfileView({ userId, game, loadingGame, profile, setShowShop, setS
     const { play } = useAudio();
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            {/* Stats grid */}
-            <div className="px-4 mb-5">
-                <div className="grid grid-cols-3 gap-2">
-                    {loadingGame && !game ? (
-                        <>
-                            <Skeleton className="h-16 rounded-2xl" />
-                            <Skeleton className="h-16 rounded-2xl" />
-                            <Skeleton className="h-16 rounded-2xl" />
-                        </>
-                    ) : (
-                        <>
-                            <StatTile label="Энергия" value={String(game?.energy || 0)} color="#F59E0B" />
-                            <StatTile label="Серия" value={`${game?.streak || 0} дн`} color="#10B981" />
-                            <StatTile label="Опыт" value={String(game?.xp || 0)} color="#60A5FA" />
-                        </>
-                    )}
-                </div>
+            {/* Hero stats block */}
+            <div style={{ margin: "0 16px 24px" }}>
+                {loadingGame && !game ? (
+                    <Skeleton className="h-24 rounded-2xl" />
+                ) : (
+                    <div style={{
+                        background: "rgba(255,255,255,0.05)",
+                        border: "1px solid rgba(255,255,255,0.07)",
+                        borderRadius: 14,
+                        padding: "16px 16px 12px",
+                        display: "flex", gap: 0,
+                    }}>
+                        <div style={{ flex: 1, textAlign: "center" }}>
+                            <p style={{ fontSize: 32, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1, margin: 0 }}>
+                                {game?.xp ?? "—"}
+                            </p>
+                            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 3, display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}>
+                                <EnergyIcon size={11} color="rgba(255,255,255,0.4)" /> опыт
+                            </p>
+                        </div>
+                        <div style={{ width: 0.5, background: "rgba(255,255,255,0.08)", margin: "2px 0" }} />
+                        <div style={{ flex: 1, textAlign: "center" }}>
+                            <p style={{ fontSize: 32, fontWeight: 700, color: "#10B981", lineHeight: 1, margin: 0 }}>
+                                {game?.streak ?? "—"}
+                            </p>
+                            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 3 }}>серия дн</p>
+                        </div>
+                        <div style={{ width: 0.5, background: "rgba(255,255,255,0.08)", margin: "2px 0" }} />
+                        <div style={{ flex: 1, textAlign: "center" }}>
+                            <p style={{ fontSize: 32, fontWeight: 700, color: "#F59E0B", lineHeight: 1, margin: 0 }}>
+                                {game?.energy ?? "—"}
+                            </p>
+                            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 3 }}>энергия</p>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Location section */}
@@ -639,12 +658,20 @@ function SettingsView({ userId, tgId }: { userId: string; tgId: number | null })
 function ReferralView({ userId, referralCode }: { userId: string; referralCode: string }) {
     const { setUser } = useUserStore();
 
-    const generatedLink = referralCode ? `https://t.me/avatarmatrix_bot/app?ref=${referralCode}` : null;
+    const generatedLink = referralCode ? `https://t.me/avatarmatrix_bot?start=${referralCode}` : null;
 
-    const { data: referrals, isLoading: referralsLoading } = useSWR(
+    const { data: referralData, isLoading: referralsLoading } = useSWR(
         userId ? ["referrals", userId] : null,
         () => profileAPI.getReferrals(userId).then(res => res.data)
     );
+
+    // Handle both old format (array) and new format ({invited, active})
+    const invited = Array.isArray(referralData)
+        ? referralData
+        : (referralData?.invited ?? []);
+    const active = Array.isArray(referralData)
+        ? referralData.filter((r: any) => r.onboarding_done)
+        : (referralData?.active ?? []);
 
     const [promoCode, setPromoCode] = useState("");
     const [promoLoading, setPromoLoading] = useState(false);
@@ -684,8 +711,6 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
         }
     };
 
-    const activeCount = referrals?.filter((r: any) => r.onboarding_done).length ?? 0;
-
     return (
         <motion.div
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
@@ -702,21 +727,21 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
                 }}>
                     <div style={{ flex: 1, textAlign: "center" }}>
                         <p style={{ fontSize: 32, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1, margin: 0 }}>
-                            {referrals?.length ?? "—"}
+                            {invited.length}
                         </p>
                         <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 3 }}>приглашено</p>
                     </div>
                     <div style={{ width: 0.5, background: "rgba(255,255,255,0.08)", margin: "2px 0" }} />
                     <div style={{ flex: 1, textAlign: "center" }}>
                         <p style={{ fontSize: 32, fontWeight: 700, color: "#34D399", lineHeight: 1, margin: 0 }}>
-                            {activeCount}
+                            {active.length}
                         </p>
                         <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 3 }}>активных</p>
                     </div>
                     <div style={{ width: 0.5, background: "rgba(255,255,255,0.08)", margin: "2px 0" }} />
                     <div style={{ flex: 1, textAlign: "center" }}>
                         <p style={{ fontSize: 32, fontWeight: 700, color: "#F59E0B", lineHeight: 1, margin: 0 }}>
-                            {activeCount * 50}
+                            {active.length * 50}
                         </p>
                         <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 3, display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}>
                             <EnergyIcon size={11} color="rgba(255,255,255,0.4)" /> заработано
@@ -829,7 +854,7 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
             </div>
 
             {/* ── Referrals list ── */}
-            {(referralsLoading || (referrals && referrals.length > 0)) && (
+            {(referralsLoading || invited.length > 0) && (
                 <div style={{ marginTop: 20 }}>
                     {iosSectionLabel("Приглашённые")}
                     <div style={iosGroup}>
@@ -837,7 +862,7 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
                             <div style={{ display: "flex", justifyContent: "center", padding: "24px 0" }}>
                                 <div style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid rgba(139,92,246,0.4)", borderTopColor: "#7C3AED", animation: "spin 0.6s linear infinite" }} />
                             </div>
-                        ) : referrals.map((ref: any, i: number) => (
+                        ) : invited.map((ref: any, i: number) => (
                             <div key={ref.id}>
                                 <div style={{ display: "flex", alignItems: "center", padding: "10px 16px", gap: 12, minHeight: 52 }}>
                                     <div style={{
@@ -869,7 +894,7 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
                                         {ref.onboarding_done ? "✓ Активен" : "→ В пути"}
                                     </span>
                                 </div>
-                                {i < referrals.length - 1 && iosDivider(16 + 36 + 12)}
+                                {i < invited.length - 1 && iosDivider(16 + 36 + 12)}
                             </div>
                         ))}
                     </div>
@@ -938,52 +963,110 @@ function ShopModal({ onClose, userId }: { onClose: () => void; userId: string })
         }
     };
 
+    const filteredOffers = offers?.filter((o: any) => o.id !== "pack_premium") ?? [];
+
     return (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center px-4 pt-20 bg-black/60 backdrop-blur-sm">
+        <div style={{
+            position: "fixed", inset: 0, zIndex: 100,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "0 16px",
+            background: "rgba(0,0,0,0.6)",
+            backdropFilter: "blur(8px)",
+        }}>
             <motion.div
-                initial={{ y: "100%" }} animate={{ y: 0 }}
-                className="w-full max-w-md glass p-6 rounded-[32px] space-y-6"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                style={{
+                    width: "100%", maxWidth: 390,
+                    background: "rgba(28,28,30,0.98)",
+                    borderRadius: 20,
+                    border: "0.5px solid rgba(255,255,255,0.1)",
+                    overflow: "hidden",
+                }}
             >
-                <div className="flex justify-between items-center">
-                    <h3 className="text-xl font-bold text-white">Магазин Энергии</h3>
-                    <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/60">✕</button>
+                {/* Header */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 20px 0" }}>
+                    <h3 style={{ fontSize: 17, fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>Пополнение энергии</h3>
+                    <button onClick={onClose} style={{
+                        width: 28, height: 28, borderRadius: 14,
+                        background: "rgba(255,255,255,0.1)", border: "none",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        cursor: "pointer", color: "rgba(255,255,255,0.5)", fontSize: 14,
+                    }}>✕</button>
                 </div>
 
-                <div className="space-y-3">
+                {/* Section label */}
+                <p style={{
+                    fontSize: 12, fontWeight: 500, color: "rgba(255,255,255,0.35)",
+                    textTransform: "uppercase", letterSpacing: "0.05em",
+                    padding: "16px 20px 6px",
+                }}>Выберите пакет</p>
+
+                {/* Packages iOS group */}
+                <div style={{ margin: "0 16px 8px", background: "rgba(255,255,255,0.05)", borderRadius: 14, overflow: "hidden" }}>
                     {isLoading ? (
-                        <div className="py-10 flex justify-center"><div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" /></div>
+                        <div style={{ display: "flex", justifyContent: "center", padding: "24px 0" }}>
+                            <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                        </div>
                     ) : offersError ? (
-                        <p className="text-center text-white/40 py-6 text-sm">Не удалось загрузить пакеты. Попробуйте позже.</p>
-                    ) : offers?.filter((o: any) => o.id !== "pack_premium").map((offer: any) => (
-                        <button
-                            key={offer.id}
-                            disabled={!!buyingId}
-                            onClick={() => handleBuy(offer.id)}
-                            className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between group active:scale-[0.98] transition-all disabled:opacity-50"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="text-2xl">⚡</div>
-                                <div className="text-left">
-                                    <div className="flex items-center gap-2">
-                                        <p className="font-bold text-white">{offer.name}</p>
-                                        {offer.id === "pack_300" && <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-md border border-emerald-500/20">-2%</span>}
-                                        {offer.id === "pack_500" && <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-md border border-emerald-500/20">-5%</span>}
-                                        {offer.id === "pack_1000" && <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-md border border-emerald-500/20">-10%</span>}
+                        <p style={{ textAlign: "center", color: "rgba(255,255,255,0.4)", padding: "20px 16px", fontSize: 14 }}>
+                            Не удалось загрузить пакеты
+                        </p>
+                    ) : filteredOffers.map((offer: any, i: number) => (
+                        <div key={offer.id}>
+                            {i > 0 && <div style={{ height: 0.5, background: "rgba(255,255,255,0.07)", marginLeft: 58 }} />}
+                            <button
+                                disabled={!!buyingId}
+                                onClick={() => handleBuy(offer.id)}
+                                style={{
+                                    display: "flex", alignItems: "center",
+                                    padding: "0 16px", height: 58, gap: 12,
+                                    background: "transparent", border: "none",
+                                    cursor: "pointer", width: "100%",
+                                    opacity: buyingId && buyingId !== offer.id ? 0.5 : 1,
+                                }}
+                            >
+                                {/* Icon */}
+                                <div style={{
+                                    width: 30, height: 30, borderRadius: 8,
+                                    background: "rgba(245,158,11,0.85)", flexShrink: 0,
+                                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16,
+                                }}>⚡</div>
+
+                                {/* Name — single line */}
+                                <span style={{
+                                    fontSize: 15, fontWeight: 500, color: "var(--text-primary)",
+                                    flex: 1, textAlign: "left",
+                                    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                                }}>{offer.name}</span>
+
+                                {/* Right: energy amount + stars price */}
+                                <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                                    <span style={{ fontSize: 12, fontWeight: 600, color: "#10B981" }}>+{offer.energy}</span>
+                                    <EnergyIcon size={12} color="#10B981" />
+                                    <div style={{
+                                        background: "rgba(245,158,11,0.15)",
+                                        border: "1px solid rgba(245,158,11,0.3)",
+                                        borderRadius: 8, padding: "3px 10px",
+                                        display: "flex", alignItems: "center", gap: 3,
+                                    }}>
+                                        {buyingId === offer.id
+                                            ? <div className="w-3 h-3 border border-amber-500 border-t-transparent rounded-full animate-spin" />
+                                            : <span style={{ fontSize: 13, fontWeight: 600, color: "#F59E0B" }}>⭐ {offer.stars}</span>
+                                        }
                                     </div>
-                                    <p className="text-[11px] text-white/40">Начислится моментально</p>
                                 </div>
-                            </div>
-                            <div className="flex items-center gap-2 bg-amber-500/20 px-3 py-1.5 rounded-xl border border-amber-500/30">
-                                <span className="text-xs font-bold text-amber-400">⭐️ {offer.stars}</span>
-                                {buyingId === offer.id && <div className="w-3 h-3 border border-amber-500 border-t-transparent rounded-full animate-spin" />}
-                            </div>
-                        </button>
+                            </button>
+                        </div>
                     ))}
                 </div>
 
-                <p className="text-[10px] text-center text-white/30 uppercase font-bold tracking-widest">
-                    Оплата через Telegram Stars
-                </p>
+                <p style={{
+                    fontSize: 10, textAlign: "center",
+                    color: "rgba(255,255,255,0.25)",
+                    textTransform: "uppercase", letterSpacing: "0.08em",
+                    padding: "4px 16px 20px",
+                }}>Оплата через Telegram Stars</p>
             </motion.div>
         </div>
     );

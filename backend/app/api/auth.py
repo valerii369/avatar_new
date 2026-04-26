@@ -200,10 +200,25 @@ async def login(request: LoginRequest):
             # Generate referral_code for existing users who don't have one
             if not user.get("referral_code"):
                 update_fields["referral_code"] = _generate_referral_code(supabase)
+            # Update streak based on last_login_date
+            from datetime import date, timedelta
+            today = date.today()
+            last_login = user.get("last_login_date")
+            if last_login:
+                if isinstance(last_login, str):
+                    last_login = date.fromisoformat(last_login[:10])
+                if last_login == today - timedelta(days=1):
+                    update_fields["streak"] = user.get("streak", 0) + 1
+                elif last_login < today - timedelta(days=1):
+                    update_fields["streak"] = 1
+            else:
+                update_fields["streak"] = max(user.get("streak", 0), 1)
+            update_fields["last_login_date"] = today.isoformat()
             supabase.table("users").update(update_fields).eq("tg_id", resolved_tg_id).execute()
             # Refresh user data to get generated referral_code
             user = supabase.table("users").select("*").eq("tg_id", resolved_tg_id).execute().data[0]
         else:
+            from datetime import date as _date
             new_user = {
                 "tg_id":      resolved_tg_id,
                 "first_name": resolved_first_name,
@@ -211,7 +226,9 @@ async def login(request: LoginRequest):
                 "username":   resolved_username,
                 "photo_url":  resolved_photo_url,
                 "referral_code": _generate_referral_code(supabase),
+                "last_login_date": _date.today().isoformat(),
                 **_default_user_fields(),
+                "streak": 1,
             }
 
             # Handle referral tracking: if ref param provided, find referrer and store their id
@@ -662,31 +679,44 @@ async def update_location(request: UpdateLocationRequest):
 
 @router.get("/referrals")
 async def get_referrals(user_id: str):
-    """Returns users who registered via this user's referral_code (referred_by = user_id)."""
+    """Returns referrals stats: invited (all) and active (onboarding done)."""
     supabase = get_supabase()
     try:
         # Find all users who were referred by this user
         referrals_res = supabase.table("users") \
-            .select("id,first_name,username,created_at,xp,evolution_level") \
+            .select("id,first_name,username,created_at,xp,evolution_level,onboarding_done") \
             .eq("referred_by", user_id) \
             .order("created_at", desc=True) \
             .execute()
 
-        referrals = []
-        for ref_user in referrals_res.data:
-            referrals.append({
+        all_referrals = referrals_res.data or []
+
+        # Split into invited and active
+        invited = []
+        active = []
+
+        for ref_user in all_referrals:
+            user_obj = {
                 "user_id": ref_user.get("id"),
                 "first_name": ref_user.get("first_name", ""),
                 "username": ref_user.get("username", ""),
                 "level": ref_user.get("evolution_level", 1),
                 "xp": ref_user.get("xp", 0),
                 "joined_at": ref_user.get("created_at"),
-            })
+            }
+            invited.append(user_obj)
 
-        return referrals
+            # Add to active only if onboarding_done
+            if ref_user.get("onboarding_done"):
+                active.append(user_obj)
+
+        return {
+            "invited": invited,
+            "active": active,
+        }
     except Exception as e:
         logger.error(f"get_referrals failed for user {user_id}: {e}")
-        return []
+        return {"invited": [], "active": []}
 
 
 # ─── /referral-link ───────────────────────────────────────────────────────────
@@ -704,8 +734,9 @@ async def get_referral_link(user_id: str):
         if not referral_code:
             raise HTTPException(status_code=400, detail="User has no referral code")
 
-        # Build the referral link as Telegram Mini App link (only accessible via Telegram)
-        referral_link = f"https://t.me/avatarmatrix_bot/app?ref={referral_code}"
+        # Build the referral link using Telegram /start command format
+        # ?start=CODE passes the parameter to the bot's /start handler
+        referral_link = f"https://t.me/avatarmatrix_bot?start={referral_code}"
 
         return {
             "referral_code": referral_code,

@@ -118,7 +118,6 @@ jobs:
           fi
 
       - name: Deploy to Vercel
-        working-directory: frontend
         run: |
           vercel --token ${{ secrets.VERCEL_TOKEN }} --prod --yes
         env:
