@@ -665,8 +665,13 @@ function ReferralView({ userId, referralCode }: { userId: string; referralCode: 
         () => profileAPI.getReferrals(userId).then(res => res.data)
     );
 
-    const invited = referralData?.invited ?? [];
-    const active = referralData?.active ?? [];
+    // Handle both old format (array) and new format ({invited, active})
+    const invited = Array.isArray(referralData)
+        ? referralData
+        : (referralData?.invited ?? []);
+    const active = Array.isArray(referralData)
+        ? referralData.filter((r: any) => r.onboarding_done)
+        : (referralData?.active ?? []);
 
     const [promoCode, setPromoCode] = useState("");
     const [promoLoading, setPromoLoading] = useState(false);
