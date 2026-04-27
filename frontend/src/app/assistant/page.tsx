@@ -570,6 +570,11 @@ export default function AssistantPage() {
                         </AnimatePresence>
                     </div>
                     <button
+                        onMouseDown={startRecording}
+                        onMouseUp={stopRecording}
+                        onMouseLeave={stopRecording}
+                        onTouchStart={startRecording}
+                        onTouchEnd={stopRecording}
                         onPointerDown={startRecording}
                         onPointerUp={stopRecording}
                         onPointerLeave={stopRecording}
@@ -581,7 +586,9 @@ export default function AssistantPage() {
                             display: "flex", alignItems: "center", justifyContent: "center",
                             transform: isRecording ? "scale(0.95)" : "scale(1)",
                             transition: "all 0.15s",
-                            opacity: isFinished ? 0.3 : 1
+                            opacity: isFinished ? 0.3 : 1,
+                            userSelect: "none",
+                            WebkitUserSelect: "none"
                         }}
                     >
                         {isRecording ? "🔴" : <MicIcon className="w-5 h-5 text-amber-500/60" />}
