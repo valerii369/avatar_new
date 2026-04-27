@@ -102,14 +102,27 @@ const useVoiceRecorder = (userId: string | null, setInput: React.Dispatch<React.
     const chunksRef = useRef<Blob[]>([]);
 
     const startRecording = useCallback(async () => {
-        if (!userId || isRecording || isTranscribing) {
-            console.log("[startRecording] Skipped: userId=", userId, "isRecording=", isRecording, "isTranscribing=", isTranscribing);
+        console.log("[startRecording] Called with userId=", userId, "isRecording=", isRecording, "isTranscribing=", isTranscribing);
+
+        if (!userId) {
+            console.error("[startRecording] ERROR: userId is null or undefined!");
             return;
         }
+
+        if (isRecording) {
+            console.warn("[startRecording] WARNING: Already recording");
+            return;
+        }
+
+        if (isTranscribing) {
+            console.warn("[startRecording] WARNING: Already transcribing");
+            return;
+        }
+
         try {
             console.log("[startRecording] Requesting microphone access...");
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            console.log("[startRecording] Microphone access granted, stream tracks:", stream.getTracks().length);
+            console.log("[startRecording] ✓ Microphone access granted, stream tracks:", stream.getTracks().length);
 
             const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
                 ? "audio/webm;codecs=opus" : "audio/webm";
@@ -188,6 +201,11 @@ export default function AssistantPage() {
     const router = useRouter();
     const tmaSafeTop = useTmaSafeArea();
     const { userId, assistantMessages, setAssistantMessages, energy } = useUserStore();
+
+    useEffect(() => {
+        console.log("[AssistantPage] Mounted, userId=", userId);
+    }, [userId]);
+
     const [messages, setMessages] = useState<{ role: string, content: string }[]>(assistantMessages);
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
@@ -196,7 +214,7 @@ export default function AssistantPage() {
     const [isFinished, setIsFinished] = useState(false);
     const [diarySummary, setDiarySummary] = useState<string | null>(null);
     const [isSavingDiary, setIsSavingDiary] = useState(false);
-    
+
     const scrollRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 

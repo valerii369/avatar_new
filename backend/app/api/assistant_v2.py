@@ -964,3 +964,18 @@ async def client_log(req: ClientLogRequest):
     except Exception as e:
         logger.error(f"Failed to log client error: {e}")
         return {"ok": False}
+
+
+@router.get("/debug-errors/{user_id}")
+async def debug_errors(user_id: str):
+    """Get recent errors for debugging."""
+    try:
+        supabase = get_supabase()
+        result = supabase.table("uis_errors").select("*").eq("user_id", user_id).order("created_at", desc=True).limit(30).execute()
+        return {
+            "count": len(result.data),
+            "errors": result.data
+        }
+    except Exception as e:
+        logger.error(f"Failed to fetch errors: {e}")
+        return {"error": str(e)}
