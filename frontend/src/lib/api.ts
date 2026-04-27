@@ -92,14 +92,43 @@ export const paymentsAPI = {
 
 export const voiceAPI = {
   transcribe: (userId: string | number, audioBlob: Blob, context: string) => {
+    console.log(`[voiceAPI.transcribe] 📤 Sending blob: ${audioBlob.size} bytes, type: ${audioBlob.type}`);
+
+    if (!audioBlob || audioBlob.size === 0) {
+      console.error("[voiceAPI.transcribe] ❌ Empty blob!");
+      throw new Error("Audio blob is empty");
+    }
+
     const formData = new FormData();
-    formData.append("file", audioBlob);
+    formData.append("file", audioBlob, "audio.webm");
     formData.append("user_id", userId.toString());
     formData.append("context", context);
+
+    // For FormData, let axios handle Content-Type automatically
     return api.post("/api/assistant-v2/transcribe", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
+      timeout: 60000
+    }).then(res => {
+      console.log("[voiceAPI.transcribe] ✅ Success response:", res.data);
+      return res;
+    }).catch(err => {
+      const errorMsg = err.response?.data?.detail || err.message;
+      console.error("[voiceAPI.transcribe] ❌ Error:", errorMsg, "Status:", err.response?.status);
+      throw err;
     });
   },
+};
+
+// Debug logging to backend
+export const debugAPI = {
+  log: (userId: string | number, message: string, level: string = "info") => {
+    console.log(`[DEBUG] ${message}`);
+    return api.post("/api/assistant-v2/debug-log", {
+      user_id: userId.toString(),
+      message,
+      level,
+      timestamp: new Date().toISOString()
+    }).catch(() => {});
+  }
 };
 
 export default api;

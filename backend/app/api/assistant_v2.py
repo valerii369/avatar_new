@@ -889,20 +889,103 @@ async def transcribe(
     user_id: str = Form(...),
     context: str = Form(default=""),
 ):
+    """Transcribe audio to text using OpenAI Whisper."""
+    print(f"\n🎤 [TRANSCRIBE START] user={user_id}")
+
     try:
-        audio_bytes = await file.read()
-        audio_io = io.BytesIO(audio_bytes)
-        filename = file.filename or "audio.webm"
-        content_type = file.content_type or "audio/webm"
+        # Read audio file
+        audio_data = await file.read()
+        print(f"📦 Audio received: {len(audio_data)} bytes")
 
-        transcript = await openai_client.audio.transcriptions.create(
-            model="whisper-1",
-            file=(filename, audio_io, content_type),
-            language="ru",
-        )
+        if not audio_data or len(audio_data) < 100:
+            print(f"❌ Audio too small: {len(audio_data)} bytes")
+            return {"transcript": ""}
 
-        return {"transcript": transcript.text}
+        # Create temporary file for Whisper
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as tmp:
+            tmp.write(audio_data)
+            tmp_path = tmp.name
+
+        print(f"🚀 Sending to Whisper API...")
+
+        # Call Whisper API
+        with open(tmp_path, "rb") as audio_file:
+            result = await openai_client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file,
+                language="ru"
+            )
+
+        # Clean up temp file
+        import os
+        os.unlink(tmp_path)
+
+        transcript_text = result.text.strip() if result.text else ""
+        print(f"✅ Transcript: {transcript_text}")
+
+        return {"transcript": transcript_text}
 
     except Exception as e:
-        logger.error(f"Transcription error: {e}")
-        raise HTTPException(status_code=500, detail="Transcription failed")
+        print(f"❌ ERROR: {type(e).__name__}: {str(e)}")
+        return {"transcript": "", "error": str(e)}
+
+
+# ─── Client logging ────────────────────────────────────────────────────────────
+
+class ClientLogRequest(BaseModel):
+    user_id: str
+    error_type: str
+    message: str
+    context: str | None = None
+
+@router.post("/client-log")
+async def client_log(req: ClientLogRequest):
+    try:
+        logger.info(f"[CLIENT] {req.error_type} from user {req.user_id}: {req.message}")
+        supabase = get_supabase()
+        supabase.table("uis_errors").insert({
+            "user_id": req.user_id,
+            "error_type": f"client_{req.error_type}",
+            "message": req.message,
+            "context": req.context
+        }).execute()
+        return {"ok": True}
+    except Exception as e:
+        logger.error(f"Failed to log client error: {e}")
+        return {"ok": False}
+
+
+class DebugLogRequest(BaseModel):
+    user_id: str
+    message: str
+    level: str = "info"
+    timestamp: str | None = None
+
+@router.post("/debug-log")
+async def debug_log(req: DebugLogRequest):
+    """Log messages from frontend."""
+    prefix = "[CLIENT]" if req.level == "error" else "[CLIENT]"
+    logger.log(
+        logging.ERROR if req.level == "error" else logging.INFO,
+        f"{prefix} {req.user_id}: {req.message}"
+    )
+    print(f"{prefix} {req.user_id}: {req.message}")
+    return {"ok": True}
+
+
+@router.get("/debug-errors/{user_id}")
+async def debug_errors(user_id: str):
+    """Get recent errors for debugging."""
+    try:
+        supabase = get_supabase()
+        result = supabase.table("uis_errors").select("*").eq("user_id", user_id).order("created_at", desc=True).limit(30).execute()
+        return {
+            "count": len(result.data),
+            "errors": result.data
+        }
+    except Exception as e:
+        logger.error(f"Failed to fetch errors: {e}")
+        return {"error": str(e)}
+
+
