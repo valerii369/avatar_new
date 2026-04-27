@@ -151,9 +151,8 @@ export default function AssistantPage() {
     const tmaSafeTop = useTmaSafeArea();
     const { userId, assistantMessages, assistantMessagesUserId, setAssistantMessages, clearAssistantMessages, energy } = useUserStore();
 
-    // Load history only if it belongs to the current user
-    const initialMessages = userId && assistantMessagesUserId === userId ? assistantMessages : [];
-    const [messages, setMessages] = useState<{ role: string, content: string, time?: string }[]>(initialMessages);
+    // Load history from localStorage immediately (userId check is for cross-user protection on save)
+    const [messages, setMessages] = useState<{ role: string, content: string, time?: string }[]>(assistantMessages);
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
     const [sessionId, setSessionId] = useState<number | null>(null);
