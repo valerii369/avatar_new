@@ -494,7 +494,7 @@ export default function AssistantPage() {
                                 background: "rgba(255,255,255,0.06)",
                                 border: "1px solid rgba(255,255,255,0.1)",
                                 borderRadius: 32,
-                                padding: "10px 48px 10px 16px",
+                                padding: "10px 52px 10px 16px",
                                 fontSize: 15,
                                 color: "#fff",
                                 outline: "none",
@@ -512,8 +512,8 @@ export default function AssistantPage() {
                             onClick={handleSend}
                             disabled={!input.trim() || loading || isTranscribing || isFinished}
                             style={{
-                                position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
-                                width: 32, height: 32, borderRadius: "50%", border: "none", cursor: "pointer",
+                                position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)",
+                                width: 40, height: 40, borderRadius: "50%", border: "none", cursor: "pointer",
                                 background: "rgba(245,158,11,0.2)", color: "#FCD34D",
                                 display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16,
                                 opacity: (!input.trim() || loading || isFinished) ? 0.3 : 1,
@@ -542,7 +542,7 @@ export default function AssistantPage() {
                         onPointerLeave={stopRecording}
                         disabled={isFinished}
                         style={{
-                            flexShrink: 0, width: 46, height: 46, borderRadius: "50%", cursor: "pointer",
+                            flexShrink: 0, width: 44, height: 44, borderRadius: "50%", cursor: "pointer",
                             background: isRecording ? "#EF4444" : "rgba(255,255,255,0.06)",
                             border: isRecording ? "none" : "1px solid rgba(255,255,255,0.1)",
                             display: "flex", alignItems: "center", justifyContent: "center",
