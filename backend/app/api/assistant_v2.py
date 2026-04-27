@@ -890,10 +890,20 @@ async def transcribe(
     context: str = Form(default=""),
 ):
     try:
+        logger.info(f"Transcribe request: user_id={user_id}, context={context}, filename={file.filename}, content_type={file.content_type}")
+
         audio_bytes = await file.read()
+        logger.info(f"Audio bytes received: {len(audio_bytes)} bytes")
+
+        if len(audio_bytes) == 0:
+            logger.warning("Empty audio file received")
+            raise HTTPException(status_code=400, detail="Empty audio file")
+
         audio_io = io.BytesIO(audio_bytes)
         filename = file.filename or "audio.webm"
         content_type = file.content_type or "audio/webm"
+
+        logger.info(f"Calling OpenAI Whisper with {len(audio_bytes)} bytes, language=ru")
 
         transcript = await openai_client.audio.transcriptions.create(
             model="whisper-1",
@@ -901,8 +911,11 @@ async def transcribe(
             language="ru",
         )
 
+        logger.info(f"Transcription successful: '{transcript.text}'")
         return {"transcript": transcript.text}
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Transcription error: {e}")
-        raise HTTPException(status_code=500, detail="Transcription failed")
+        logger.error(f"Transcription error: {type(e).__name__}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))

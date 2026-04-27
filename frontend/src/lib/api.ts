@@ -92,11 +92,21 @@ export const paymentsAPI = {
 
 export const voiceAPI = {
   transcribe: (userId: string | number, audioBlob: Blob, context: string) => {
+    console.log(`[voiceAPI.transcribe] Blob size: ${audioBlob.size} bytes, type: ${audioBlob.type}`);
     const formData = new FormData();
-    formData.append("file", audioBlob);
+    formData.append("file", audioBlob, "audio.webm");
     formData.append("user_id", userId.toString());
     formData.append("context", context);
-    return api.post("/api/assistant-v2/transcribe", formData);
+    return api.post("/api/assistant-v2/transcribe", formData, {
+      timeout: 60000,
+      headers: {}
+    }).then(res => {
+      console.log("[voiceAPI.transcribe] Response:", res.data);
+      return res;
+    }).catch(err => {
+      console.error("[voiceAPI.transcribe] Error:", err.response?.data || err.message);
+      throw err;
+    });
   },
 };
 

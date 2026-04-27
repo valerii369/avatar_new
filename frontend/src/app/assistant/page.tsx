@@ -102,37 +102,60 @@ const useVoiceRecorder = (userId: string | null, setInput: React.Dispatch<React.
     const chunksRef = useRef<Blob[]>([]);
 
     const startRecording = useCallback(async () => {
-        if (!userId || isRecording || isTranscribing) return;
+        if (!userId || isRecording || isTranscribing) {
+            console.log("[startRecording] Skipped: userId=", userId, "isRecording=", isRecording, "isTranscribing=", isTranscribing);
+            return;
+        }
         try {
+            console.log("[startRecording] Requesting microphone access...");
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            console.log("[startRecording] Microphone access granted, stream tracks:", stream.getTracks().length);
+
             const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
                 ? "audio/webm;codecs=opus" : "audio/webm";
+            console.log("[startRecording] Using MIME type:", mimeType);
 
             const recorder = new MediaRecorder(stream, { mimeType });
             chunksRef.current = [];
-            recorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+
+            recorder.ondataavailable = e => {
+                console.log("[recorder.ondataavailable] Chunk received:", e.data.size, "bytes");
+                if (e.data.size > 0) chunksRef.current.push(e.data);
+            };
+
             recorder.onstop = async () => {
+                console.log("[recorder.onstop] Recording stopped, total chunks:", chunksRef.current.length, "total size:", chunksRef.current.reduce((s, c) => s + c.size, 0));
                 stream.getTracks().forEach(t => t.stop());
-                if (chunksRef.current.length === 0) return;
+
+                if (chunksRef.current.length === 0) {
+                    console.warn("[recorder.onstop] No audio chunks recorded");
+                    return;
+                }
+
                 const blob = new Blob(chunksRef.current, { type: mimeType });
+                console.log("[recorder.onstop] Blob created:", blob.size, "bytes, type:", blob.type);
+
                 setIsTranscribing(true);
                 try {
                     const res = await voiceAPI.transcribe(userId, blob, "assistant");
                     const transcript = res.data.transcript?.trim();
+                    console.log("[startRecording] Transcription result:", transcript);
                     if (transcript) {
                         setInput(prev => prev ? prev + " " + transcript : transcript);
                     }
                 } catch (err) {
-                    console.error("Transcription error:", err);
+                    console.error("[startRecording] Transcription error:", err);
                 } finally {
                     setIsTranscribing(false);
                 }
             };
+
             recorder.start(100);
             mediaRecorderRef.current = recorder;
             setIsRecording(true);
+            console.log("[startRecording] Recording started");
         } catch (err) {
-            console.error("Microphone access error:", err);
+            console.error("[startRecording] Microphone access error:", err);
         }
     }, [isRecording, isTranscribing, userId, setInput]);
 
