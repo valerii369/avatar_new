@@ -340,8 +340,8 @@ export default function AssistantPage() {
             )}
 
             {/* Top bar — offset for TMA header */}
-            <div style={{ padding: "14px 16px 8px", borderBottom: "1px solid rgba(255,255,255,0.05)", flexShrink: 0, position: "relative", zIndex: 20 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ padding: "4px 16px 8px", borderBottom: "1px solid rgba(255,255,255,0.05)", flexShrink: 0, position: "relative", zIndex: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
                     <button
                         onClick={() => router.back()}
                         style={{
@@ -389,8 +389,17 @@ export default function AssistantPage() {
                         letterSpacing: "0.1em",
                         textTransform: "uppercase",
                         flex: "1",
+                        gap: 6,
                     }}>
-                        ☼ Чат с внутренним миром
+                        <div style={{
+                            width: 5,
+                            height: 5,
+                            borderRadius: "50%",
+                            background: "#22C55E",
+                            boxShadow: "0 0 8px rgba(34, 197, 94, 0.8)",
+                            flexShrink: 0,
+                        }} />
+                        <span>Чат с внутренним миром</span>
                     </div>
                     <button
                         onClick={handleClear}
