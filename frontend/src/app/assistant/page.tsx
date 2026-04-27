@@ -564,7 +564,9 @@ export default function AssistantPage() {
                             disabled={loading || isTranscribing || isFinished}
                             style={{
                                 width: "100%",
-                                background: "rgba(255,255,255,0.06)",
+                                background: "rgba(30,30,40,0.75)",
+                                backdropFilter: "blur(20px)",
+                                WebkitBackdropFilter: "blur(20px)",
                                 border: "1px solid rgba(255,255,255,0.1)",
                                 borderRadius: 32,
                                 padding: "10px 16px",
