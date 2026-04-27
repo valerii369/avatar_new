@@ -494,7 +494,7 @@ export default function AssistantPage() {
                                 background: "rgba(255,255,255,0.06)",
                                 border: "1px solid rgba(255,255,255,0.1)",
                                 borderRadius: 32,
-                                padding: "14px 48px 14px 16px",
+                                padding: "8px 48px 8px 16px",
                                 fontSize: 14,
                                 color: "#fff",
                                 outline: "none",
@@ -542,7 +542,7 @@ export default function AssistantPage() {
                         onPointerLeave={stopRecording}
                         disabled={isFinished}
                         style={{
-                            flexShrink: 0, width: 52, height: 52, borderRadius: 24, cursor: "pointer",
+                            flexShrink: 0, width: 52, height: 52, borderRadius: "50%", cursor: "pointer",
                             background: isRecording ? "#EF4444" : "rgba(255,255,255,0.06)",
                             border: isRecording ? "none" : "1px solid rgba(255,255,255,0.1)",
                             display: "flex", alignItems: "center", justifyContent: "center",
