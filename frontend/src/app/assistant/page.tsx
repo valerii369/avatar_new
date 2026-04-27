@@ -565,8 +565,8 @@ export default function AssistantPage() {
                             style={{
                                 width: "100%",
                                 background: "rgba(30,30,40,0.75)",
-                                backdropFilter: "blur(20px)",
-                                WebkitBackdropFilter: "blur(20px)",
+                                backdropFilter: "blur(14px)",
+                                WebkitBackdropFilter: "blur(14px)",
                                 border: "1px solid rgba(255,255,255,0.1)",
                                 borderRadius: 32,
                                 padding: "10px 16px",
