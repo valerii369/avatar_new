@@ -473,8 +473,8 @@ export default function AssistantPage() {
             </div>
 
             {/* Bottom panel */}
-            <div style={{ flexShrink: 0, padding: "10px 16px 20px", borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", flexDirection: "column", gap: 8, position: "relative", zIndex: 20, background: "rgba(6,8,24,0.95)", backdropFilter: "blur(10px)", opacity: isFinished ? 0.3 : 1, pointerEvents: isFinished ? "none" : "auto" }}>
-                <div style={{ display: "flex", gap: 8, alignItems: "center", position: "relative" }}>
+            <div style={{ flexShrink: 0, padding: "10px 12px 20px", borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", flexDirection: "column", gap: 8, position: "relative", zIndex: 20, background: "rgba(6,8,24,0.95)", backdropFilter: "blur(10px)", opacity: isFinished ? 0.3 : 1, pointerEvents: isFinished ? "none" : "auto" }}>
+                <div style={{ display: "flex", gap: 4, alignItems: "center", position: "relative" }}>
                     <div style={{ flex: 1, position: "relative" }}>
                         <textarea
                             ref={textareaRef}
@@ -542,7 +542,7 @@ export default function AssistantPage() {
                         onPointerLeave={stopRecording}
                         disabled={isFinished}
                         style={{
-                            flexShrink: 0, width: 44, height: 44, borderRadius: "50%", cursor: "pointer",
+                            flexShrink: 0, width: 46, height: 46, borderRadius: "50%", cursor: "pointer",
                             background: isRecording ? "#EF4444" : "rgba(255,255,255,0.06)",
                             border: isRecording ? "none" : "1px solid rgba(255,255,255,0.1)",
                             display: "flex", alignItems: "center", justifyContent: "center",
