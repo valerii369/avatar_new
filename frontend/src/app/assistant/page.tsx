@@ -473,7 +473,7 @@ export default function AssistantPage() {
             </div>
 
             {/* Bottom panel */}
-            <div style={{ flexShrink: 0, padding: "10px 20px 20px", borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", flexDirection: "column", gap: 8, position: "relative", zIndex: 20, background: "rgba(6,8,24,0.95)", backdropFilter: "blur(10px)", opacity: isFinished ? 0.3 : 1, pointerEvents: isFinished ? "none" : "auto" }}>
+            <div style={{ flexShrink: 0, padding: "10px 20px 8px", borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", flexDirection: "column", gap: 8, position: "relative", zIndex: 20, background: "rgba(6,8,24,0.95)", backdropFilter: "blur(10px)", opacity: isFinished ? 0.3 : 1, pointerEvents: isFinished ? "none" : "auto" }}>
                 <div style={{ display: "flex", gap: 4, alignItems: "center", position: "relative" }}>
                     <div style={{ flex: 1, position: "relative" }}>
                         <textarea
