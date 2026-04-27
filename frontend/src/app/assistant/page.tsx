@@ -340,7 +340,7 @@ export default function AssistantPage() {
             )}
 
             {/* Top bar — floating with gradient fade */}
-            <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: "4px 16px 32px", background: "linear-gradient(to bottom, rgba(6,8,24,1) 55%, transparent)", zIndex: 20 }}>
+            <div style={{ position: "absolute", top: tmaSafeTop > 0 ? tmaSafeTop : 0, left: 0, right: 0, padding: "4px 16px 32px", background: "linear-gradient(to bottom, rgba(6,8,24,1) 55%, transparent)", zIndex: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
                     <button
                         onClick={() => router.back()}
