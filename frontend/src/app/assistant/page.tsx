@@ -128,7 +128,8 @@ const useVoiceRecorder = (userId: string | null, setInput: React.Dispatch<React.
             };
 
             recorder.onstop = async () => {
-                console.log("[recorder.onstop] Recording stopped, total chunks:", chunksRef.current.length, "total size:", chunksRef.current.reduce((s, c) => s + c.size, 0));
+                const totalSize = chunksRef.current.reduce((s, c) => s + c.size, 0);
+                console.log("[recorder.onstop] Recording stopped, total chunks:", chunksRef.current.length, "total size:", totalSize);
                 stream.getTracks().forEach(t => t.stop());
 
                 if (chunksRef.current.length === 0) {
@@ -139,16 +140,24 @@ const useVoiceRecorder = (userId: string | null, setInput: React.Dispatch<React.
                 const blob = new Blob(chunksRef.current, { type: mimeType });
                 console.log("[recorder.onstop] Blob created:", blob.size, "bytes, type:", blob.type);
 
+                if (blob.size < 100) {
+                    console.warn("[recorder.onstop] Audio too short or silent:", blob.size, "bytes");
+                    return;
+                }
+
                 setIsTranscribing(true);
                 try {
+                    console.log("[recorder.onstop] Starting transcription...");
                     const res = await voiceAPI.transcribe(userId, blob, "assistant");
                     const transcript = res.data.transcript?.trim();
-                    console.log("[startRecording] Transcription result:", transcript);
+                    console.log("[recorder.onstop] Transcription result:", transcript);
                     if (transcript) {
                         setInput(prev => prev ? prev + " " + transcript : transcript);
+                    } else {
+                        console.warn("[recorder.onstop] Empty transcript returned");
                     }
                 } catch (err) {
-                    console.error("[startRecording] Transcription error:", err);
+                    console.error("[recorder.onstop] Transcription error:", err);
                 } finally {
                     setIsTranscribing(false);
                 }

@@ -896,8 +896,14 @@ async def transcribe(
         logger.info(f"Audio bytes received: {len(audio_bytes)} bytes")
 
         if len(audio_bytes) == 0:
-            logger.warning("Empty audio file received")
-            raise HTTPException(status_code=400, detail="Empty audio file")
+            error = "Empty audio file"
+            logger.warning(error)
+            raise HTTPException(status_code=400, detail=error)
+
+        if len(audio_bytes) < 100:
+            error = f"Audio too short: {len(audio_bytes)} bytes (minimum 100 required)"
+            logger.warning(error)
+            raise HTTPException(status_code=400, detail=error)
 
         audio_io = io.BytesIO(audio_bytes)
         filename = file.filename or "audio.webm"
