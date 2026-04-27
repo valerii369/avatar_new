@@ -449,7 +449,7 @@ export default function AssistantPage() {
                 className="no-scrollbar"
                 style={{
                     flex: 1, overflowY: "auto", padding: `76px 16px ${isInputFocused ? 66 : 76}px`, display: "flex", flexDirection: "column", justifyContent: "flex-end", gap: 10, scrollbarWidth: "none", position: "relative", zIndex: 10,
-                    background: `linear-gradient(rgba(6,8,24,0.65), rgba(6,8,24,0.65)), url('/sacred-bg.svg')`,
+                    background: `url('/stars-bg.svg')`,
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                     backgroundAttachment: "fixed",
@@ -467,10 +467,10 @@ export default function AssistantPage() {
                             fontSize: 16,
                             lineHeight: 1.4,
                             fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif',
-                            background: msg.role === "user" ? "#007AFF" : "#0f0d1a",
+                            background: msg.role === "user" ? "#007AFF" : "#1e1e1e",
                             color: "#ffffff",
                             border: "none",
-                            boxShadow: msg.role === "user" ? "0 2px 8px rgba(0,122,255,0.3)" : "0 2px 8px rgba(0,0,0,0.3)",
+                            boxShadow: msg.role === "user" ? "0 2px 8px rgba(0,122,255,0.3)" : "0 2px 8px rgba(0,0,0,0.4)",
                         }}>
                             {msg.role === "assistant" ? <MessageContent content={msg.content} /> : msg.content}
                         </div>
