@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { assistantAPI, voiceAPI, debugAPI } from "@/lib/api";
+import { assistantAPI, voiceAPI } from "@/lib/api";
 import { useUserStore } from "@/lib/store";
 import { useTmaSafeArea } from "@/lib/useTmaSafeArea";
 import { EnergyIcon } from "@/components/EnergyIcon";
@@ -102,99 +102,42 @@ const useVoiceRecorder = (userId: string | null, setInput: React.Dispatch<React.
     const chunksRef = useRef<Blob[]>([]);
 
     const startRecording = useCallback(async () => {
-        console.log(`[🎤 startRecording] userId=${userId}, isRecording=${isRecording}, isTranscribing=${isTranscribing}`);
-        if (userId) debugAPI.log(userId, `[🎤 START] userId=${userId}, recording=${isRecording}`);
-
-        if (!userId) {
-            console.error("[🎤 startRecording] ❌ userId is null or undefined!");
-            return;
-        }
-
-        if (isRecording) {
-            console.warn("[🎤 startRecording] ⚠️ Already recording");
-            return;
-        }
-
-        if (isTranscribing) {
-            console.warn("[🎤 startRecording] ⚠️ Already transcribing");
-            return;
-        }
-
+        if (!userId || isRecording || isTranscribing) return;
         try {
-            console.log("[🎤 startRecording] 📱 Requesting microphone access...");
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            console.log("[🎤 startRecording] ✅ Microphone granted, tracks:", stream.getTracks().length);
-
             const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
                 ? "audio/webm;codecs=opus" : "audio/webm";
-            console.log("[🎤 startRecording] Codec:", mimeType);
 
             const recorder = new MediaRecorder(stream, { mimeType });
             chunksRef.current = [];
-
-            recorder.onerror = e => {
-                console.error("[🎤 recorder.onerror] ❌ Error:", e.error);
-            };
-
-            recorder.ondataavailable = e => {
-                console.log("[🎤 ondataavailable] Chunk:", e.data.size, "bytes");
-                if (e.data.size > 0) chunksRef.current.push(e.data);
-            };
-
+            recorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
             recorder.onstop = async () => {
-                const totalSize = chunksRef.current.reduce((s, c) => s + c.size, 0);
-                console.log(`[🎤 onstop] Stopped: ${chunksRef.current.length} chunks, ${totalSize} bytes total`);
-                if (userId) debugAPI.log(userId, `[🎤 ONSTOP] chunks=${chunksRef.current.length}, size=${totalSize}`);
                 stream.getTracks().forEach(t => t.stop());
-
-                if (chunksRef.current.length === 0) {
-                    console.error("[🎤 onstop] ❌ No chunks recorded!");
-                    return;
-                }
-
+                if (chunksRef.current.length === 0) return;
                 const blob = new Blob(chunksRef.current, { type: mimeType });
-                console.log(`[🎤 onstop] 📦 Blob: ${blob.size} bytes, type: ${blob.type}`);
-
-                if (blob.size < 100) {
-                    console.error(`[🎤 onstop] ❌ Too short: ${blob.size} < 100 bytes`);
-                    return;
-                }
-
-                console.log(`[🎤 onstop] ✅ Ready to transcribe: ${blob.size} bytes`);
-
                 setIsTranscribing(true);
                 try {
-                    console.log("[🎤 onstop] 🚀 Transcribing...");
-                    if (userId) debugAPI.log(userId, `[🎤 TRANSCRIBE] Sending blob ${blob.size} bytes`);
                     const res = await voiceAPI.transcribe(userId, blob, "assistant");
                     const transcript = res.data.transcript?.trim();
-                    console.log(`[🎤 onstop] ✅ Got transcript: "${transcript}"`);
                     if (transcript) {
                         setInput(prev => prev ? prev + " " + transcript : transcript);
-                        console.log("[🎤 onstop] ✅ Text added to input");
-                    } else {
-                        console.warn("[🎤 onstop] ⚠️ Empty transcript!");
                     }
                 } catch (err) {
-                    console.error(`[🎤 onstop] ❌ Error: ${err.message || err}`);
+                    console.error("Transcription error:", err);
                 } finally {
                     setIsTranscribing(false);
                 }
             };
-
             recorder.start(100);
             mediaRecorderRef.current = recorder;
             setIsRecording(true);
-            console.log("[🎤 startRecording] ✅ Recording started");
         } catch (err) {
-            console.error("[🎤 startRecording] ❌ Mic error:", err.message || err);
+            console.error("Microphone access error:", err);
         }
     }, [isRecording, isTranscribing, userId, setInput]);
 
     const stopRecording = useCallback(() => {
-        console.log(`[🎤 stopRecording] isRecording=${isRecording}, hasRecorder=${!!mediaRecorderRef.current}`);
         if (mediaRecorderRef.current && isRecording) {
-            console.log("[🎤 stopRecording] ⏹️ Stopping...");
             mediaRecorderRef.current.stop();
             setIsRecording(false);
         }
@@ -207,12 +150,7 @@ export default function AssistantPage() {
     const router = useRouter();
     const tmaSafeTop = useTmaSafeArea();
     const { userId, assistantMessages, setAssistantMessages, energy } = useUserStore();
-
-    useEffect(() => {
-        console.log("[AssistantPage] Mounted, userId=", userId);
-    }, [userId]);
-
-    const [messages, setMessages] = useState<{ role: string, content: string }[]>(assistantMessages);
+    const [messages, setMessages] = useState<{ role: string, content: string, time?: string }[]>(assistantMessages);
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
     const [sessionId, setSessionId] = useState<number | null>(null);
@@ -220,7 +158,8 @@ export default function AssistantPage() {
     const [isFinished, setIsFinished] = useState(false);
     const [diarySummary, setDiarySummary] = useState<string | null>(null);
     const [isSavingDiary, setIsSavingDiary] = useState(false);
-
+    const [isInputFocused, setIsInputFocused] = useState(false);
+    
     const scrollRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -241,7 +180,7 @@ export default function AssistantPage() {
                     setLoading(true);
                     const chatRes = await assistantAPI.chat(userId, sid, "");
                     if (chatRes.data.ai_response) {
-                        const greeting = { role: "assistant", content: chatRes.data.ai_response };
+                        const greeting = { role: "assistant", content: chatRes.data.ai_response, time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) };
                         setMessages([greeting]);
                         setAssistantMessages([greeting]);
                     }
@@ -270,7 +209,8 @@ export default function AssistantPage() {
         if (!input.trim() || loading || !sessionId || !userId || isTranscribing || isFinished) return;
         
         const userMsg = input.trim();
-        const newHistory = [...messages, { role: "user", content: userMsg }];
+        const now = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        const newHistory = [...messages, { role: "user", content: userMsg, time: now }];
         setMessages(newHistory);
         setInput("");
         if (textareaRef.current) textareaRef.current.style.height = "auto";
@@ -278,10 +218,10 @@ export default function AssistantPage() {
 
         try {
             const res = await assistantAPI.chat(userId, sessionId, userMsg);
-            setMessages([...newHistory, { role: "assistant", content: res.data.ai_response }]);
+            setMessages([...newHistory, { role: "assistant", content: res.data.ai_response, time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) }]);
         } catch (err) {
             console.error("Assistant chat error:", err);
-            setMessages([...newHistory, { role: "assistant", content: "Простите, моё зеркало помутнело. Давайте попробуем еще раз?" }]);
+            setMessages([...newHistory, { role: "assistant", content: "Простите, моё зеркало помутнело. Давайте попробуем еще раз?", time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) }]);
         } finally {
             setLoading(false);
         }
@@ -321,7 +261,7 @@ export default function AssistantPage() {
             setLoading(true);
             const chatRes = await assistantAPI.chat(userId, sid, "");
             if (chatRes.data.ai_response) {
-                const greeting = { role: "assistant", content: chatRes.data.ai_response };
+                const greeting = { role: "assistant", content: chatRes.data.ai_response, time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) };
                 setMessages([greeting]);
                 setAssistantMessages([greeting]);
             }
@@ -400,22 +340,105 @@ export default function AssistantPage() {
                 </div>
             )}
 
-            {/* Top bar — offset for TMA header */}
-            <div style={{ padding: "14px 16px 8px", borderBottom: "1px solid rgba(255,255,255,0.05)", flexShrink: 0, position: "relative", zIndex: 20 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            {/* Top bar — floating with gradient fade */}
+            <div style={{ position: "absolute", top: tmaSafeTop > 0 ? tmaSafeTop : 0, left: 0, right: 0, padding: "4px 16px 32px", background: "linear-gradient(to bottom, rgba(6,8,24,1) 55%, transparent)", zIndex: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
                     <button
                         onClick={() => router.back()}
-                        style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}
+                        style={{
+                            color: "rgba(255,255,255,0.7)",
+                            background: "rgba(255,255,255,0.08)",
+                            border: "1px solid rgba(255,255,255,0.12)",
+                            borderRadius: 24,
+                            cursor: "pointer",
+                            padding: "8px 16px 8px 6px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "flex-start",
+                            height: 40,
+                            transition: "all 0.2s",
+                            gap: 0,
+                            fontSize: 16,
+                            fontWeight: 500,
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "rgba(255,255,255,0.12)";
+                            e.currentTarget.style.color = "rgba(255,255,255,0.9)";
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+                            e.currentTarget.style.color = "rgba(255,255,255,0.7)";
+                        }}
                     >
-                        ← Назад
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", flexShrink: 0 }}>
+                            <polyline points="15 18 9 12 15 6"></polyline>
+                        </svg>
+                        <span>Назад</span>
                     </button>
-                    <span style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", letterSpacing: "0.1em", textTransform: "uppercase" }}>☼ Чат с внутренним миром</span>
+                    <div style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        height: 40,
+                        borderRadius: 24,
+                        background: "rgba(255,255,255,0.06)",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        padding: "0 16px",
+                        whiteSpace: "nowrap",
+                        fontSize: 10,
+                        color: "rgba(255,255,255,0.3)",
+                        letterSpacing: "0.1em",
+                        textTransform: "uppercase",
+                        flex: "1",
+                        gap: 6,
+                    }}>
+                        <div style={{
+                            width: 5,
+                            height: 5,
+                            borderRadius: "50%",
+                            background: "#22C55E",
+                            boxShadow: "0 0 8px rgba(34, 197, 94, 0.8)",
+                            flexShrink: 0,
+                        }} />
+                        <span>Чат с внутренним миром</span>
+                    </div>
                     <button
                         onClick={handleClear}
                         disabled={loading}
-                        style={{ fontSize: 10, color: "rgba(139,92,246,0.6)", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: 8, padding: "4px 8px", opacity: loading ? 0.5 : 1 }}
+                        style={{
+                            color: "rgba(255,255,255,0.7)",
+                            background: "rgba(255,255,255,0.08)",
+                            border: "1px solid rgba(255,255,255,0.12)",
+                            borderRadius: "50%",
+                            cursor: "pointer",
+                            padding: "8px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            width: 40,
+                            height: 40,
+                            transition: "all 0.2s",
+                            opacity: loading ? 0.5 : 1,
+                        }}
+                        onMouseEnter={(e) => {
+                            if (!loading) {
+                                e.currentTarget.style.background = "rgba(255,255,255,0.12)";
+                                e.currentTarget.style.color = "rgba(255,255,255,0.9)";
+                            }
+                        }}
+                        onMouseLeave={(e) => {
+                            if (!loading) {
+                                e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+                                e.currentTarget.style.color = "rgba(255,255,255,0.7)";
+                            }
+                        }}
                     >
-                        Очистить
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                        </svg>
                     </button>
                 </div>
             </div>
@@ -423,7 +446,7 @@ export default function AssistantPage() {
             {/* Chat messages */}
             <div
                 ref={scrollRef}
-                style={{ flex: 1, overflowY: "auto", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 10, scrollbarWidth: "none", position: "relative", zIndex: 10 }}
+                style={{ flex: 1, overflowY: "auto", padding: `76px 16px ${isInputFocused ? 66 : 76}px`, display: "flex", flexDirection: "column", justifyContent: "flex-end", gap: 10, scrollbarWidth: "none", position: "relative", zIndex: 10 }}
                 className="no-scrollbar"
             >
                 {messages.map((msg, i) => (
@@ -432,14 +455,15 @@ export default function AssistantPage() {
                         style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start" }}
                     >
                         <div style={{
-                            padding: "10px 14px",
+                            padding: "6px 12px",
                             borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                            maxWidth: "85%",
-                            fontSize: 14,
-                            lineHeight: 1.5,
-                            background: msg.role === "user" ? "rgba(245,158,11,0.18)" : "rgba(255,255,255,0.06)",
-                            color: msg.role === "user" ? "#FEF3C7" : "rgba(255,255,255,0.9)",
-                            border: msg.role === "user" ? "1px solid rgba(245,158,11,0.15)" : "1px solid rgba(255,255,255,0.08)",
+                            maxWidth: "90%",
+                            fontSize: 16,
+                            lineHeight: 1.4,
+                            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif',
+                            background: msg.role === "user" ? "#007AFF" : "rgba(255,255,255,0.08)",
+                            color: msg.role === "user" ? "#fff" : "rgba(255,255,255,0.95)",
+                            border: "none",
                         }}>
                             {msg.role === "assistant" ? <MessageContent content={msg.content} /> : msg.content}
                         </div>
@@ -448,11 +472,12 @@ export default function AssistantPage() {
                 
                 {loading && (
                     <div style={{ display: "flex", justifyContent: "flex-start" }}>
-                        <div style={{ 
-                            padding: "10px 14px", 
-                            borderRadius: "18px 18px 18px 4px", 
-                            background: "rgba(255,255,255,0.05)", 
-                            display: "flex", 
+                        <div style={{
+                            padding: "10px 14px",
+                            borderRadius: "4px 18px 18px 18px",
+                            background: "rgba(255,255,255,0.08)",
+                            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif',
+                            display: "flex",
                             gap: 4, 
                             alignItems: "center" 
                         }}>
@@ -511,30 +536,32 @@ export default function AssistantPage() {
                 </AnimatePresence>
             </div>
 
-            {/* Bottom panel */}
-            <div style={{ flexShrink: 0, padding: "10px 16px 20px", borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", flexDirection: "column", gap: 8, position: "relative", zIndex: 20, background: "rgba(6,8,24,0.95)", backdropFilter: "blur(10px)", opacity: isFinished ? 0.3 : 1, pointerEvents: isFinished ? "none" : "auto" }}>
-                <div style={{ display: "flex", gap: 8, alignItems: "center", position: "relative" }}>
+            {/* Bottom panel — floating with gradient fade */}
+            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `10px 20px ${isInputFocused ? 8 : 20}px`, background: "linear-gradient(to top, rgba(6,8,24,1) 60%, transparent)", display: "flex", flexDirection: "column", gap: 8, zIndex: 20, opacity: isFinished ? 0.3 : 1, pointerEvents: isFinished ? "none" : "auto" }}>
+                <div style={{ display: "flex", gap: 4, alignItems: "flex-end", position: "relative" }}>
                     <div style={{ flex: 1, position: "relative" }}>
                         <textarea
                             ref={textareaRef}
                             rows={1}
                             value={isTranscribing ? "Транскрибирую..." : input}
                             onChange={handleTextChange}
+                            onFocus={() => setIsInputFocused(true)}
+                            onBlur={() => setIsInputFocused(false)}
                             onKeyDown={(e) => {
                                 if (e.key === "Enter" && !e.shiftKey) {
                                     e.preventDefault();
                                     handleSend();
                                 }
                             }}
-                            placeholder="задайте вопрос"
+                            placeholder="Сообщение"
                             disabled={loading || isTranscribing || isFinished}
                             style={{
                                 width: "100%",
                                 background: "rgba(255,255,255,0.06)",
                                 border: "1px solid rgba(255,255,255,0.1)",
-                                borderRadius: 16,
-                                padding: "14px 48px 14px 16px",
-                                fontSize: 14,
+                                borderRadius: 32,
+                                padding: "10px 16px",
+                                fontSize: 16,
                                 color: "#fff",
                                 outline: "none",
                                 fontFamily: "inherit",
@@ -547,23 +574,10 @@ export default function AssistantPage() {
                             }}
                             className="placeholder:text-white/20 focus:border-amber-500/50"
                         />
-                        <button
-                            onClick={handleSend}
-                            disabled={!input.trim() || loading || isTranscribing || isFinished}
-                            style={{
-                                position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
-                                width: 32, height: 32, borderRadius: 10, border: "none", cursor: "pointer",
-                                background: "rgba(245,158,11,0.2)", color: "#FCD34D",
-                                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16,
-                                opacity: (!input.trim() || loading || isFinished) ? 0.3 : 1,
-                            }}
-                        >
-                            ↑
-                        </button>
                         <AnimatePresence>
                             {isRecording && (
                                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                                    style={{ position: "absolute", inset: 0, background: "rgba(245,158,11,0.1)", backdropFilter: "blur(8px)", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(245,158,11,0.2)", pointerEvents: "none" }}>
+                                    style={{ position: "absolute", inset: 0, background: "rgba(245,158,11,0.1)", backdropFilter: "blur(8px)", borderRadius: 32, display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(245,158,11,0.2)", pointerEvents: "none" }}>
                                     <div style={{ display: "flex", gap: 4 }}>
                                         {[0, 1, 2].map(i => (
                                             <motion.div key={i} style={{ width: 4, height: 16, borderRadius: 4, background: "rgba(251,191,36,0.6)" }}
@@ -575,30 +589,42 @@ export default function AssistantPage() {
                             )}
                         </AnimatePresence>
                     </div>
-                    <button
-                        onMouseDown={startRecording}
-                        onMouseUp={stopRecording}
-                        onMouseLeave={stopRecording}
-                        onTouchStart={startRecording}
-                        onTouchEnd={stopRecording}
-                        onPointerDown={startRecording}
-                        onPointerUp={stopRecording}
-                        onPointerLeave={stopRecording}
-                        disabled={isFinished}
-                        style={{
-                            flexShrink: 0, width: 52, height: 52, borderRadius: 16, cursor: "pointer",
-                            background: isRecording ? "#EF4444" : "rgba(255,255,255,0.06)",
-                            border: isRecording ? "none" : "1px solid rgba(255,255,255,0.1)",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            transform: isRecording ? "scale(0.95)" : "scale(1)",
-                            transition: "all 0.15s",
-                            opacity: isFinished ? 0.3 : 1,
-                            userSelect: "none",
-                            WebkitUserSelect: "none"
-                        }}
-                    >
-                        {isRecording ? "🔴" : <MicIcon className="w-5 h-5 text-amber-500/60" />}
-                    </button>
+                    {/* Telegram-style: mic when empty, send (blue) when typing */}
+                    {!input.trim() ? (
+                        <button
+                            onPointerDown={startRecording}
+                            onPointerUp={stopRecording}
+                            onPointerLeave={stopRecording}
+                            disabled={isFinished}
+                            style={{
+                                flexShrink: 0, width: 44, height: 44, borderRadius: "50%", cursor: "pointer",
+                                background: isRecording ? "#EF4444" : "rgba(255,255,255,0.06)",
+                                border: isRecording ? "none" : "1px solid rgba(255,255,255,0.1)",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                transform: isRecording ? "scale(0.95)" : "scale(1)",
+                                transition: "all 0.15s",
+                                opacity: isFinished ? 0.3 : 1
+                            }}
+                        >
+                            {isRecording ? "🔴" : <MicIcon className="w-5 h-5 text-amber-500/60" />}
+                        </button>
+                    ) : (
+                        <button
+                            onClick={handleSend}
+                            disabled={!input.trim() || loading || isTranscribing || isFinished}
+                            style={{
+                                flexShrink: 0, width: 44, height: 44, borderRadius: "50%", cursor: "pointer",
+                                background: "#3B82F6",
+                                border: "none",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                fontSize: 20,
+                                opacity: (!input.trim() || loading || isFinished) ? 0.5 : 1,
+                                transition: "all 0.2s"
+                            }}
+                        >
+                            ↑
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
