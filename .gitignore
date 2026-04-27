@@ -43,3 +43,4 @@ backend/venv/
 Хранилище токенов.md
 *.pem
 .vercel
+backend/logs/
