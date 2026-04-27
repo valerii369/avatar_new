@@ -374,7 +374,24 @@ export default function AssistantPage() {
                         </svg>
                         <span>Назад</span>
                     </button>
-                    <span style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", letterSpacing: "0.1em", textTransform: "uppercase" }}>☼ Чат с внутренним миром</span>
+                    <div style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        height: 44,
+                        borderRadius: "50%",
+                        background: "rgba(255,255,255,0.06)",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        padding: "0 16px",
+                        whiteSpace: "nowrap",
+                        fontSize: 10,
+                        color: "rgba(255,255,255,0.3)",
+                        letterSpacing: "0.1em",
+                        textTransform: "uppercase",
+                        flex: "1",
+                    }}>
+                        ☼ Чат с внутренним миром
+                    </div>
                     <button
                         onClick={handleClear}
                         disabled={loading}
