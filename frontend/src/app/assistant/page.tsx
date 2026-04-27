@@ -445,7 +445,7 @@ export default function AssistantPage() {
             {/* Chat messages */}
             <div
                 ref={scrollRef}
-                style={{ flex: 1, overflowY: "auto", padding: "76px 16px 12px", display: "flex", flexDirection: "column", gap: 10, scrollbarWidth: "none", position: "relative", zIndex: 10 }}
+                style={{ flex: 1, overflowY: "auto", padding: "76px 16px 88px", display: "flex", flexDirection: "column", gap: 10, scrollbarWidth: "none", position: "relative", zIndex: 10 }}
                 className="no-scrollbar"
             >
                 {messages.map((msg, i) => (
@@ -535,8 +535,8 @@ export default function AssistantPage() {
                 </AnimatePresence>
             </div>
 
-            {/* Bottom panel */}
-            <div style={{ flexShrink: 0, padding: `10px 20px ${isInputFocused ? 8 : 20}px`, borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", flexDirection: "column", gap: 8, position: "relative", zIndex: 20, background: "rgba(6,8,24,0.95)", backdropFilter: "blur(10px)", opacity: isFinished ? 0.3 : 1, pointerEvents: isFinished ? "none" : "auto" }}>
+            {/* Bottom panel — floating with gradient fade */}
+            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `10px 20px ${isInputFocused ? 8 : 20}px`, background: "linear-gradient(to top, rgba(6,8,24,1) 60%, transparent)", display: "flex", flexDirection: "column", gap: 8, zIndex: 20, opacity: isFinished ? 0.3 : 1, pointerEvents: isFinished ? "none" : "auto" }}>
                 <div style={{ display: "flex", gap: 4, alignItems: "center", position: "relative" }}>
                     <div style={{ flex: 1, position: "relative" }}>
                         <textarea
