@@ -146,31 +146,34 @@ const useVoiceRecorder = (userId: string | null, setInput: React.Dispatch<React.
                 stream.getTracks().forEach(t => t.stop());
 
                 if (chunksRef.current.length === 0) {
-                    console.warn("[recorder.onstop] No audio chunks recorded");
+                    console.warn("[recorder.onstop] ❌ No audio chunks recorded");
                     return;
                 }
 
                 const blob = new Blob(chunksRef.current, { type: mimeType });
-                console.log("[recorder.onstop] Blob created:", blob.size, "bytes, type:", blob.type);
+                console.log("[recorder.onstop] ✅ Blob created:", blob.size, "bytes, type:", blob.type);
 
                 if (blob.size < 100) {
-                    console.warn("[recorder.onstop] Audio too short or silent:", blob.size, "bytes");
+                    console.warn("[recorder.onstop] ❌ Audio too short:", blob.size, "bytes (need 100+)");
                     return;
                 }
 
+                console.log("[recorder.onstop] ✅ Audio size OK:", blob.size, "bytes, userId:", userId);
+
                 setIsTranscribing(true);
                 try {
-                    console.log("[recorder.onstop] Starting transcription...");
+                    console.log("[recorder.onstop] 🚀 Starting transcription...");
                     const res = await voiceAPI.transcribe(userId, blob, "assistant");
                     const transcript = res.data.transcript?.trim();
-                    console.log("[recorder.onstop] Transcription result:", transcript);
+                    console.log("[recorder.onstop] ✅ Transcription result:", transcript);
                     if (transcript) {
+                        console.log("[recorder.onstop] ✅ Adding text to input");
                         setInput(prev => prev ? prev + " " + transcript : transcript);
                     } else {
-                        console.warn("[recorder.onstop] Empty transcript returned");
+                        console.warn("[recorder.onstop] ⚠️ Empty transcript returned");
                     }
                 } catch (err) {
-                    console.error("[recorder.onstop] Transcription error:", err);
+                    console.error("[recorder.onstop] ❌ Transcription error:", err.message || err);
                 } finally {
                     setIsTranscribing(false);
                 }
