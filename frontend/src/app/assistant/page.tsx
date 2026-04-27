@@ -343,9 +343,32 @@ export default function AssistantPage() {
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <button
                         onClick={() => router.back()}
-                        style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}
+                        style={{
+                            fontSize: 18,
+                            fontWeight: 600,
+                            color: "rgba(255,255,255,0.7)",
+                            background: "rgba(255,255,255,0.08)",
+                            border: "1px solid rgba(255,255,255,0.12)",
+                            borderRadius: 8,
+                            cursor: "pointer",
+                            padding: "8px 12px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            minWidth: 40,
+                            height: 40,
+                            transition: "all 0.2s",
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "rgba(255,255,255,0.12)";
+                            e.currentTarget.style.color = "rgba(255,255,255,0.9)";
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+                            e.currentTarget.style.color = "rgba(255,255,255,0.7)";
+                        }}
                     >
-                        ← Назад
+                        &lt;
                     </button>
                     <span style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", letterSpacing: "0.1em", textTransform: "uppercase" }}>☼ Чат с внутренним миром</span>
                     <button
