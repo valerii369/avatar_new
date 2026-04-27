@@ -448,7 +448,7 @@ export default function AssistantPage() {
                             padding: "10px 14px",
                             borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
                             maxWidth: "85%",
-                            fontSize: 14,
+                            fontSize: 15,
                             lineHeight: 1.5,
                             fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif',
                             background: msg.role === "user" ? "rgba(245,158,11,0.18)" : "rgba(255,255,255,0.06)",
