@@ -889,27 +889,48 @@ async def transcribe(
     user_id: str = Form(...),
     context: str = Form(default=""),
 ):
+    supabase = get_supabase()
     try:
-        logger.info(f"Transcribe request: user_id={user_id}, context={context}, filename={file.filename}, content_type={file.content_type}")
-
         audio_bytes = await file.read()
-        logger.info(f"Audio bytes received: {len(audio_bytes)} bytes")
+        file_size = len(audio_bytes)
 
-        if len(audio_bytes) == 0:
+        # Log attempt
+        supabase.table("uis_errors").insert({
+            "user_id": user_id,
+            "error_type": "transcribe_attempt",
+            "message": f"File size: {file_size} bytes",
+            "context": f"filename={file.filename}, content_type={file.content_type}"
+        }).execute()
+
+        logger.info(f"[TRANSCRIBE] user_id={user_id}, file_size={file_size}, filename={file.filename}")
+
+        if file_size == 0:
             error = "Empty audio file"
-            logger.warning(error)
+            logger.warning(f"[TRANSCRIBE] {error}")
+            supabase.table("uis_errors").insert({
+                "user_id": user_id,
+                "error_type": "transcribe_error",
+                "message": error,
+                "context": "file_size=0"
+            }).execute()
             raise HTTPException(status_code=400, detail=error)
 
-        if len(audio_bytes) < 100:
-            error = f"Audio too short: {len(audio_bytes)} bytes (minimum 100 required)"
-            logger.warning(error)
+        if file_size < 100:
+            error = f"Audio too short: {file_size} bytes (minimum 100 required)"
+            logger.warning(f"[TRANSCRIBE] {error}")
+            supabase.table("uis_errors").insert({
+                "user_id": user_id,
+                "error_type": "transcribe_error",
+                "message": error,
+                "context": f"file_size={file_size}"
+            }).execute()
             raise HTTPException(status_code=400, detail=error)
 
         audio_io = io.BytesIO(audio_bytes)
         filename = file.filename or "audio.webm"
         content_type = file.content_type or "audio/webm"
 
-        logger.info(f"Calling OpenAI Whisper with {len(audio_bytes)} bytes, language=ru")
+        logger.info(f"[TRANSCRIBE] Calling Whisper API with {file_size} bytes")
 
         transcript = await openai_client.audio.transcriptions.create(
             model="whisper-1",
@@ -917,26 +938,33 @@ async def transcribe(
             language="ru",
         )
 
-        logger.info(f"Transcription successful: '{transcript.text}'")
-        return {"transcript": transcript.text}
+        result_text = transcript.text or ""
+        logger.info(f"[TRANSCRIBE] ✓ Success: '{result_text}'")
+
+        supabase.table("uis_errors").insert({
+            "user_id": user_id,
+            "error_type": "transcribe_success",
+            "message": f"Transcript: {result_text}",
+            "context": f"length={len(result_text)}"
+        }).execute()
+
+        return {"transcript": result_text}
 
     except HTTPException:
         raise
     except Exception as e:
         error_msg = f"{type(e).__name__}: {str(e)}"
-        logger.error(f"Transcription error: {error_msg}", exc_info=True)
+        logger.error(f"[TRANSCRIBE] ERROR: {error_msg}", exc_info=True)
 
-        # Log to Supabase for monitoring
         try:
-            supabase = get_supabase()
             supabase.table("uis_errors").insert({
                 "user_id": user_id,
-                "error_type": "transcribe",
+                "error_type": "transcribe_error",
                 "message": error_msg,
-                "context": f"file_size={len(audio_bytes) if 'audio_bytes' in locals() else 0}"
+                "context": f"file_size={file_size if 'file_size' in locals() else 'unknown'}"
             }).execute()
         except Exception as log_err:
-            logger.error(f"Failed to log error to Supabase: {log_err}")
+            logger.error(f"[TRANSCRIBE] Failed to log error: {log_err}")
 
         raise HTTPException(status_code=500, detail=error_msg)
 
