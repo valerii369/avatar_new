@@ -446,7 +446,7 @@ export default function AssistantPage() {
             {/* Chat messages */}
             <div
                 ref={scrollRef}
-                style={{ flex: 1, overflowY: "auto", padding: "76px 16px 44px", display: "flex", flexDirection: "column", justifyContent: "flex-end", gap: 10, scrollbarWidth: "none", position: "relative", zIndex: 10 }}
+                style={{ flex: 1, overflowY: "auto", padding: "76px 16px 66px", display: "flex", flexDirection: "column", justifyContent: "flex-end", gap: 10, scrollbarWidth: "none", position: "relative", zIndex: 10 }}
                 className="no-scrollbar"
             >
                 {messages.map((msg, i) => (
