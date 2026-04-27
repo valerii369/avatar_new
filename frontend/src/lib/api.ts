@@ -118,4 +118,17 @@ export const voiceAPI = {
   },
 };
 
+// Debug logging to backend
+export const debugAPI = {
+  log: (userId: string | number, message: string, level: string = "info") => {
+    console.log(`[DEBUG] ${message}`);
+    return api.post("/api/assistant-v2/debug-log", {
+      user_id: userId.toString(),
+      message,
+      level,
+      timestamp: new Date().toISOString()
+    }).catch(() => {});
+  }
+};
+
 export default api;

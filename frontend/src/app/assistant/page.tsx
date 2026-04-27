@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { assistantAPI, voiceAPI } from "@/lib/api";
+import { assistantAPI, voiceAPI, debugAPI } from "@/lib/api";
 import { useUserStore } from "@/lib/store";
 import { useTmaSafeArea } from "@/lib/useTmaSafeArea";
 import { EnergyIcon } from "@/components/EnergyIcon";
@@ -103,6 +103,7 @@ const useVoiceRecorder = (userId: string | null, setInput: React.Dispatch<React.
 
     const startRecording = useCallback(async () => {
         console.log(`[🎤 startRecording] userId=${userId}, isRecording=${isRecording}, isTranscribing=${isTranscribing}`);
+        if (userId) debugAPI.log(userId, `[🎤 START] userId=${userId}, recording=${isRecording}`);
 
         if (!userId) {
             console.error("[🎤 startRecording] ❌ userId is null or undefined!");
@@ -143,6 +144,7 @@ const useVoiceRecorder = (userId: string | null, setInput: React.Dispatch<React.
             recorder.onstop = async () => {
                 const totalSize = chunksRef.current.reduce((s, c) => s + c.size, 0);
                 console.log(`[🎤 onstop] Stopped: ${chunksRef.current.length} chunks, ${totalSize} bytes total`);
+                if (userId) debugAPI.log(userId, `[🎤 ONSTOP] chunks=${chunksRef.current.length}, size=${totalSize}`);
                 stream.getTracks().forEach(t => t.stop());
 
                 if (chunksRef.current.length === 0) {
@@ -163,6 +165,7 @@ const useVoiceRecorder = (userId: string | null, setInput: React.Dispatch<React.
                 setIsTranscribing(true);
                 try {
                     console.log("[🎤 onstop] 🚀 Transcribing...");
+                    if (userId) debugAPI.log(userId, `[🎤 TRANSCRIBE] Sending blob ${blob.size} bytes`);
                     const res = await voiceAPI.transcribe(userId, blob, "assistant");
                     const transcript = res.data.transcript?.trim();
                     console.log(`[🎤 onstop] ✅ Got transcript: "${transcript}"`);

@@ -962,6 +962,24 @@ async def client_log(req: ClientLogRequest):
         return {"ok": False}
 
 
+class DebugLogRequest(BaseModel):
+    user_id: str
+    message: str
+    level: str = "info"
+    timestamp: str | None = None
+
+@router.post("/debug-log")
+async def debug_log(req: DebugLogRequest):
+    """Log messages from frontend."""
+    prefix = "[CLIENT]" if req.level == "error" else "[CLIENT]"
+    logger.log(
+        logging.ERROR if req.level == "error" else logging.INFO,
+        f"{prefix} {req.user_id}: {req.message}"
+    )
+    print(f"{prefix} {req.user_id}: {req.message}")
+    return {"ok": True}
+
+
 @router.get("/debug-errors/{user_id}")
 async def debug_errors(user_id: str):
     """Get recent errors for debugging."""
