@@ -450,6 +450,7 @@ export default function AssistantPage() {
                             maxWidth: "85%",
                             fontSize: 14,
                             lineHeight: 1.5,
+                            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif',
                             background: msg.role === "user" ? "rgba(245,158,11,0.18)" : "rgba(255,255,255,0.06)",
                             color: msg.role === "user" ? "#FEF3C7" : "rgba(255,255,255,0.9)",
                             border: msg.role === "user" ? "1px solid rgba(245,158,11,0.15)" : "1px solid rgba(255,255,255,0.08)",
@@ -461,11 +462,12 @@ export default function AssistantPage() {
                 
                 {loading && (
                     <div style={{ display: "flex", justifyContent: "flex-start" }}>
-                        <div style={{ 
-                            padding: "10px 14px", 
-                            borderRadius: "18px 18px 18px 4px", 
-                            background: "rgba(255,255,255,0.05)", 
-                            display: "flex", 
+                        <div style={{
+                            padding: "10px 14px",
+                            borderRadius: "18px 18px 18px 4px",
+                            background: "rgba(255,255,255,0.05)",
+                            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif',
+                            display: "flex",
                             gap: 4, 
                             alignItems: "center" 
                         }}>
