@@ -150,7 +150,7 @@ export default function AssistantPage() {
     const router = useRouter();
     const tmaSafeTop = useTmaSafeArea();
     const { userId, assistantMessages, setAssistantMessages, energy } = useUserStore();
-    const [messages, setMessages] = useState<{ role: string, content: string }[]>(assistantMessages);
+    const [messages, setMessages] = useState<{ role: string, content: string, time?: string }[]>(assistantMessages);
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
     const [sessionId, setSessionId] = useState<number | null>(null);
@@ -180,7 +180,7 @@ export default function AssistantPage() {
                     setLoading(true);
                     const chatRes = await assistantAPI.chat(userId, sid, "");
                     if (chatRes.data.ai_response) {
-                        const greeting = { role: "assistant", content: chatRes.data.ai_response };
+                        const greeting = { role: "assistant", content: chatRes.data.ai_response, time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) };
                         setMessages([greeting]);
                         setAssistantMessages([greeting]);
                     }
@@ -209,7 +209,8 @@ export default function AssistantPage() {
         if (!input.trim() || loading || !sessionId || !userId || isTranscribing || isFinished) return;
         
         const userMsg = input.trim();
-        const newHistory = [...messages, { role: "user", content: userMsg }];
+        const now = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        const newHistory = [...messages, { role: "user", content: userMsg, time: now }];
         setMessages(newHistory);
         setInput("");
         if (textareaRef.current) textareaRef.current.style.height = "auto";
@@ -217,10 +218,10 @@ export default function AssistantPage() {
 
         try {
             const res = await assistantAPI.chat(userId, sessionId, userMsg);
-            setMessages([...newHistory, { role: "assistant", content: res.data.ai_response }]);
+            setMessages([...newHistory, { role: "assistant", content: res.data.ai_response, time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) }]);
         } catch (err) {
             console.error("Assistant chat error:", err);
-            setMessages([...newHistory, { role: "assistant", content: "Простите, моё зеркало помутнело. Давайте попробуем еще раз?" }]);
+            setMessages([...newHistory, { role: "assistant", content: "Простите, моё зеркало помутнело. Давайте попробуем еще раз?", time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) }]);
         } finally {
             setLoading(false);
         }
@@ -260,7 +261,7 @@ export default function AssistantPage() {
             setLoading(true);
             const chatRes = await assistantAPI.chat(userId, sid, "");
             if (chatRes.data.ai_response) {
-                const greeting = { role: "assistant", content: chatRes.data.ai_response };
+                const greeting = { role: "assistant", content: chatRes.data.ai_response, time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) };
                 setMessages([greeting]);
                 setAssistantMessages([greeting]);
             }
@@ -454,8 +455,8 @@ export default function AssistantPage() {
                         style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start" }}
                     >
                         <div style={{
-                            padding: "10px 14px",
-                            borderRadius: msg.role === "user" ? "18px 4px 18px 18px" : "4px 18px 18px 18px",
+                            padding: "5px 7px",
+                            borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
                             maxWidth: "90%",
                             fontSize: 16,
                             lineHeight: 1.5,
@@ -465,6 +466,11 @@ export default function AssistantPage() {
                             border: "none",
                         }}>
                             {msg.role === "assistant" ? <MessageContent content={msg.content} /> : msg.content}
+                            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 2 }}>
+                                <span style={{ fontSize: 11, opacity: 0.45, lineHeight: 1 }}>
+                                    {msg.time || ""}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 ))}
