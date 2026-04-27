@@ -917,5 +917,44 @@ async def transcribe(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Transcription error: {type(e).__name__}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        error_msg = f"{type(e).__name__}: {str(e)}"
+        logger.error(f"Transcription error: {error_msg}", exc_info=True)
+
+        # Log to Supabase for monitoring
+        try:
+            supabase = get_supabase()
+            supabase.table("uis_errors").insert({
+                "user_id": user_id,
+                "error_type": "transcribe",
+                "message": error_msg,
+                "context": f"file_size={len(audio_bytes) if 'audio_bytes' in locals() else 0}"
+            }).execute()
+        except Exception as log_err:
+            logger.error(f"Failed to log error to Supabase: {log_err}")
+
+        raise HTTPException(status_code=500, detail=error_msg)
+
+
+# ─── Client logging ────────────────────────────────────────────────────────────
+
+class ClientLogRequest(BaseModel):
+    user_id: str
+    error_type: str
+    message: str
+    context: str | None = None
+
+@router.post("/client-log")
+async def client_log(req: ClientLogRequest):
+    try:
+        logger.info(f"[CLIENT] {req.error_type} from user {req.user_id}: {req.message}")
+        supabase = get_supabase()
+        supabase.table("uis_errors").insert({
+            "user_id": req.user_id,
+            "error_type": f"client_{req.error_type}",
+            "message": req.message,
+            "context": req.context
+        }).execute()
+        return {"ok": True}
+    except Exception as e:
+        logger.error(f"Failed to log client error: {e}")
+        return {"ok": False}

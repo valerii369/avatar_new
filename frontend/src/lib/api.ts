@@ -104,7 +104,15 @@ export const voiceAPI = {
       console.log("[voiceAPI.transcribe] Response:", res.data);
       return res;
     }).catch(err => {
-      console.error("[voiceAPI.transcribe] Error:", err.response?.data || err.message);
+      const errorMsg = err.response?.data?.detail || err.message;
+      console.error("[voiceAPI.transcribe] Error:", errorMsg);
+      // Log to server
+      api.post("/api/assistant-v2/client-log", {
+        user_id: userId.toString(),
+        error_type: "transcribe_error",
+        message: errorMsg,
+        context: `blob_size=${audioBlob.size}, blob_type=${audioBlob.type}`
+      }).catch(() => {});
       throw err;
     });
   },
