@@ -158,6 +158,7 @@ export default function AssistantPage() {
     const [isFinished, setIsFinished] = useState(false);
     const [diarySummary, setDiarySummary] = useState<string | null>(null);
     const [isSavingDiary, setIsSavingDiary] = useState(false);
+    const [isInputFocused, setIsInputFocused] = useState(false);
     
     const scrollRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -473,7 +474,7 @@ export default function AssistantPage() {
             </div>
 
             {/* Bottom panel */}
-            <div style={{ flexShrink: 0, padding: "10px 20px 8px", borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", flexDirection: "column", gap: 8, position: "relative", zIndex: 20, background: "rgba(6,8,24,0.95)", backdropFilter: "blur(10px)", opacity: isFinished ? 0.3 : 1, pointerEvents: isFinished ? "none" : "auto" }}>
+            <div style={{ flexShrink: 0, padding: `10px 20px ${isInputFocused ? 8 : 20}px`, borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", flexDirection: "column", gap: 8, position: "relative", zIndex: 20, background: "rgba(6,8,24,0.95)", backdropFilter: "blur(10px)", opacity: isFinished ? 0.3 : 1, pointerEvents: isFinished ? "none" : "auto" }}>
                 <div style={{ display: "flex", gap: 4, alignItems: "center", position: "relative" }}>
                     <div style={{ flex: 1, position: "relative" }}>
                         <textarea
@@ -481,6 +482,8 @@ export default function AssistantPage() {
                             rows={1}
                             value={isTranscribing ? "Транскрибирую..." : input}
                             onChange={handleTextChange}
+                            onFocus={() => setIsInputFocused(true)}
+                            onBlur={() => setIsInputFocused(false)}
                             onKeyDown={(e) => {
                                 if (e.key === "Enter" && !e.shiftKey) {
                                     e.preventDefault();
