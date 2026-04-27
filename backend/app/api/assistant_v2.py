@@ -889,52 +889,46 @@ async def transcribe(
     user_id: str = Form(...),
     context: str = Form(default=""),
 ):
+    """Transcribe audio to text using OpenAI Whisper."""
+    print(f"\n🎤 [TRANSCRIBE START] user={user_id}")
+
     try:
-        audio_bytes = await file.read()
-        file_size = len(audio_bytes)
+        # Read audio file
+        audio_data = await file.read()
+        print(f"📦 Audio received: {len(audio_data)} bytes")
 
-        # Log attempt
-        logger.info(f"[TRANSCRIBE] ⏳ ATTEMPT: user_id={user_id}, file_size={file_size}, filename={file.filename}, content_type={file.content_type}")
-        print(f"[TRANSCRIBE] ⏳ ATTEMPT: user_id={user_id}, file_size={file_size} bytes")
+        if not audio_data or len(audio_data) < 100:
+            print(f"❌ Audio too small: {len(audio_data)} bytes")
+            return {"transcript": ""}
 
-        if file_size == 0:
-            error = "❌ Empty audio file"
-            logger.warning(f"[TRANSCRIBE] {error}")
-            print(f"[TRANSCRIBE] {error}")
-            raise HTTPException(status_code=400, detail=error)
+        # Create temporary file for Whisper
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as tmp:
+            tmp.write(audio_data)
+            tmp_path = tmp.name
 
-        if file_size < 100:
-            error = f"❌ Audio too short: {file_size} bytes (minimum 100 required)"
-            logger.warning(f"[TRANSCRIBE] {error}")
-            print(f"[TRANSCRIBE] {error}")
-            raise HTTPException(status_code=400, detail=error)
+        print(f"🚀 Sending to Whisper API...")
 
-        audio_io = io.BytesIO(audio_bytes)
-        filename = file.filename or "audio.webm"
-        content_type = file.content_type or "audio/webm"
+        # Call Whisper API
+        with open(tmp_path, "rb") as audio_file:
+            result = await openai_client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file,
+                language="ru"
+            )
 
-        logger.info(f"[TRANSCRIBE] 🔄 Calling Whisper API with {file_size} bytes")
-        print(f"[TRANSCRIBE] 🔄 Calling Whisper API with {file_size} bytes")
+        # Clean up temp file
+        import os
+        os.unlink(tmp_path)
 
-        transcript = await openai_client.audio.transcriptions.create(
-            model="whisper-1",
-            file=(filename, audio_io, content_type),
-            language="ru",
-        )
+        transcript_text = result.text.strip() if result.text else ""
+        print(f"✅ Transcript: {transcript_text}")
 
-        result_text = transcript.text or ""
-        logger.info(f"[TRANSCRIBE] ✅ SUCCESS: '{result_text}'")
-        print(f"[TRANSCRIBE] ✅ SUCCESS: '{result_text}'")
+        return {"transcript": transcript_text}
 
-        return {"transcript": result_text}
-
-    except HTTPException:
-        raise
     except Exception as e:
-        error_msg = f"{type(e).__name__}: {str(e)}"
-        logger.error(f"[TRANSCRIBE] ❌ ERROR: {error_msg}", exc_info=True)
-        print(f"[TRANSCRIBE] ❌ ERROR: {error_msg}")
-        raise HTTPException(status_code=500, detail=error_msg)
+        print(f"❌ ERROR: {type(e).__name__}: {str(e)}")
+        return {"transcript": "", "error": str(e)}
 
 
 # ─── Client logging ────────────────────────────────────────────────────────────
