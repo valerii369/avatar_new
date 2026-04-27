@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="55%" r="75%">
+      <stop offset="0%" stop-color="#2a1d6e"/>
+      <stop offset="55%" stop-color="#1a1050"/>
+      <stop offset="100%" stop-color="#0d0830"/>
+    </radialGradient>
+    <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#c9841050"/>
+      <stop offset="100%" stop-color="#c9841000"/>
+    </radialGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="390" height="844" fill="url(#bg)"/>
+
+  <!-- Central ambient glow -->
+  <circle cx="195" cy="422" r="220" fill="url(#centerGlow)"/>
+
+  <!-- Extended background circles (outer pattern, very faint) -->
+  <circle cx="195" cy="187" r="65" fill="none" stroke="#c98410" stroke-width="0.5" opacity="0.25"/>
+  <circle cx="195" cy="657" r="65" fill="none" stroke="#c98410" stroke-width="0.5" opacity="0.25"/>
+  <circle cx="325" cy="422" r="65" fill="none" stroke="#c98410" stroke-width="0.5" opacity="0.25"/>
+  <circle cx="65"  cy="422" r="65" fill="none" stroke="#c98410" stroke-width="0.5" opacity="0.25"/>
+  <circle cx="292" cy="309" r="65" fill="none" stroke="#c98410" stroke-width="0.5" opacity="0.25"/>
+  <circle cx="98"  cy="309" r="65" fill="none" stroke="#c98410" stroke-width="0.5" opacity="0.25"/>
+  <circle cx="292" cy="535" r="65" fill="none" stroke="#c98410" stroke-width="0.5" opacity="0.25"/>
+  <circle cx="98"  cy="535" r="65" fill="none" stroke="#c98410" stroke-width="0.5" opacity="0.25"/>
+
+  <!-- Flower of Life — 7 inner circles (r=65) with glow -->
+  <g filter="url(#glow)" opacity="0.85">
+    <circle cx="195" cy="422" r="65" fill="none" stroke="#d4930a" stroke-width="0.9"/>
+    <circle cx="260" cy="422" r="65" fill="none" stroke="#d4930a" stroke-width="0.9"/>
+    <circle cx="227" cy="366" r="65" fill="none" stroke="#d4930a" stroke-width="0.9"/>
+    <circle cx="163" cy="366" r="65" fill="none" stroke="#d4930a" stroke-width="0.9"/>
+    <circle cx="130" cy="422" r="65" fill="none" stroke="#d4930a" stroke-width="0.9"/>
+    <circle cx="163" cy="478" r="65" fill="none" stroke="#d4930a" stroke-width="0.9"/>
+    <circle cx="227" cy="478" r="65" fill="none" stroke="#d4930a" stroke-width="0.9"/>
+  </g>
+
+  <!-- Large bounding circle -->
+  <circle cx="195" cy="422" r="130" fill="none" stroke="#d4930a" stroke-width="1.1" opacity="0.9" filter="url(#glow)"/>
+
+  <!-- Connecting radial lines from center to outer ring -->
+  <g stroke="#c98410" stroke-width="0.4" opacity="0.2">
+    <line x1="195" y1="422" x2="0"   y2="0"/>
+    <line x1="195" y1="422" x2="390" y2="0"/>
+    <line x1="195" y1="422" x2="0"   y2="844"/>
+    <line x1="195" y1="422" x2="390" y2="844"/>
+    <line x1="195" y1="422" x2="195" y2="0"/>
+    <line x1="195" y1="422" x2="195" y2="844"/>
+    <line x1="195" y1="422" x2="0"   y2="422"/>
+    <line x1="195" y1="422" x2="390" y2="422"/>
+  </g>
+
+  <!-- Crystal top-left -->
+  <g transform="translate(72,145) rotate(15)" filter="url(#glow)">
+    <polygon points="0,-42 26,-16 26,16 0,42 -26,16 -26,-16" fill="none" stroke="#d4930a" stroke-width="1" opacity="0.85"/>
+    <polygon points="0,-26 16,-10 16,10 0,26 -16,10 -16,-10" fill="none" stroke="#d4930a" stroke-width="0.7" opacity="0.75"/>
+    <line x1="0" y1="-42" x2="0"  y2="42"  stroke="#d4930a" stroke-width="0.5" opacity="0.55"/>
+    <line x1="-26" y1="-16" x2="26" y2="16"  stroke="#d4930a" stroke-width="0.5" opacity="0.55"/>
+    <line x1="-26" y1="16"  x2="26" y2="-16" stroke="#d4930a" stroke-width="0.5" opacity="0.55"/>
+  </g>
+
+  <!-- Crystal top-right -->
+  <g transform="translate(316,118) rotate(-12)" filter="url(#glow)">
+    <polygon points="0,-36 22,-13 22,13 0,36 -22,13 -22,-13" fill="none" stroke="#d4930a" stroke-width="1" opacity="0.85"/>
+    <polygon points="0,-22 13,-8 13,8 0,22 -13,8 -13,-8" fill="none" stroke="#d4930a" stroke-width="0.7" opacity="0.75"/>
+    <line x1="0" y1="-36" x2="0"  y2="36"  stroke="#d4930a" stroke-width="0.5" opacity="0.55"/>
+    <line x1="-22" y1="-13" x2="22" y2="13"  stroke="#d4930a" stroke-width="0.5" opacity="0.55"/>
+    <line x1="-22" y1="13"  x2="22" y2="-13" stroke="#d4930a" stroke-width="0.5" opacity="0.55"/>
+  </g>
+
+  <!-- Crystal right small -->
+  <g transform="translate(368,370) rotate(5)" filter="url(#glow)">
+    <polygon points="0,-20 12,-8 12,8 0,20 -12,8 -12,-8" fill="none" stroke="#d4930a" stroke-width="0.8" opacity="0.7"/>
+    <line x1="0" y1="-20" x2="0" y2="20" stroke="#d4930a" stroke-width="0.5" opacity="0.5"/>
+    <line x1="-12" y1="-8" x2="12" y2="8" stroke="#d4930a" stroke-width="0.5" opacity="0.5"/>
+    <line x1="-12" y1="8"  x2="12" y2="-8" stroke="#d4930a" stroke-width="0.5" opacity="0.5"/>
+  </g>
+
+  <!-- Crystal bottom-left -->
+  <g transform="translate(78,698) rotate(-8)" filter="url(#glow)">
+    <polygon points="0,-40 25,-15 25,15 0,40 -25,15 -25,-15" fill="none" stroke="#d4930a" stroke-width="1" opacity="0.85"/>
+    <polygon points="0,-24 15,-9 15,9 0,24 -15,9 -15,-9" fill="none" stroke="#d4930a" stroke-width="0.7" opacity="0.75"/>
+    <line x1="0" y1="-40" x2="0"  y2="40"  stroke="#d4930a" stroke-width="0.5" opacity="0.55"/>
+    <line x1="-25" y1="-15" x2="25" y2="15"  stroke="#d4930a" stroke-width="0.5" opacity="0.55"/>
+    <line x1="-25" y1="15"  x2="25" y2="-15" stroke="#d4930a" stroke-width="0.5" opacity="0.55"/>
+  </g>
+
+  <!-- Crystal bottom-right -->
+  <g transform="translate(308,726) rotate(10)" filter="url(#glow)">
+    <polygon points="0,-34 21,-13 21,13 0,34 -21,13 -21,-13" fill="none" stroke="#d4930a" stroke-width="1" opacity="0.85"/>
+    <polygon points="0,-20 12,-8 12,8 0,20 -12,8 -12,-8" fill="none" stroke="#d4930a" stroke-width="0.7" opacity="0.75"/>
+    <line x1="0" y1="-34" x2="0"  y2="34"  stroke="#d4930a" stroke-width="0.5" opacity="0.55"/>
+    <line x1="-21" y1="-13" x2="21" y2="13"  stroke="#d4930a" stroke-width="0.5" opacity="0.55"/>
+    <line x1="-21" y1="13"  x2="21" y2="-13" stroke="#d4930a" stroke-width="0.5" opacity="0.55"/>
+  </g>
+
+  <!-- Crystal bottom-right tiny -->
+  <g transform="translate(362,545) rotate(-15)">
+    <polygon points="0,-16 10,-6 10,6 0,16 -10,6 -10,-6" fill="none" stroke="#d4930a" stroke-width="0.7" opacity="0.6"/>
+    <line x1="0" y1="-16" x2="0" y2="16" stroke="#d4930a" stroke-width="0.4" opacity="0.4"/>
+  </g>
+
+  <!-- Stars / dots -->
+  <circle cx="28"  cy="55"  r="1.5" fill="#d4930a" opacity="0.75"/>
+  <circle cx="145" cy="28"  r="1.0" fill="#d4930a" opacity="0.55"/>
+  <circle cx="275" cy="48"  r="1.5" fill="#d4930a" opacity="0.65"/>
+  <circle cx="372" cy="88"  r="1.2" fill="#d4930a" opacity="0.5"/>
+  <circle cx="358" cy="205" r="1.0" fill="#d4930a" opacity="0.5"/>
+  <circle cx="14"  cy="310" r="1.5" fill="#d4930a" opacity="0.6"/>
+  <circle cx="382" cy="660" r="1.0" fill="#d4930a" opacity="0.5"/>
+  <circle cx="8"   cy="555" r="1.2" fill="#d4930a" opacity="0.45"/>
+  <circle cx="115" cy="808" r="1.5" fill="#d4930a" opacity="0.65"/>
+  <circle cx="345" cy="795" r="1.0" fill="#d4930a" opacity="0.55"/>
+  <circle cx="58"  cy="762" r="1.2" fill="#d4930a" opacity="0.45"/>
+  <circle cx="340" cy="30"  r="1.2" fill="#d4930a" opacity="0.6"/>
+  <circle cx="200" cy="20"  r="1.0" fill="#d4930a" opacity="0.4"/>
+</svg>

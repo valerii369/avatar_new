@@ -446,14 +446,17 @@ export default function AssistantPage() {
             {/* Chat messages */}
             <div
                 ref={scrollRef}
+                className="no-scrollbar"
                 style={{
                     flex: 1, overflowY: "auto", padding: `76px 16px ${isInputFocused ? 66 : 76}px`, display: "flex", flexDirection: "column", justifyContent: "flex-end", gap: 10, scrollbarWidth: "none", position: "relative", zIndex: 10,
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='sacred' x='0' y='0' width='200' height='200' patternUnits='userSpaceOnUse'%3E%3Cg opacity='0.06' stroke='%239f7aea' strokeWidth='1' fill='none'%3E%3C!-- Metatron Cube --%3E%3Ccircle cx='50' cy='50' r='30'/%3E%3Crect x='25' y='25' width='50' height='50'/%3E%3Cpath d='M35 50 L65 50 M50 35 L50 65'/%3E%3C!-- Flower of Life --%3E%3Ccircle cx='150' cy='60' r='25'/%3E%3Ccircle cx='130' cy='75' r='8'/%3E%3Ccircle cx='170' cy='75' r='8'/%3E%3Ccircle cx='130' cy='45' r='8'/%3E%3Ccircle cx='170' cy='45' r='8'/%3E%3Ccircle cx='150' cy='35' r='8'/%3E%3Ccircle cx='150' cy='85' r='8'/%3E%3C!-- Sacred Geometry --%3E%3Cpolygon points='50,150 70,180 30,180' /%3E%3Cpolygon points='150,120 180,170 120,170' /%3E%3Ccircle cx='100' cy='160' r='15'/%3E%3Ccircle cx='100' cy='160' r='10'/%3E%3Ccircle cx='100' cy='160' r='5'/%3E%3C/g%3E%3C/pattern%3E%3C/defs%3E%3Crect width='200' height='200' fill='url(%23sacred)'/%3E%3C/svg%3E")`,
-                    backgroundRepeat: "repeat",
-                    backgroundAttachment: "fixed"
+                    backgroundImage: "url('/sacred-bg.svg')",
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    backgroundAttachment: "fixed",
                 }}
-                className="no-scrollbar"
             >
+                {/* Dark overlay to dim background */}
+                <div style={{ position: "fixed", inset: 0, background: "rgba(6,4,24,0.62)", pointerEvents: "none", zIndex: 0 }}/>
                 {messages.map((msg, i) => (
                     <div 
                         key={i} 
