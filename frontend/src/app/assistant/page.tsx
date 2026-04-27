@@ -559,7 +559,7 @@ export default function AssistantPage() {
                                 background: "rgba(255,255,255,0.06)",
                                 border: "1px solid rgba(255,255,255,0.1)",
                                 borderRadius: 32,
-                                padding: "10px 42px 10px 16px",
+                                padding: "10px 16px",
                                 fontSize: 16,
                                 color: "#fff",
                                 outline: "none",
@@ -573,19 +573,6 @@ export default function AssistantPage() {
                             }}
                             className="placeholder:text-white/20 focus:border-amber-500/50"
                         />
-                        <button
-                            onClick={handleSend}
-                            disabled={!input.trim() || loading || isTranscribing || isFinished}
-                            style={{
-                                position: "absolute", right: 3, top: "50%", transform: "translateY(-50%)",
-                                width: 38, height: 38, borderRadius: "50%", border: "none", cursor: "pointer",
-                                background: "rgba(245,158,11,0.2)", color: "#FCD34D",
-                                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16,
-                                opacity: (!input.trim() || loading || isFinished) ? 0.3 : 1,
-                            }}
-                        >
-                            ↑
-                        </button>
                         <AnimatePresence>
                             {isRecording && (
                                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -601,23 +588,42 @@ export default function AssistantPage() {
                             )}
                         </AnimatePresence>
                     </div>
-                    <button
-                        onPointerDown={startRecording}
-                        onPointerUp={stopRecording}
-                        onPointerLeave={stopRecording}
-                        disabled={isFinished}
-                        style={{
-                            flexShrink: 0, width: 44, height: 44, borderRadius: "50%", cursor: "pointer",
-                            background: isRecording ? "#EF4444" : "rgba(255,255,255,0.06)",
-                            border: isRecording ? "none" : "1px solid rgba(255,255,255,0.1)",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            transform: isRecording ? "scale(0.95)" : "scale(1)",
-                            transition: "all 0.15s",
-                            opacity: isFinished ? 0.3 : 1
-                        }}
-                    >
-                        {isRecording ? "🔴" : <MicIcon className="w-5 h-5 text-amber-500/60" />}
-                    </button>
+                    {/* Telegram-style: mic when empty, send (blue) when typing */}
+                    {!input.trim() ? (
+                        <button
+                            onPointerDown={startRecording}
+                            onPointerUp={stopRecording}
+                            onPointerLeave={stopRecording}
+                            disabled={isFinished}
+                            style={{
+                                flexShrink: 0, width: 44, height: 44, borderRadius: "50%", cursor: "pointer",
+                                background: isRecording ? "#EF4444" : "rgba(255,255,255,0.06)",
+                                border: isRecording ? "none" : "1px solid rgba(255,255,255,0.1)",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                transform: isRecording ? "scale(0.95)" : "scale(1)",
+                                transition: "all 0.15s",
+                                opacity: isFinished ? 0.3 : 1
+                            }}
+                        >
+                            {isRecording ? "🔴" : <MicIcon className="w-5 h-5 text-amber-500/60" />}
+                        </button>
+                    ) : (
+                        <button
+                            onClick={handleSend}
+                            disabled={!input.trim() || loading || isTranscribing || isFinished}
+                            style={{
+                                flexShrink: 0, width: 44, height: 44, borderRadius: "50%", cursor: "pointer",
+                                background: "#3B82F6",
+                                border: "none",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                fontSize: 20,
+                                opacity: (!input.trim() || loading || isFinished) ? 0.5 : 1,
+                                transition: "all 0.2s"
+                            }}
+                        >
+                            ↑
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
