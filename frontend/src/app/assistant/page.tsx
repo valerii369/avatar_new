@@ -102,78 +102,78 @@ const useVoiceRecorder = (userId: string | null, setInput: React.Dispatch<React.
     const chunksRef = useRef<Blob[]>([]);
 
     const startRecording = useCallback(async () => {
-        console.log("[startRecording] Called with userId=", userId, "isRecording=", isRecording, "isTranscribing=", isTranscribing);
+        console.log(`[🎤 startRecording] userId=${userId}, isRecording=${isRecording}, isTranscribing=${isTranscribing}`);
 
         if (!userId) {
-            console.error("[startRecording] ERROR: userId is null or undefined!");
+            console.error("[🎤 startRecording] ❌ userId is null or undefined!");
             return;
         }
 
         if (isRecording) {
-            console.warn("[startRecording] WARNING: Already recording");
+            console.warn("[🎤 startRecording] ⚠️ Already recording");
             return;
         }
 
         if (isTranscribing) {
-            console.warn("[startRecording] WARNING: Already transcribing");
+            console.warn("[🎤 startRecording] ⚠️ Already transcribing");
             return;
         }
 
         try {
-            console.log("[startRecording] Requesting microphone access...");
+            console.log("[🎤 startRecording] 📱 Requesting microphone access...");
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            console.log("[startRecording] ✓ Microphone access granted, stream tracks:", stream.getTracks().length);
+            console.log("[🎤 startRecording] ✅ Microphone granted, tracks:", stream.getTracks().length);
 
             const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
                 ? "audio/webm;codecs=opus" : "audio/webm";
-            console.log("[startRecording] Using MIME type:", mimeType);
+            console.log("[🎤 startRecording] Codec:", mimeType);
 
             const recorder = new MediaRecorder(stream, { mimeType });
             chunksRef.current = [];
 
             recorder.onerror = e => {
-                console.error("[recorder.onerror] Recording error:", e.error);
+                console.error("[🎤 recorder.onerror] ❌ Error:", e.error);
             };
 
             recorder.ondataavailable = e => {
-                console.log("[recorder.ondataavailable] Chunk received:", e.data.size, "bytes");
+                console.log("[🎤 ondataavailable] Chunk:", e.data.size, "bytes");
                 if (e.data.size > 0) chunksRef.current.push(e.data);
             };
 
             recorder.onstop = async () => {
                 const totalSize = chunksRef.current.reduce((s, c) => s + c.size, 0);
-                console.log("[recorder.onstop] Recording stopped, total chunks:", chunksRef.current.length, "total size:", totalSize);
+                console.log(`[🎤 onstop] Stopped: ${chunksRef.current.length} chunks, ${totalSize} bytes total`);
                 stream.getTracks().forEach(t => t.stop());
 
                 if (chunksRef.current.length === 0) {
-                    console.warn("[recorder.onstop] ❌ No audio chunks recorded");
+                    console.error("[🎤 onstop] ❌ No chunks recorded!");
                     return;
                 }
 
                 const blob = new Blob(chunksRef.current, { type: mimeType });
-                console.log("[recorder.onstop] ✅ Blob created:", blob.size, "bytes, type:", blob.type);
+                console.log(`[🎤 onstop] 📦 Blob: ${blob.size} bytes, type: ${blob.type}`);
 
                 if (blob.size < 100) {
-                    console.warn("[recorder.onstop] ❌ Audio too short:", blob.size, "bytes (need 100+)");
+                    console.error(`[🎤 onstop] ❌ Too short: ${blob.size} < 100 bytes`);
                     return;
                 }
 
-                console.log("[recorder.onstop] ✅ Audio size OK:", blob.size, "bytes, userId:", userId);
+                console.log(`[🎤 onstop] ✅ Ready to transcribe: ${blob.size} bytes`);
 
                 setIsTranscribing(true);
                 try {
-                    console.log("[recorder.onstop] 🚀 Starting transcription...");
+                    console.log("[🎤 onstop] 🚀 Transcribing...");
                     const res = await voiceAPI.transcribe(userId, blob, "assistant");
                     const transcript = res.data.transcript?.trim();
-                    console.log("[recorder.onstop] ✅ Transcription result:", transcript);
+                    console.log(`[🎤 onstop] ✅ Got transcript: "${transcript}"`);
                     if (transcript) {
-                        console.log("[recorder.onstop] ✅ Adding text to input");
                         setInput(prev => prev ? prev + " " + transcript : transcript);
+                        console.log("[🎤 onstop] ✅ Text added to input");
                     } else {
-                        console.warn("[recorder.onstop] ⚠️ Empty transcript returned");
+                        console.warn("[🎤 onstop] ⚠️ Empty transcript!");
                     }
                 } catch (err) {
-                    console.error("[recorder.onstop] ❌ Transcription error:", err.message || err);
+                    console.error(`[🎤 onstop] ❌ Error: ${err.message || err}`);
                 } finally {
                     setIsTranscribing(false);
                 }
@@ -182,16 +182,16 @@ const useVoiceRecorder = (userId: string | null, setInput: React.Dispatch<React.
             recorder.start(100);
             mediaRecorderRef.current = recorder;
             setIsRecording(true);
-            console.log("[startRecording] Recording started");
+            console.log("[🎤 startRecording] ✅ Recording started");
         } catch (err) {
-            console.error("[startRecording] Microphone access error:", err);
+            console.error("[🎤 startRecording] ❌ Mic error:", err.message || err);
         }
     }, [isRecording, isTranscribing, userId, setInput]);
 
     const stopRecording = useCallback(() => {
-        console.log("[stopRecording] Called, isRecording=", isRecording, "mediaRecorder exists=", !!mediaRecorderRef.current);
+        console.log(`[🎤 stopRecording] isRecording=${isRecording}, hasRecorder=${!!mediaRecorderRef.current}`);
         if (mediaRecorderRef.current && isRecording) {
-            console.log("[stopRecording] Stopping recorder, state=", mediaRecorderRef.current.state);
+            console.log("[🎤 stopRecording] ⏹️ Stopping...");
             mediaRecorderRef.current.stop();
             setIsRecording(false);
         }
