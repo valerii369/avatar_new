@@ -455,7 +455,7 @@ export default function AssistantPage() {
                         style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start" }}
                     >
                         <div style={{
-                            padding: "5px 10px",
+                            padding: "6px 12px",
                             borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
                             maxWidth: "90%",
                             fontSize: 16,
