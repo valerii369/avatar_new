@@ -977,28 +977,3 @@ async def debug_errors(user_id: str):
         return {"error": str(e)}
 
 
-@router.get("/monitor-transcribe")
-async def monitor_transcribe(limit: int = 50):
-    """Monitor all transcription attempts (for debugging)."""
-    try:
-        supabase = get_supabase()
-        result = supabase.table("uis_errors").select("*").ilike("error_type", "%transcribe%").order("created_at", desc=True).limit(limit).execute()
-
-        logs = []
-        for err in result.data:
-            logs.append({
-                "id": err.get('id'),
-                "user_id": err.get('user_id'),
-                "error_type": err.get('error_type'),
-                "message": err.get('message'),
-                "context": err.get('context'),
-                "created_at": err.get('created_at')
-            })
-
-        return {
-            "count": len(logs),
-            "logs": logs
-        }
-    except Exception as e:
-        logger.error(f"Failed to fetch monitor logs: {e}")
-        return {"error": str(e), "count": 0, "logs": []}
