@@ -449,29 +449,28 @@ export default function AssistantPage() {
                 className="no-scrollbar"
                 style={{
                     flex: 1, overflowY: "auto", padding: `76px 16px ${isInputFocused ? 66 : 76}px`, display: "flex", flexDirection: "column", justifyContent: "flex-end", gap: 10, scrollbarWidth: "none", position: "relative", zIndex: 10,
-                    backgroundImage: "url('/sacred-bg.svg')",
+                    background: `linear-gradient(rgba(6,8,24,0.65), rgba(6,8,24,0.65)), url('/sacred-bg.svg')`,
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                     backgroundAttachment: "fixed",
-                }}
-            >
-                {/* Dark overlay to dim background */}
-                <div style={{ position: "fixed", inset: 0, background: "rgba(6,4,24,0.62)", pointerEvents: "none", zIndex: 0 }}/>
+                }}>
+                {/* Overlay integrated into background gradient */}
                 {messages.map((msg, i) => (
                     <div 
                         key={i} 
                         style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start" }}
                     >
                         <div style={{
-                            padding: "6px 12px",
+                            padding: "8px 14px",
                             borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
                             maxWidth: "90%",
                             fontSize: 16,
                             lineHeight: 1.4,
                             fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif',
-                            background: msg.role === "user" ? "#007AFF" : "rgba(255,255,255,0.08)",
-                            color: msg.role === "user" ? "#fff" : "rgba(255,255,255,0.95)",
+                            background: msg.role === "user" ? "#007AFF" : "#0f0d1a",
+                            color: "#ffffff",
                             border: "none",
+                            boxShadow: msg.role === "user" ? "0 2px 8px rgba(0,122,255,0.3)" : "0 2px 8px rgba(0,0,0,0.3)",
                         }}>
                             {msg.role === "assistant" ? <MessageContent content={msg.content} /> : msg.content}
                         </div>
