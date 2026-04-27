@@ -889,48 +889,32 @@ async def transcribe(
     user_id: str = Form(...),
     context: str = Form(default=""),
 ):
-    supabase = get_supabase()
     try:
         audio_bytes = await file.read()
         file_size = len(audio_bytes)
 
         # Log attempt
-        supabase.table("uis_errors").insert({
-            "user_id": user_id,
-            "error_type": "transcribe_attempt",
-            "message": f"File size: {file_size} bytes",
-            "context": f"filename={file.filename}, content_type={file.content_type}"
-        }).execute()
-
-        logger.info(f"[TRANSCRIBE] user_id={user_id}, file_size={file_size}, filename={file.filename}")
+        logger.info(f"[TRANSCRIBE] ⏳ ATTEMPT: user_id={user_id}, file_size={file_size}, filename={file.filename}, content_type={file.content_type}")
+        print(f"[TRANSCRIBE] ⏳ ATTEMPT: user_id={user_id}, file_size={file_size} bytes")
 
         if file_size == 0:
-            error = "Empty audio file"
+            error = "❌ Empty audio file"
             logger.warning(f"[TRANSCRIBE] {error}")
-            supabase.table("uis_errors").insert({
-                "user_id": user_id,
-                "error_type": "transcribe_error",
-                "message": error,
-                "context": "file_size=0"
-            }).execute()
+            print(f"[TRANSCRIBE] {error}")
             raise HTTPException(status_code=400, detail=error)
 
         if file_size < 100:
-            error = f"Audio too short: {file_size} bytes (minimum 100 required)"
+            error = f"❌ Audio too short: {file_size} bytes (minimum 100 required)"
             logger.warning(f"[TRANSCRIBE] {error}")
-            supabase.table("uis_errors").insert({
-                "user_id": user_id,
-                "error_type": "transcribe_error",
-                "message": error,
-                "context": f"file_size={file_size}"
-            }).execute()
+            print(f"[TRANSCRIBE] {error}")
             raise HTTPException(status_code=400, detail=error)
 
         audio_io = io.BytesIO(audio_bytes)
         filename = file.filename or "audio.webm"
         content_type = file.content_type or "audio/webm"
 
-        logger.info(f"[TRANSCRIBE] Calling Whisper API with {file_size} bytes")
+        logger.info(f"[TRANSCRIBE] 🔄 Calling Whisper API with {file_size} bytes")
+        print(f"[TRANSCRIBE] 🔄 Calling Whisper API with {file_size} bytes")
 
         transcript = await openai_client.audio.transcriptions.create(
             model="whisper-1",
@@ -939,14 +923,8 @@ async def transcribe(
         )
 
         result_text = transcript.text or ""
-        logger.info(f"[TRANSCRIBE] ✓ Success: '{result_text}'")
-
-        supabase.table("uis_errors").insert({
-            "user_id": user_id,
-            "error_type": "transcribe_success",
-            "message": f"Transcript: {result_text}",
-            "context": f"length={len(result_text)}"
-        }).execute()
+        logger.info(f"[TRANSCRIBE] ✅ SUCCESS: '{result_text}'")
+        print(f"[TRANSCRIBE] ✅ SUCCESS: '{result_text}'")
 
         return {"transcript": result_text}
 
@@ -954,18 +932,8 @@ async def transcribe(
         raise
     except Exception as e:
         error_msg = f"{type(e).__name__}: {str(e)}"
-        logger.error(f"[TRANSCRIBE] ERROR: {error_msg}", exc_info=True)
-
-        try:
-            supabase.table("uis_errors").insert({
-                "user_id": user_id,
-                "error_type": "transcribe_error",
-                "message": error_msg,
-                "context": f"file_size={file_size if 'file_size' in locals() else 'unknown'}"
-            }).execute()
-        except Exception as log_err:
-            logger.error(f"[TRANSCRIBE] Failed to log error: {log_err}")
-
+        logger.error(f"[TRANSCRIBE] ❌ ERROR: {error_msg}", exc_info=True)
+        print(f"[TRANSCRIBE] ❌ ERROR: {error_msg}")
         raise HTTPException(status_code=500, detail=error_msg)
 
 
