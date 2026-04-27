@@ -344,14 +344,12 @@ export default function AssistantPage() {
                     <button
                         onClick={() => router.back()}
                         style={{
-                            fontSize: 18,
-                            fontWeight: 600,
                             color: "rgba(255,255,255,0.7)",
                             background: "rgba(255,255,255,0.08)",
                             border: "1px solid rgba(255,255,255,0.12)",
-                            borderRadius: 8,
+                            borderRadius: 18,
                             cursor: "pointer",
-                            padding: "8px 12px",
+                            padding: "8px 14px",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
@@ -368,7 +366,9 @@ export default function AssistantPage() {
                             e.currentTarget.style.color = "rgba(255,255,255,0.7)";
                         }}
                     >
-                        &lt;
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
+                            <polyline points="15 18 9 12 15 6"></polyline>
+                        </svg>
                     </button>
                     <span style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", letterSpacing: "0.1em", textTransform: "uppercase" }}>☼ Чат с внутренним миром</span>
                     <button
