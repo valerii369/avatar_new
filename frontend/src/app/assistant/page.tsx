@@ -455,7 +455,7 @@ export default function AssistantPage() {
                         style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start" }}
                     >
                         <div style={{
-                            padding: "5px 7px",
+                            padding: "5px 10px",
                             borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
                             maxWidth: "90%",
                             fontSize: 16,
@@ -465,9 +465,11 @@ export default function AssistantPage() {
                             color: msg.role === "user" ? "#fff" : "rgba(255,255,255,0.95)",
                             border: "none",
                         }}>
-                            {msg.role === "assistant" ? <MessageContent content={msg.content} /> : msg.content}
-                            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 2 }}>
-                                <span style={{ fontSize: 11, opacity: 0.45, lineHeight: 1 }}>
+                            <div style={{ display: "flex", gap: 6, alignItems: "flex-end" }}>
+                                <div style={{ flex: 1 }}>
+                                    {msg.role === "assistant" ? <MessageContent content={msg.content} /> : msg.content}
+                                </div>
+                                <span style={{ fontSize: 11, opacity: 0.45, lineHeight: 1, whiteSpace: "nowrap", flexShrink: 0 }}>
                                     {msg.time || ""}
                                 </span>
                             </div>
