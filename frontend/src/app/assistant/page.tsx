@@ -465,10 +465,10 @@ export default function AssistantPage() {
                             color: msg.role === "user" ? "#fff" : "rgba(255,255,255,0.95)",
                             border: "none",
                         }}>
-                            {msg.role === "assistant" ? <MessageContent content={msg.content} /> : msg.content}
-                            <span style={{ marginLeft: 6, fontSize: 11, opacity: 0.45, lineHeight: 1 }}>
+                            <span style={{ float: "right", marginLeft: 8, marginTop: 2, fontSize: 11, opacity: 0.45, lineHeight: 1 }}>
                                 {msg.time || ""}
                             </span>
+                            {msg.role === "assistant" ? <MessageContent content={msg.content} /> : msg.content}
                         </div>
                     </div>
                 ))}
