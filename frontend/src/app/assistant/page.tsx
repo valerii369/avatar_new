@@ -379,7 +379,7 @@ export default function AssistantPage() {
                         alignItems: "center",
                         justifyContent: "center",
                         height: 44,
-                        borderRadius: "50%",
+                        borderRadius: 24,
                         background: "rgba(255,255,255,0.06)",
                         border: "1px solid rgba(255,255,255,0.1)",
                         padding: "0 16px",
