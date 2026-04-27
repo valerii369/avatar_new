@@ -537,7 +537,7 @@ export default function AssistantPage() {
 
             {/* Bottom panel — floating with gradient fade */}
             <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `10px 20px ${isInputFocused ? 8 : 20}px`, background: "linear-gradient(to top, rgba(6,8,24,1) 60%, transparent)", display: "flex", flexDirection: "column", gap: 8, zIndex: 20, opacity: isFinished ? 0.3 : 1, pointerEvents: isFinished ? "none" : "auto" }}>
-                <div style={{ display: "flex", gap: 4, alignItems: "center", position: "relative" }}>
+                <div style={{ display: "flex", gap: 4, alignItems: "flex-end", position: "relative" }}>
                     <div style={{ flex: 1, position: "relative" }}>
                         <textarea
                             ref={textareaRef}
