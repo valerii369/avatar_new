@@ -493,7 +493,7 @@ export default function AssistantPage() {
                                 width: "100%",
                                 background: "rgba(255,255,255,0.06)",
                                 border: "1px solid rgba(255,255,255,0.1)",
-                                borderRadius: 24,
+                                borderRadius: 32,
                                 padding: "14px 48px 14px 16px",
                                 fontSize: 14,
                                 color: "#fff",
@@ -524,7 +524,7 @@ export default function AssistantPage() {
                         <AnimatePresence>
                             {isRecording && (
                                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                                    style={{ position: "absolute", inset: 0, background: "rgba(245,158,11,0.1)", backdropFilter: "blur(8px)", borderRadius: 24, display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(245,158,11,0.2)", pointerEvents: "none" }}>
+                                    style={{ position: "absolute", inset: 0, background: "rgba(245,158,11,0.1)", backdropFilter: "blur(8px)", borderRadius: 32, display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(245,158,11,0.2)", pointerEvents: "none" }}>
                                     <div style={{ display: "flex", gap: 4 }}>
                                         {[0, 1, 2].map(i => (
                                             <motion.div key={i} style={{ width: 4, height: 16, borderRadius: 4, background: "rgba(251,191,36,0.6)" }}
@@ -542,7 +542,7 @@ export default function AssistantPage() {
                         onPointerLeave={stopRecording}
                         disabled={isFinished}
                         style={{
-                            flexShrink: 0, width: 52, height: 52, borderRadius: 20, cursor: "pointer",
+                            flexShrink: 0, width: 52, height: 52, borderRadius: 24, cursor: "pointer",
                             background: isRecording ? "#EF4444" : "rgba(255,255,255,0.06)",
                             border: isRecording ? "none" : "1px solid rgba(255,255,255,0.1)",
                             display: "flex", alignItems: "center", justifyContent: "center",
