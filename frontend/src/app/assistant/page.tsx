@@ -339,8 +339,8 @@ export default function AssistantPage() {
                 </div>
             )}
 
-            {/* Top bar — offset for TMA header */}
-            <div style={{ padding: "4px 16px 8px", borderBottom: "1px solid rgba(255,255,255,0.05)", flexShrink: 0, position: "relative", zIndex: 20 }}>
+            {/* Top bar — floating with gradient fade */}
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: "4px 16px 32px", background: "linear-gradient(to bottom, rgba(6,8,24,1) 55%, transparent)", zIndex: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
                     <button
                         onClick={() => router.back()}
@@ -445,7 +445,7 @@ export default function AssistantPage() {
             {/* Chat messages */}
             <div
                 ref={scrollRef}
-                style={{ flex: 1, overflowY: "auto", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 10, scrollbarWidth: "none", position: "relative", zIndex: 10 }}
+                style={{ flex: 1, overflowY: "auto", padding: "76px 16px 12px", display: "flex", flexDirection: "column", gap: 10, scrollbarWidth: "none", position: "relative", zIndex: 10 }}
                 className="no-scrollbar"
             >
                 {messages.map((msg, i) => (
