@@ -513,7 +513,7 @@ export default function AssistantPage() {
                             disabled={!input.trim() || loading || isTranscribing || isFinished}
                             style={{
                                 position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
-                                width: 32, height: 32, borderRadius: 10, border: "none", cursor: "pointer",
+                                width: 32, height: 32, borderRadius: "50%", border: "none", cursor: "pointer",
                                 background: "rgba(245,158,11,0.2)", color: "#FCD34D",
                                 display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16,
                                 opacity: (!input.trim() || loading || isFinished) ? 0.3 : 1,
@@ -542,7 +542,7 @@ export default function AssistantPage() {
                         onPointerLeave={stopRecording}
                         disabled={isFinished}
                         style={{
-                            flexShrink: 0, width: 52, height: 52, borderRadius: "50%", cursor: "pointer",
+                            flexShrink: 0, width: 44, height: 44, borderRadius: "50%", cursor: "pointer",
                             background: isRecording ? "#EF4444" : "rgba(255,255,255,0.06)",
                             border: isRecording ? "none" : "1px solid rgba(255,255,255,0.1)",
                             display: "flex", alignItems: "center", justifyContent: "center",
