@@ -456,7 +456,6 @@ export default function AssistantPage() {
                     >
                         <div style={{
                             padding: "6px 12px",
-                            paddingBottom: 20,
                             borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
                             maxWidth: "90%",
                             fontSize: 16,
@@ -465,12 +464,8 @@ export default function AssistantPage() {
                             background: msg.role === "user" ? "#007AFF" : "rgba(255,255,255,0.08)",
                             color: msg.role === "user" ? "#fff" : "rgba(255,255,255,0.95)",
                             border: "none",
-                            position: "relative",
                         }}>
                             {msg.role === "assistant" ? <MessageContent content={msg.content} /> : msg.content}
-                            <span style={{ position: "absolute", bottom: 6, right: 12, fontSize: 11, opacity: 0.45, lineHeight: 1, whiteSpace: "nowrap" }}>
-                                {msg.time || ""}
-                            </span>
                         </div>
                     </div>
                 ))}
