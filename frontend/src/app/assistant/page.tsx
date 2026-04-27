@@ -118,6 +118,10 @@ const useVoiceRecorder = (userId: string | null, setInput: React.Dispatch<React.
             const recorder = new MediaRecorder(stream, { mimeType });
             chunksRef.current = [];
 
+            recorder.onerror = e => {
+                console.error("[recorder.onerror] Recording error:", e.error);
+            };
+
             recorder.ondataavailable = e => {
                 console.log("[recorder.ondataavailable] Chunk received:", e.data.size, "bytes");
                 if (e.data.size > 0) chunksRef.current.push(e.data);
@@ -160,7 +164,9 @@ const useVoiceRecorder = (userId: string | null, setInput: React.Dispatch<React.
     }, [isRecording, isTranscribing, userId, setInput]);
 
     const stopRecording = useCallback(() => {
+        console.log("[stopRecording] Called, isRecording=", isRecording, "mediaRecorder exists=", !!mediaRecorderRef.current);
         if (mediaRecorderRef.current && isRecording) {
+            console.log("[stopRecording] Stopping recorder, state=", mediaRecorderRef.current.state);
             mediaRecorderRef.current.stop();
             setIsRecording(false);
         }
