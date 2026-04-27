@@ -96,9 +96,7 @@ export const voiceAPI = {
     formData.append("file", audioBlob);
     formData.append("user_id", userId.toString());
     formData.append("context", context);
-    return api.post("/api/assistant-v2/transcribe", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    return api.post("/api/assistant-v2/transcribe", formData);
   },
 };
 
