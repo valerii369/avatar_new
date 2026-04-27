@@ -63,9 +63,11 @@ interface UserState {
   hubData: any | null;
   setHubData: (data: any) => void;
 
-  // Assistant History
-  assistantMessages: { role: string; content: string }[];
-  setAssistantMessages: (messages: { role: string; content: string }[]) => void;
+  // Assistant History — persisted per userId, last 200 messages
+  assistantMessages: { role: string; content: string; time?: string }[];
+  assistantMessagesUserId: string | null;
+  setAssistantMessages: (messages: { role: string; content: string; time?: string }[], userId?: string) => void;
+  clearAssistantMessages: () => void;
 
   // Actions
   setUser: (data: Partial<UserState>) => void;
@@ -89,6 +91,7 @@ const initialUserState = {
   referralCode: "",
   hubData: null,
   assistantMessages: [],
+  assistantMessagesUserId: null,
 };
 
 export const useUserStore = create<UserState>()(
@@ -100,7 +103,12 @@ export const useUserStore = create<UserState>()(
       setHubData: (data) => set({ hubData: data }),
 
       assistantMessages: [],
-      setAssistantMessages: (messages) => set({ assistantMessages: messages }),
+      assistantMessagesUserId: null,
+      setAssistantMessages: (messages, userId) => set({
+        assistantMessages: messages.slice(-200),
+        assistantMessagesUserId: userId ?? null,
+      }),
+      clearAssistantMessages: () => set({ assistantMessages: [], assistantMessagesUserId: null }),
 
       setUser: (data) => set((state) => ({ ...state, ...data })),
       reset: () => set({ ...initialUserState }),

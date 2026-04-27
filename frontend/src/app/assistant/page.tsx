@@ -149,8 +149,11 @@ const useVoiceRecorder = (userId: string | null, setInput: React.Dispatch<React.
 export default function AssistantPage() {
     const router = useRouter();
     const tmaSafeTop = useTmaSafeArea();
-    const { userId, assistantMessages, setAssistantMessages, energy } = useUserStore();
-    const [messages, setMessages] = useState<{ role: string, content: string, time?: string }[]>(assistantMessages);
+    const { userId, assistantMessages, assistantMessagesUserId, setAssistantMessages, clearAssistantMessages, energy } = useUserStore();
+
+    // Load history only if it belongs to the current user
+    const initialMessages = userId && assistantMessagesUserId === userId ? assistantMessages : [];
+    const [messages, setMessages] = useState<{ role: string, content: string, time?: string }[]>(initialMessages);
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
     const [sessionId, setSessionId] = useState<number | null>(null);
@@ -194,12 +197,12 @@ export default function AssistantPage() {
         init();
     }, [userId]);
 
-    // Save messages to store whenever they change
+    // Save messages to store whenever they change (last 200, keyed by userId)
     useEffect(() => {
-        if (messages.length > 0) {
-            setAssistantMessages(messages);
+        if (messages.length > 0 && userId) {
+            setAssistantMessages(messages, userId);
         }
-    }, [messages, setAssistantMessages]);
+    }, [messages, userId, setAssistantMessages]);
 
     useEffect(() => {
         if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -246,7 +249,7 @@ export default function AssistantPage() {
         if (!userId) return;
         // Clear all messages from state and store
         setMessages([]);
-        setAssistantMessages([]);
+        clearAssistantMessages();
         setInput("");
         setIsFinished(false);
         setDiarySummary(null);
