@@ -487,7 +487,7 @@ export default function AssistantPage() {
                                     handleSend();
                                 }
                             }}
-                            placeholder="задайте вопрос"
+                            placeholder="Сообщение"
                             disabled={loading || isTranscribing || isFinished}
                             style={{
                                 width: "100%",
